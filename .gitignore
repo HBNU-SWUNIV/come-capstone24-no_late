@@ -14,7 +14,8 @@ dist/
 downloads/
 eggs/
 .eggs/
-lib/
+#플러터 소스파일 경로라서 주석처리
+#lib/ 
 lib64/
 parts/
 sdist/
