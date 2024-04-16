@@ -2,7 +2,7 @@
 import 'package:flutter/material.dart';
 import 'package:table_calendar/table_calendar.dart';
 import 'add_event_screen.dart';
-import 'day_events_page.dart';
+import 'day_events_screen.dart';
 import 'event.dart';
 
 
