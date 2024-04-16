@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'review_screen.dart';
 import 'setting_screen.dart';
+import 'calendar_screen.dart';
 
 class RootScreen extends StatefulWidget {
   const RootScreen({Key? key}) : super(key: key);
@@ -35,13 +36,7 @@ class _RootScreenState extends State<RootScreen> {
   }
 
   List<Widget> renderChildren = <Widget>[
-    Container(          // TODO. 캘린더 화면 연결하기
-      child: Center(
-        child: Text(
-            '캘린더'
-        ),
-      ),
-    ),
+    CalendarPage(),
     Container(          // TODO. 일정관리 화면 연결하기
       child: Center(
         child: Text(
