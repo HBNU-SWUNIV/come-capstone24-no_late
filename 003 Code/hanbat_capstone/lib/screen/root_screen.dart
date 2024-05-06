@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:hanbat_capstone/screen/schedule_screen.dart';
 import 'review_screen.dart';
 import 'setting_screen.dart';
 import 'calendar_screen.dart';
@@ -37,13 +38,8 @@ class _RootScreenState extends State<RootScreen> {
 
   List<Widget> renderChildren = <Widget>[
     CalendarPage(),
-    Container(          // TODO. 일정관리 화면 연결하기
-      child: Center(
-        child: Text(
-            '하루일정'
-        ),
-      ),
-    ),
+
+    schedule_screen(),
     Container(          // TODO. 일정등록 화면 연결하기
       child: Center(
         child: Text(
