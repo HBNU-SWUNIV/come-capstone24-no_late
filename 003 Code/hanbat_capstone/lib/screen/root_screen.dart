@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:hanbat_capstone/screen/schedule_screen.dart';
+import 'add_event_screen.dart';
 import 'review_screen.dart';
 import 'setting_screen.dart';
 import 'calendar_screen.dart';
@@ -40,13 +41,7 @@ class _RootScreenState extends State<RootScreen> {
     CalendarPage(),
 
     schedule_screen(),
-    Container(          // TODO. 일정등록 화면 연결하기
-      child: Center(
-        child: Text(
-            '일정추가'
-        ),
-      ),
-    ),
+    AddEventPage(),
     ReviewScreen(), // 회고관리 화면 연결
     SettingScreen() // 설정관리 화면 연결
   ];
