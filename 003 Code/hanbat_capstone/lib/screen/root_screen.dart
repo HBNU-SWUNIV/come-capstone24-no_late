@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:hanbat_capstone/screen/schedule_screen.dart';
-import 'add_event_screen.dart';
+
 import 'review_screen.dart';
 import 'setting_screen.dart';
 import 'calendar_screen.dart';
@@ -21,10 +21,30 @@ class _RootScreenState extends State<RootScreen> {
     super.initState();
   }
 
-  void _onItemTapped(int index){
-    setState(() {
-      _selectedIndex = index;
-    });
+  void _onItemTapped(int index) async {
+    if (index == 2) {
+      final newEvent = await Navigator.push<Event>(
+        context,
+        MaterialPageRoute(builder: (context) => AddEventPage()),
+      );
+      if (newEvent != null) {
+        setState(() {
+          // 새로운 일정을 CalendarPage의 kEvents에 추가
+          DateTime eventDate = DateTime.utc(
+            newEvent.date.year,
+            newEvent.date.month,
+            newEvent.date.day,
+          );
+          List<Event> events = kEvents[eventDate] ?? [];
+          kEvents[eventDate] = [...events, newEvent];
+        });
+        _selectedIndex = 0; // CalendarPage로 이동
+      }
+    } else {
+      setState(() {
+        _selectedIndex = index;
+      });
+    }
   }
 
   @override
@@ -42,6 +62,7 @@ class _RootScreenState extends State<RootScreen> {
 
     schedule_screen(),
     AddEventPage(),
+
     ReviewScreen(), // 회고관리 화면 연결
     SettingScreen() // 설정관리 화면 연결
   ];
@@ -52,10 +73,10 @@ class _RootScreenState extends State<RootScreen> {
         onTap: _onItemTapped,
         items: [
           BottomNavigationBarItem(
-              icon: Icon(
+            icon: Icon(
                 Icons.calendar_month
-              ),
-              label: '캘린더',
+            ),
+            label: '캘린더',
           ),
           BottomNavigationBarItem(
             icon: Icon(
@@ -64,6 +85,7 @@ class _RootScreenState extends State<RootScreen> {
             label: '하루일정',
           ),
           BottomNavigationBarItem(
+
             icon: Icon(
                 Icons.add_circle
             ),
