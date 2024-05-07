@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "261619279679",
+    "project_id": "hanbat-capstone-9b1af",
+    "storage_bucket": "hanbat-capstone-9b1af.appspot.com"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:261619279679:android:db5cc17990350a79af558a",
+        "android_client_info": {
+          "package_name": "com.example.hanbat_capstone"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyB0boSwMGr4b2r-Q4RUrnxtxd2m1IYq8Xk"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
