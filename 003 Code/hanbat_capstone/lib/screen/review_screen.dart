@@ -1,190 +1,156 @@
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
+import 'package:hanbat_capstone/component/review_text_field.dart';
+import 'package:hanbat_capstone/component/top_date_picker.dart';
+import 'package:uuid/uuid.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+
 
 class ReviewScreen extends StatefulWidget {
-  const ReviewScreen({Key? key}) : super(key : key);
+  const ReviewScreen({Key? key}) : super(key:key);
 
   @override
-  State<ReviewScreen> createState() => _ReviewScreenSate();
+  State createState() => _ReviewScreenState();
 }
 
-class _ReviewScreenSate extends State<ReviewScreen> {
+class _ReviewScreenState extends State<ReviewScreen> {
+  final GlobalKey<FormState> formkey = GlobalKey();
 
-  DateTime currentDay = DateTime.now();
+  String? content;  // 내용 저장 변수
+  DateTime currentDay = DateTime.now(); // 선택된 날짜
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      floatingActionButton: FloatingActionButton(
-        onPressed: (){
-          // 회고 텍스트 필드 추가
-        },
-        child: Icon(
-          Icons.add_comment
-        ),
-      ),
-      body: SafeArea(
-        top: true,
-        bottom: false,
-        child: Column(
-          children: [
-            _DatePicker(
-              currentDay : currentDay,
-              onPressDate : onPressDate,
-              onPressBackBtn : onPressBackBtn,
-              onPressForwadBtn : onPressForwadBtn,
-            ),
-            _ReviewForm()
-          ],
+    final bottomInset = MediaQuery.of(context).viewInsets.bottom;
+    return Form(
+      key: formkey,
+      child: SafeArea(
+        child: LayoutBuilder(
+          builder: (BuildContext context, BoxConstraints constraints){
+            return SingleChildScrollView(
+                child: Column(
+                  children: [
+                    SizedBox(
+                      //height: constraints.maxHeight * 0.15,
+                      child: Column(
+                        children: [
+                          TopDatePicker(onPressDate: onPressDate, onPressBackBtn: onPressBackBtn, onPressForwardBtn: onPressForwardBtn, currentDay: currentDay),
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              TextButton(
+                                  onPressed: (){},
+                                  child: Text("\u{1F601}")
+                              ),
+                              TextButton.icon(
+                                  onPressed: onDBTest,
+                                  icon: Icon(Icons.settings),
+                                  label: Text('')
+                              ),
+                            ],
+                          ),
+                        ],
+                      ),
+                    ),
+                    SizedBox(
+                      height: constraints.maxHeight * 0.85 + bottomInset,
+                      child: ListView(
+                        children: [
+                          ReviewTextField(
+                              onSaved: (String? val){
+                                content = val;
+                              },
+                              validator: contentValidator,
+                              title: "일기", content: "오늘 하루 어땠나요?"),
+                          ReviewTextField(
+                              onSaved: (String? val){
+                                content = val;
+                              },
+                              validator: contentValidator,
+                              title: "오늘 가장 좋았던 일", content: "오늘은 뭐가 제일 좋았나요?"),
+                          ReviewTextField(
+                              onSaved: (String? val){
+                                content = val;
+                              },
+                              validator: contentValidator,
+                              title: "나에게 한마디", content: "나에게 하고 싶은 말을 적어봐요!"),
+                          ReviewTextField(
+                              onSaved: (String? val){
+                                content = val;
+                              },
+                              validator: contentValidator,
+                              title: "오늘의 쓴소리", content: "오늘 하루 반성하고 싶었던 말을 적어봐요!"),
+                        ],
+                      ),
+                    ),
+                  ],
+                )
+            );
+          },
         ),
       ),
     );
   }
 
-  void onPressDate(){
-    showCupertinoDialog(  // 쿠퍼티노 다이얼로그 실행
-      context: context,  // 보여줄 다이얼로그 빌드
-      builder: (BuildContext context){
-        return Align(
-          alignment: Alignment.center,
-          child: Container(
-            color: Colors.white,
-            height: 300,
-            child: CupertinoDatePicker( // 날짜 선택하는 다이얼로그
-              mode: CupertinoDatePickerMode.date,
-              onDateTimeChanged: (DateTime date){
-                setState(() {
-                  currentDay = date;
-                });
-              },
-            ),
-          ),
-        );
-      },
-      barrierDismissible: true, // 외부에서 탭할 경우 다이얼로그 닫기
-    );
-  }
-
-  void onPressBackBtn(){
+  /**
+   * 날짜 이전 버튼 눌렀을때 이벤트
+   * - currentDay - 1 인 날짜를 셋팅한다.
+   */
+  void onPressBackBtn() {
     setState(() {
       currentDay = currentDay.subtract(Duration(days: 1));
     });
   }
 
-  void onPressForwadBtn(){
+  /**
+   * 상단 날짜를 눌렀을때 이벤트
+   * - 날짜 선택 다이얼로그 띄운다.
+   */
+  void onPressDate() async {
+    final selectedDate = await showDatePicker(
+        context: context,
+        initialDate: currentDay,
+        firstDate: DateTime(2020),
+        lastDate: DateTime(2030),
+        initialEntryMode: DatePickerEntryMode.calendarOnly, // 캘린더만 띄움.
+        barrierDismissible: true,  // 외부에서 탭할 경우 다이얼로그 닫기
+    );
+
+    if(selectedDate != null) {
+      setState(() {
+        currentDay = selectedDate;
+      });
+    }
+  }
+
+  /**
+   * 날짜 이후 버튼 눌렀을 때 이벤트
+   * - currentDay + 1 인 날짜를 셋팅한다.
+   */
+  void onPressForwardBtn() {
     setState(() {
       currentDay = currentDay.add(Duration(days: 1));
     });
   }
-}
 
-class _DatePicker extends StatelessWidget {
-
-  final GestureTapCallback onPressDate;
-  final GestureTapCallback onPressBackBtn;
-  final GestureTapCallback onPressForwadBtn;
-  final DateTime currentDay;
-
-  _DatePicker({
-    required this.onPressDate,
-    required this.onPressBackBtn,
-    required this.onPressForwadBtn,
-    required this.currentDay,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceAround,
-      crossAxisAlignment: CrossAxisAlignment.center,
-      children: [
-        TextButton.icon(onPressed: onPressBackBtn, icon: Icon(Icons.arrow_back), label: Text("")),
-        TextButton(onPressed: onPressDate, child: Text('${currentDay.year}.${currentDay.month}.${currentDay.day}')),
-        TextButton.icon(onPressed: onPressForwadBtn, icon: Icon(Icons.arrow_forward), label: Text("")),
-      ],
-    );
+  /**
+   * TODO. 테스트용으로 변경필요
+   */
+  void onDBTest() {
+    // null값이 아니기 때문에 formkey.currentState!
+    if(formkey.currentState!.validate()){ // 폼 검증
+      formkey.currentState!.save(); // 폼 저장
+      print(content);
+    }
   }
-}
 
-class _ReviewForm extends StatefulWidget {
-
-  @override
-  State createState() => _ReviewFormState();
-}
-
-class _ReviewFormState extends State<_ReviewForm> {
-
-  @override
-  Widget build(BuildContext context) {
-    return SafeArea(
-          child: Container(
-            decoration: BoxDecoration(
-                border: Border.all(
-                    width: 1,
-                    color: Colors.grey
-                ),
-            ),
-            child: Padding(
-              padding: const EdgeInsets.all(16),
-              child: IntrinsicHeight(
-                child: Column(
-                  children: [
-                    Expanded(
-                        child: _TextField(
-                          label: '제목',
-                          isTitle: true,
-                        )),
-                    SizedBox(height:8),
-                    Expanded(child: _TextField(
-                      label: '내용',
-                      isTitle: false,
-                    ))
-                  ],
-                ),
-              ),
-            ),
-      )
-    );
-  }
-}
-
-/**
- * 텍스트 입력하는 필드
- */
-class _TextField extends StatelessWidget {
-
-  final bool isTitle;
-  final String label;
-
-  const _TextField({
-    required this.isTitle,
-    required this.label,
-    Key? key,
-  }) : super(key: key);
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      children: [
-        Text(
-          label,
-          style: TextStyle(
-            fontWeight: FontWeight.w600
-          ),
-        ),
-        Expanded(
-            child: TextFormField(
-              cursorColor: Colors.grey,
-              maxLines: isTitle ? 1 : null, // 제목 항목의 경우 한줄만
-              expands: !isTitle,  // 제목 항목이 아닌 경우 한줄 이상 작성 가능
-              keyboardType: TextInputType.multiline,
-              decoration: InputDecoration(
-                border: InputBorder.none,
-                filled: true,
-                fillColor: Colors.grey[300],
-              ),
-            ))
-      ],
-    );
+  /**
+   * 내용 검증 확인 함수
+   */
+  String? contentValidator(String? val) {
+    if(val == null || val.length == 0 ){
+      return '값을 입력하세요';
+    }
+    return null;
   }
 }
