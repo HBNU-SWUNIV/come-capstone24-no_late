@@ -17,27 +17,22 @@ class TopDatePicker extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return SafeArea(
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.spaceAround,
-          crossAxisAlignment: CrossAxisAlignment.center,
-          children: [
-            TextButton.icon(
-              label: Text(""),
-              icon: Icon(Icons.arrow_back),
-              onPressed: onPressBackBtn,
-            ),
-            TextButton(
-              onPressed: onPressDate,
-              child: Text('${currentDay.year}.${currentDay.month}.${currentDay.day}'),
-            ),
-            TextButton.icon(
-              label: Text(""),
-              icon: Icon(Icons.arrow_forward),
-              onPressed: onPressForwardBtn,
-            )
-          ],
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      children: [
+        IconButton(
+          icon: Icon(Icons.chevron_left),
+          onPressed: onPressBackBtn,
+        ),
+        TextButton(
+          onPressed: onPressDate,
+          child: Text('${currentDay.year}.${currentDay.month}.${currentDay.day}'),
+        ),
+        IconButton(
+          icon: Icon(Icons.chevron_right),
+          onPressed: onPressForwardBtn,
         )
+      ],
     );
   }
 }

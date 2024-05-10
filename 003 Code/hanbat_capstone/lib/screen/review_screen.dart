@@ -2,6 +2,7 @@ import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:hanbat_capstone/component/review_text_field.dart';
 import 'package:hanbat_capstone/component/top_date_picker.dart';
+import 'package:hanbat_capstone/model/review_model.dart';
 import 'package:uuid/uuid.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 
@@ -16,7 +17,12 @@ class ReviewScreen extends StatefulWidget {
 class _ReviewScreenState extends State<ReviewScreen> {
   final GlobalKey<FormState> formkey = GlobalKey();
 
-  String? content;  // 내용 저장 변수
+  String? reviewId;
+  String? userId;
+  DateTime? reviewDate;
+  String? reviewTitle;
+  String? reviewContent;
+
   DateTime currentDay = DateTime.now(); // 선택된 날짜
 
   @override
@@ -24,69 +30,65 @@ class _ReviewScreenState extends State<ReviewScreen> {
     final bottomInset = MediaQuery.of(context).viewInsets.bottom;
     return Form(
       key: formkey,
-      child: SafeArea(
-        child: LayoutBuilder(
-          builder: (BuildContext context, BoxConstraints constraints){
-            return SingleChildScrollView(
+      child: Scaffold(
+        appBar: AppBar(
+          title: TopDatePicker(
+            onPressBackBtn: onPressBackBtn,
+            onPressDate: onPressDate,
+            onPressForwardBtn: onPressForwardBtn,
+            currentDay: currentDay,
+          ),
+        ),
+        body: SafeArea(
+          child: LayoutBuilder(
+            builder: (BuildContext context, BoxConstraints constraints){
+              return SingleChildScrollView(
                 child: Column(
                   children: [
-                    SizedBox(
-                      //height: constraints.maxHeight * 0.15,
-                      child: Column(
-                        children: [
-                          TopDatePicker(onPressDate: onPressDate, onPressBackBtn: onPressBackBtn, onPressForwardBtn: onPressForwardBtn, currentDay: currentDay),
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                            children: [
-                              TextButton(
-                                  onPressed: (){},
-                                  child: Text("\u{1F601}")
-                              ),
-                              TextButton.icon(
-                                  onPressed: onDBTest,
-                                  icon: Icon(Icons.settings),
-                                  label: Text('')
-                              ),
-                            ],
-                          ),
-                        ],
-                      ),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        TextButton(onPressed: (){},child: Text("\u{1F601}")),
+                        IconButton(onPressed: (){}, icon: Icon(Icons.settings))
+                      ],
                     ),
                     SizedBox(
                       height: constraints.maxHeight * 0.85 + bottomInset,
                       child: ListView(
                         children: [
                           ReviewTextField(
-                              onSaved: (String? val){
-                                content = val;
-                              },
-                              validator: contentValidator,
-                              title: "일기", content: "오늘 하루 어땠나요?"),
+                            onSaved: (String? val) {
+                              reviewId =  '${currentDay.year}${currentDay.month.toString().padLeft(2,'0')}${currentDay.day.toString().padLeft(2,'0')}:1';
+                              reviewDate = currentDay;
+                              userId = "yjkoo";
+                              reviewTitle = "일기";
+                              reviewContent = val;
+                            },
+                            validator: contentValidator,
+                            title: "일기",
+                            content: "오늘 하루 어땠나요?",
+                          ),
                           ReviewTextField(
-                              onSaved: (String? val){
-                                content = val;
-                              },
-                              validator: contentValidator,
-                              title: "오늘 가장 좋았던 일", content: "오늘은 뭐가 제일 좋았나요?"),
-                          ReviewTextField(
-                              onSaved: (String? val){
-                                content = val;
-                              },
-                              validator: contentValidator,
-                              title: "나에게 한마디", content: "나에게 하고 싶은 말을 적어봐요!"),
-                          ReviewTextField(
-                              onSaved: (String? val){
-                                content = val;
-                              },
-                              validator: contentValidator,
-                              title: "오늘의 쓴소리", content: "오늘 하루 반성하고 싶었던 말을 적어봐요!"),
+                            onSaved: (String? val) {
+                              reviewId =  '${currentDay.year}${currentDay.month.toString().padLeft(2,'0')}${currentDay.day.toString().padLeft(2,'0')}:2';
+                              reviewDate = currentDay;
+                              userId = "yjkoo";
+                              reviewTitle = "오늘의 쓴소리";
+                              reviewContent = val;
+                            },
+                            validator: contentValidator,
+                            title: "오늘의 쓴소리",
+                            content: "오늘 나에게 하고싶은 말은?",
+                          ),
+                          ElevatedButton(onPressed: onSaveBtn, child: Text("저장하기"))
                         ],
                       ),
-                    ),
+                    )
                   ],
-                )
-            );
-          },
+                ),
+              );
+            },
+          ),
         ),
       ),
     );
@@ -133,14 +135,22 @@ class _ReviewScreenState extends State<ReviewScreen> {
     });
   }
 
-  /**
-   * TODO. 테스트용으로 변경필요
-   */
-  void onDBTest() {
-    // null값이 아니기 때문에 formkey.currentState!
-    if(formkey.currentState!.validate()){ // 폼 검증
-      formkey.currentState!.save(); // 폼 저장
-      print(content);
+  void onSaveBtn() async {
+    if (formkey.currentState!.validate()){
+      formkey.currentState!.save();
+
+      final review = ReviewModel(
+        reviewId: reviewId!,
+        userId: userId!,
+        reviewDate: reviewDate!,
+        reviewTitle: reviewTitle!,
+        reviewContent: reviewContent!,
+      );
+      
+      await FirebaseFirestore.instance
+        .collection('review',)
+        .doc(review.reviewId)
+        .set(review.toJson());
     }
   }
 
@@ -148,9 +158,6 @@ class _ReviewScreenState extends State<ReviewScreen> {
    * 내용 검증 확인 함수
    */
   String? contentValidator(String? val) {
-    if(val == null || val.length == 0 ){
-      return '값을 입력하세요';
-    }
     return null;
   }
 }
