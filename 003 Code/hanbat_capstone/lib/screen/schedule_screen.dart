@@ -1,18 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import 'schedule_crud.dart';
 
 
-// class schedule_screen extends StatelessWidget {
-//   @override
-//   Widget build(BuildContext context) {
-//     return MaterialApp(
-//       title: 'Flutter Time List',
-//       home: Scaffold(
-//         body: TimeListView(),
-//       ),
-//     );
-//   }
-// }
 
 class schedule_screen extends StatelessWidget {
   @override
@@ -35,18 +25,44 @@ class _TimeListViewState extends State<TimeListView> {
     return '${index.toString().padLeft(2, '0')}:00';
   });
 
-  final List<Map<String, String>> scheduleList =
-  List.generate(24, (_) => {'plan': '', 'actual': ''});
+  List<Schedule_CRUD> scheduleList = List.generate(24, (_) => Schedule_CRUD(day: DateTime.now().day, time: '', planedwork: '', unplanedwork: ''));
+
+  @override
+  void initState() {
+    super.initState();
+    _loadSchedules();
+  }
+
+  Future<void> _loadSchedules() async {
+    final schedules = await Schedule_CRUD.getSchedulesByDate(selectedDate);
+    setState(() {
+      scheduleList = List.generate(24, (index) {
+        final time = timeList[index];
+        return schedules.firstWhere(
+              (schedule) => schedule.time == time,
+          orElse: () => Schedule_CRUD(day: selectedDate.day, time: time, planedwork: '', unplanedwork: ''),
+        );
+      });
+    });
+  }
 
   void _updateDate(int daysOffset) {
     setState(() {
       selectedDate = selectedDate.add(Duration(days: daysOffset));
+      _loadSchedules();
     });
   }
 
+  // void _copyPlanToActual(int index) {
+  //   setState(() {
+  //     scheduleList[index]['actual'] = scheduleList[index]['plan']!;
+  //   });
+  // }
+
   void _copyPlanToActual(int index) {
     setState(() {
-      scheduleList[index]['actual'] = scheduleList[index]['plan']!;
+      scheduleList[index].unplanedwork = scheduleList[index].planedwork;
+      Schedule_CRUD.updateSchedule(scheduleList[index]);
     });
   }
 
@@ -54,7 +70,7 @@ class _TimeListViewState extends State<TimeListView> {
     final schedule = await showDialog<Map<String, String>>(
       context: context,
       builder: (context) {
-        String plan = '';
+        String planedwork = '';
         return AlertDialog(
           title: const Text('일정 추가'),
           content: Column(
@@ -63,7 +79,7 @@ class _TimeListViewState extends State<TimeListView> {
               TextField(
                 decoration: const InputDecoration(labelText: '계획'),
                 onChanged: (value) {
-                  plan = value;
+                  planedwork = value;
                 },
               ),
             ],
@@ -71,7 +87,7 @@ class _TimeListViewState extends State<TimeListView> {
           actions: [
             TextButton(
               onPressed: () {
-                Navigator.of(context).pop({'plan': plan});
+                Navigator.of(context).pop({'planedwork': planedwork});
               },
               child: const Text('추가'),
             ),
@@ -80,11 +96,16 @@ class _TimeListViewState extends State<TimeListView> {
       },
     );
 
-    // null 확인 및 plan과 actual 중 하나라도 값이 있는지 확인할 때 !.isNotEmpty 사용
-    if (schedule != null && (schedule['plan']!.isNotEmpty)) {
+    if (schedule != null && schedule['planedwork']!.isNotEmpty) {
+      final newSchedule = Schedule_CRUD(
+        day: selectedDate.day,
+        time: timeList[index],
+        planedwork: schedule['planedwork']!,
+        unplanedwork: '',
+      );
+      await Schedule_CRUD.createSchedule(newSchedule);
       setState(() {
-        // scheduleList[index]의 각 키-값 쌍을 개별적으로 업데이트
-        scheduleList[index]['plan'] = schedule['plan'] ?? '';
+        scheduleList[index] = newSchedule;
       });
     }
   }
@@ -93,7 +114,7 @@ class _TimeListViewState extends State<TimeListView> {
     final schedule = await showDialog<Map<String, String>>(
       context: context,
       builder: (context) {
-        String actual = '';
+        String unplanedwork = '';
         return AlertDialog(
           title: const Text('일정 추가'),
           content: Column(
@@ -102,7 +123,7 @@ class _TimeListViewState extends State<TimeListView> {
               TextField(
                 decoration: const InputDecoration(labelText: '실제 활동'),
                 onChanged: (value) {
-                  actual = value;
+                  unplanedwork = value;
                 },
               ),
             ],
@@ -110,7 +131,7 @@ class _TimeListViewState extends State<TimeListView> {
           actions: [
             TextButton(
               onPressed: () {
-                Navigator.of(context).pop({'actual': actual});
+                Navigator.of(context).pop({'unplanedwork': unplanedwork});
               },
               child: const Text('추가'),
             ),
@@ -119,12 +140,11 @@ class _TimeListViewState extends State<TimeListView> {
       },
     );
 
-    // null 확인 및 plan과 actual 중 하나라도 값이 있는지 확인할 때 !.isNotEmpty 사용
-    if (schedule != null && (schedule['actual']!.isNotEmpty)) {
+    if (schedule != null && schedule['unplanedwork']!.isNotEmpty) {
+      final newSchedule = scheduleList[index].copyWith(unplanedwork: schedule['unplanedwork']!);
+      await Schedule_CRUD.updateSchedule(newSchedule);
       setState(() {
-        // scheduleList[index]의 각 키-값 쌍을 개별적으로 업데이트
-
-        scheduleList[index]['actual'] = schedule['actual'] ?? '';
+        scheduleList[index] = newSchedule;
       });
     }
   }
@@ -201,7 +221,7 @@ class _TimeListViewState extends State<TimeListView> {
                 Container(
                   width: planColumnWidth,
                   child: Text(
-                    scheduleList[index]['plan']!,
+                    scheduleList[index].planedwork,
                     overflow: TextOverflow.ellipsis,
                   ),
                 ),
@@ -224,7 +244,7 @@ class _TimeListViewState extends State<TimeListView> {
                 Container(
                   width: actualColumnWidth,
                   child: Text(
-                    scheduleList[index]['actual']!,
+                    scheduleList[index].unplanedwork,
                     overflow: TextOverflow.ellipsis,
                   ),
                 ),
