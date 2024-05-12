@@ -16,6 +16,7 @@ class _RootScreenState extends State<RootScreen> {
 
   int _selectedIndex = 0;
 
+
   @override
   void initState() {
     super.initState();
@@ -23,7 +24,7 @@ class _RootScreenState extends State<RootScreen> {
 
   void _onItemTapped(int index) async {
     if (index == 2) {
-      final newEvent = await Navigator.push<Event>(
+      final newEvent = await Navigator.push<EventModel>(
         context,
         MaterialPageRoute(builder: (context) => AddEventPage()),
       );
@@ -31,11 +32,11 @@ class _RootScreenState extends State<RootScreen> {
         setState(() {
           // 새로운 일정을 CalendarPage의 kEvents에 추가
           DateTime eventDate = DateTime.utc(
-            newEvent.date.year,
-            newEvent.date.month,
-            newEvent.date.day,
+            newEvent.eventDate.year,
+            newEvent.eventDate.month,
+            newEvent.eventDate.day,
           );
-          List<Event> events = kEvents[eventDate] ?? [];
+          List<EventModel> events = kEvents[eventDate] ?? [];
           kEvents[eventDate] = [...events, newEvent];
         });
         _selectedIndex = 0; // CalendarPage로 이동
