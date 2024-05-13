@@ -12,6 +12,7 @@ class EventModel {
   final String eventContent;    // 이벤트 내용
   final String allDayYn;        // 종일 여부
   final String completeYn;      // 완료 여부
+  final bool isRecurring;       // 중복 여부
 
   EventModel({
     required this.eventId,
@@ -24,5 +25,41 @@ class EventModel {
     required this.eventContent,
     required this.allDayYn,
     required this.completeYn,
+    required this.isRecurring,
   });
+
+  Map<String, dynamic> toMap() {
+    return {
+      'eventId': eventId,
+      'categoryId': categoryId,
+      'userId': userId,
+      'eventDate': eventDate.toIso8601String(),
+      'eventSttTime': eventSttTime.toIso8601String(),
+      'eventEndTime': eventEndTime.toIso8601String(),
+      'eventTitle': eventTitle,
+      'eventContent': eventContent,
+      'allDayYn': allDayYn,
+      'completeYn': completeYn,
+      'isRecurring':isRecurring,
+    };
+  }
+
+  factory EventModel.fromMap(Map<String, dynamic> map) {
+    return EventModel(
+      eventId: map['eventId'],
+      categoryId: map['categoryId'],
+      userId: map['userId'],
+      eventDate: DateTime.parse(map['eventDate']),
+      eventSttTime: DateTime.parse(map['eventSttTime']),
+      eventEndTime: DateTime.parse(map['eventEndTime']),
+      eventTitle: map['eventTitle'],
+      eventContent: map['eventContent'],
+      allDayYn: map['allDayYn'],
+      completeYn: map['completeYn'],
+      isRecurring: map['isRecurring'],
+
+    );
+  }
+
 }
+

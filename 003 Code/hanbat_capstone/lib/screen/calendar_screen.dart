@@ -3,16 +3,19 @@ import 'package:table_calendar/table_calendar.dart';
 import 'package:intl/intl.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 
+import '../model/event_model.dart';
+import 'addeventscreen.dart';
 
-class CalendarPage extends StatefulWidget {
+
+class CalendarScreen extends StatefulWidget {
 
   @override
-  _CalendarPageState createState() => _CalendarPageState();
+  _CalendarScreenstate createState() => _CalendarScreenstate();
 }
 
 Map<DateTime, List<EventModel>> kEvents = {};
 
-class _CalendarPageState extends State<CalendarPage> {
+class _CalendarScreenstate extends State<CalendarScreen> {
   Map<DateTime, List<EventModel>> selectedEvents = {};
   CalendarFormat _calendarFormat = CalendarFormat.month;
   DateTime _focusedDay = DateTime.now();
@@ -94,7 +97,7 @@ class _CalendarPageState extends State<CalendarPage> {
       Navigator.push(
         context,
         MaterialPageRoute(
-          builder: (context) => DayEventsPage(
+          builder: (context) => DayEventsScreen(
             events: _selectedEvents.value,
             selectedDate: selectedDay,
             updateCalendar: _updateCalendar,
@@ -246,13 +249,13 @@ class _CalendarPageState extends State<CalendarPage> {
   }
 }
 
-class DayEventsPage extends StatefulWidget {
+class DayEventsScreen extends StatefulWidget {
   final List<EventModel> events;
   final DateTime selectedDate;
   final VoidCallback updateCalendar;
   final bool deleteAllRecurrences = false;
 
-  DayEventsPage({
+  DayEventsScreen({
     required this.events,
     required this.selectedDate,
     required this.updateCalendar,
@@ -260,10 +263,23 @@ class DayEventsPage extends StatefulWidget {
   });
 
   @override
-  _DayEventsPageState createState() => _DayEventsPageState();
+  _DayEventsScreenState createState() => _DayEventsScreenState();
 }
 
-class _DayEventsPageState extends State<DayEventsPage> {
+class _DayEventsScreenState extends State<DayEventsScreen> {
+  @override
+  void initState() {
+    super.initState();
+    _fetchEvents();
+  }
+
+  @override
+  void didUpdateWidget(covariant DayEventsScreen oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.selectedDate != widget.selectedDate) {
+      _fetchEvents();
+    }
+  }
 
   void _fetchEvents() async {
     final snapshot = await FirebaseFirestore.instance.collection('events').get();
@@ -289,8 +305,10 @@ class _DayEventsPageState extends State<DayEventsPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
+
         title:
-        Text("Events for ${widget.selectedDate.toString().split(' ')[0]}"),
+        Text("${widget.selectedDate.toString().split(' ')[0]} 일정"),
+        centerTitle: true,
       ),
       body: ListView.builder(
         itemCount: widget.events.length,
@@ -309,7 +327,7 @@ class _DayEventsPageState extends State<DayEventsPage> {
               Navigator.push(
                 context,
                 MaterialPageRoute(
-                  builder: (context) => EventDetailsPage(
+                  builder: (context) => EventDetailScreen(
                     event: event,
                     onEventDeleted: (deleteAllRecurrences) async {
                       if (deleteAllRecurrences) {
@@ -347,7 +365,7 @@ class _DayEventsPageState extends State<DayEventsPage> {
         onPressed: () async {
         await Navigator.push(
           context,
-          MaterialPageRoute(builder: (context) => AddEventPage(selectedDate: widget.selectedDate)),
+          MaterialPageRoute(builder: (context) => AddEventScreen(selectedDate: widget.selectedDate)),
         );
         _fetchEvents(); // 일정 목록 갱신
       },
@@ -358,191 +376,14 @@ class _DayEventsPageState extends State<DayEventsPage> {
   }
 }
 
-class AddEventPage extends StatefulWidget {
-  final DateTime? selectedDate;
-  final EventModel? event;
-
-  AddEventPage({this.selectedDate, this.event});
-  @override
-  _AddEventPageState createState() => _AddEventPageState();
-}
-
-class _AddEventPageState extends State<AddEventPage> {
-  late DateTime? selectedDate;
-  late TimeOfDay selectedTime;
-  late TextEditingController _titleController;
-  late TextEditingController _descriptionController;
-  late bool isRecurring;
-
-  @override
-  void initState() {
-    super.initState();
-    selectedDate = widget.selectedDate;
-    selectedTime = TimeOfDay.fromDateTime(widget.event?.eventSttTime ?? DateTime.now());
-    _titleController = TextEditingController(text: widget.event?.eventTitle ?? '');
-    _descriptionController =
-        TextEditingController(text: widget.event?.eventContent ?? '');
-    isRecurring = widget.event?.isRecurring ?? false;
-  }
-
-  Future<void> _selectDate(BuildContext context) async {
-    final DateTime? picked = await showDatePicker(
-      context: context,
-      initialDate: selectedDate ?? DateTime.now(),
-      firstDate: DateTime(2000),
-      lastDate: DateTime(2100),
-    );
-    if (picked != null && picked != selectedDate) {
-      setState(() {
-        selectedDate = picked;
-      });
-    }
-  }
-
-  Future<void> _selectTime(BuildContext context) async {
-    final TimeOfDay? picked = await showTimePicker(
-      context: context,
-      initialTime: selectedTime,
-    );
-    if (picked != null && picked != selectedTime) {
-      setState(() {
-        selectedTime = picked;
-      });
-    }
-  }
-
-  Map<DateTime, List<EventModel>> _groupEvents(List<EventModel> events) {
-    final groupedEvents = <DateTime, List<EventModel>>{};
-    for (final event in events) {
-      final date = DateTime.utc(event.eventDate.year, event.eventDate.month, event.eventDate.day);
-      if (groupedEvents[date] == null) {
-        groupedEvents[date] = [];
-      }
-      groupedEvents[date]!.add(event);
-    }
-    return groupedEvents;
-  }
 
 
-
-
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: Text(widget.event == null ? 'Add Event' : 'Edit Event'),
-      ),
-      body: Form(
-        child: ListView(
-          padding: EdgeInsets.all(16.0),
-          children: <Widget>[
-            TextFormField(
-              controller: _titleController,
-              decoration: InputDecoration(
-                labelText: 'Title',
-                border: OutlineInputBorder(),
-              ),
-              validator: (value) {
-                if (value?.isEmpty ?? true) {
-                  return 'Please enter a title';
-                }
-                return null;
-              },
-            ),
-            SizedBox(height: 10),
-            TextFormField(
-              controller: _descriptionController,
-              decoration: InputDecoration(
-                labelText: 'Description',
-                border: OutlineInputBorder(),
-              ),
-              maxLines: 3,
-              validator: (value) {
-                if (value?.isEmpty ?? true) {
-                  return 'Please enter a description';
-                }
-                return null;
-              },
-            ),
-            if (selectedDate == null)
-              ListTile(
-                title: Text(
-                    "Date: ${selectedDate?.toString().split(' ')[0] ?? 'Select a date'}"),
-                trailing: Icon(Icons.calendar_today),
-                onTap: () => _selectDate(context),
-              ),
-            ListTile(
-              title: Text("Time: ${selectedTime.format(context)}"),
-              trailing: Icon(Icons.access_time),
-              onTap: () => _selectTime(context),
-            ),
-            CheckboxListTile(
-              title: Text('Repeat Weekly'),
-              value: isRecurring,
-              onChanged: (bool? value) {
-                if (value != null) {
-                  setState(() {
-                    isRecurring = value;
-                  });
-                }
-              },
-            ),
-            ElevatedButton(
-              onPressed: () async {
-                if (selectedDate != null) {
-                  final newEvent = EventModel(
-                    eventId: '',
-                    categoryId: '',
-                    userId: '',
-                    eventDate: selectedDate!,
-                    eventSttTime: DateTime(
-                      selectedDate!.year,
-                      selectedDate!.month,
-                      selectedDate!.day,
-                      selectedTime.hour,
-                      selectedTime.minute,
-                    ),
-                    eventEndTime: DateTime(
-                      selectedDate!.year,
-                      selectedDate!.month,
-                      selectedDate!.day,
-                      selectedTime.hour,
-                      selectedTime.minute,
-                    ),
-                    eventTitle: _titleController.text,
-                    eventContent: _descriptionController.text,
-                    allDayYn: 'N',
-                    completeYn: 'N',
-                    isRecurring: isRecurring,
-                  );
-                  final eventRef = await FirebaseFirestore.instance.collection('events').add(newEvent.toMap());
-                  final eventId = eventRef.id;
-                  await eventRef.update({'eventId': eventId});
-
-
-
-                  // 일정 등록 후 이전 화면으로 이동
-                  Navigator.pop(context);
-
-                };
-                },
-
-              child: Text('Save'),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class EventDetailsPage extends StatelessWidget {
+class EventDetailScreen extends StatelessWidget {
   final EventModel event;
   final Function(bool deleteAllRecurrence) onEventDeleted;
   final Function(EventModel) onEventEdited;
 
-  EventDetailsPage({
+  EventDetailScreen({
     required this.event,
     required this.onEventDeleted,
     required this.onEventEdited,
@@ -552,7 +393,7 @@ class EventDetailsPage extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text('Event Details'),
+        title: Text('일정 세부사항'),
         actions: [
           IconButton(
             icon: Icon(Icons.edit),
@@ -560,7 +401,7 @@ class EventDetailsPage extends StatelessWidget {
               final editedEvent = await Navigator.push<EventModel>(
                 context,
                 MaterialPageRoute(
-                  builder: (context) => AddEventPage(
+                  builder: (context) => AddEventScreen(
                     selectedDate: event.eventDate,
                     event: event,
                   ),
@@ -623,17 +464,17 @@ class EventDetailsPage extends StatelessWidget {
             ),
             SizedBox(height: 20),
             Text(
-              'Date: ${event.eventDate.toString().split(' ')[0]}',
+              '날짜: ${event.eventDate.toString().split(' ')[0]}',
               style: TextStyle(fontSize: 18),
             ),
             SizedBox(height: 10),
             Text(
-              'Time: ${DateFormat('HH:mm').format(event.eventSttTime)}',
+              '일정 추가 시간: ${DateFormat('HH:mm').format(event.eventSttTime)}',
               style: TextStyle(fontSize: 18),
             ),
             SizedBox(height: 20),
             Text(
-              'Description:',
+              '세부사항',
               style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
             ),
             SizedBox(height: 10),
@@ -643,68 +484,9 @@ class EventDetailsPage extends StatelessWidget {
             ),
           ],
         ),
+
       ),
     );
   }
 }
 
-class EventModel {
-  final String eventId;
-  final String categoryId;
-  final String userId;
-  final DateTime eventDate;
-  final DateTime eventSttTime;
-  final DateTime eventEndTime;
-  final String eventTitle;
-  final String eventContent;
-  final String allDayYn;
-  final String completeYn;
-  final bool isRecurring;
-
-  EventModel({
-    required this.eventId,
-    required this.categoryId,
-    required this.userId,
-    required this.eventDate,
-    required this.eventSttTime,
-    required this.eventEndTime,
-    required this.eventTitle,
-    required this.eventContent,
-    required this.allDayYn,
-    required this.completeYn,
-    required this.isRecurring,
-  });
-  Map<String, dynamic> toMap() {
-    return {
-      'eventId': eventId,
-      'categoryId': categoryId,
-      'userId': userId,
-      'eventDate': eventDate.toIso8601String(),
-      'eventSttTime': eventSttTime.toIso8601String(),
-      'eventEndTime': eventEndTime.toIso8601String(),
-      'eventTitle': eventTitle,
-      'eventContent': eventContent,
-      'allDayYn': allDayYn,
-      'completeYn': completeYn,
-      'isRecurring':isRecurring,
-    };
-  }
-
-  factory EventModel.fromMap(Map<String, dynamic> map) {
-    return EventModel(
-      eventId: map['eventId'],
-      categoryId: map['categoryId'],
-      userId: map['userId'],
-      eventDate: DateTime.parse(map['eventDate']),
-      eventSttTime: DateTime.parse(map['eventSttTime']),
-      eventEndTime: DateTime.parse(map['eventEndTime']),
-      eventTitle: map['eventTitle'],
-      eventContent: map['eventContent'],
-      allDayYn: map['allDayYn'],
-      completeYn: map['completeYn'],
-      isRecurring: map['isRecurring'],
-
-    );
-  }
-
-}

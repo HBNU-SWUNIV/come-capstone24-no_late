@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:hanbat_capstone/screen/schedule_screen.dart';
 
+import '../model/event_model.dart';
+import 'addeventscreen.dart';
 import 'review_screen.dart';
 import 'setting_screen.dart';
 import 'calendar_screen.dart';
@@ -22,15 +24,16 @@ class _RootScreenState extends State<RootScreen> {
     super.initState();
   }
 
+
   void _onItemTapped(int index) async {
     if (index == 2) {
       final newEvent = await Navigator.push<EventModel>(
         context,
-        MaterialPageRoute(builder: (context) => AddEventPage()),
+        MaterialPageRoute(builder: (context) => RootScreen()),
       );
       if (newEvent != null) {
         setState(() {
-          // 새로운 일정을 CalendarPage의 kEvents에 추가
+          // 새로운 일정을 CalendarScreen의 kEvents에 추가
           DateTime eventDate = DateTime.utc(
             newEvent.eventDate.year,
             newEvent.eventDate.month,
@@ -39,7 +42,7 @@ class _RootScreenState extends State<RootScreen> {
           List<EventModel> events = kEvents[eventDate] ?? [];
           kEvents[eventDate] = [...events, newEvent];
         });
-        _selectedIndex = 0; // CalendarPage로 이동
+        _selectedIndex = 0; // CalendarScreen로 이동
       }
     } else {
       setState(() {
@@ -59,10 +62,10 @@ class _RootScreenState extends State<RootScreen> {
   }
 
   List<Widget> renderChildren = <Widget>[
-    CalendarPage(),
+    CalendarScreen(),
 
     schedule_screen(),
-    AddEventPage(),
+    AddEventScreen(),
 
     ReviewScreen(), // 회고관리 화면 연결
     SettingScreen() // 설정관리 화면 연결
