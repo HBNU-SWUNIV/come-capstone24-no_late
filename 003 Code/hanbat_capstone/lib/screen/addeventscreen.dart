@@ -1,7 +1,9 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
+import 'package:hanbat_capstone/screen/calendar_screen.dart';
 import '../model/event_model.dart';
+import 'root_screen.dart';
 
 class AddEventScreen extends StatefulWidget {
   final DateTime? selectedDate;
@@ -146,8 +148,8 @@ class _AddEventScreenState extends State<AddEventScreen> {
                     eventTitle: _titleController.text,
                     eventContent: _descriptionController.text,
                     allDayYn: 'N',
-                    completeYn: 'N',
-                    isRecurring: isRecurring,
+                    completeYn: 'N', 
+                     isRecurring: isRecurring,
                   );
 
                   if (widget.event != null) {
@@ -165,8 +167,12 @@ class _AddEventScreenState extends State<AddEventScreen> {
                     await eventRef.update({'eventId': eventId});
                   }
 
-                  Navigator.pop(context);
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (context) => RootScreen()),
+                  );
                 }
+
 
               },
 

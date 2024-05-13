@@ -25,30 +25,10 @@ class _RootScreenState extends State<RootScreen> {
   }
 
 
-  void _onItemTapped(int index) async {
-    if (index == 2) {
-      final newEvent = await Navigator.push<EventModel>(
-        context,
-        MaterialPageRoute(builder: (context) => RootScreen()),
-      );
-      if (newEvent != null) {
-        setState(() {
-          // 새로운 일정을 CalendarScreen의 kEvents에 추가
-          DateTime eventDate = DateTime.utc(
-            newEvent.eventDate.year,
-            newEvent.eventDate.month,
-            newEvent.eventDate.day,
-          );
-          List<EventModel> events = kEvents[eventDate] ?? [];
-          kEvents[eventDate] = [...events, newEvent];
-        });
-        _selectedIndex = 0; // CalendarScreen로 이동
-      }
-    } else {
-      setState(() {
-        _selectedIndex = index;
-      });
-    }
+  void _onItemTapped(int index){
+    setState(() {
+      _selectedIndex = index;
+    });
   }
 
   @override
