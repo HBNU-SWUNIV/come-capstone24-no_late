@@ -78,4 +78,20 @@ class Schedule_CRUD {
       await doc.reference.delete();
     }
   }
+
+  //이 메서드는 새로운 day, time, planedwork, unplanedwork 값을 받아 새로운 Schedule_CRUD 객체를 생성
+  // 만약 새로운 값이 제공되지 않으면(null이면), 기존 객체의 값을 사용
+  Schedule_CRUD copyWith({
+    int? day,
+    String? time,
+    String? planedwork,
+    String? unplanedwork,
+  }) {
+    return Schedule_CRUD(
+      day: day ?? this.day,
+      time: time ?? this.time,
+      planedwork: planedwork ?? this.planedwork,
+      unplanedwork: unplanedwork ?? this.unplanedwork,
+    );
+  }
 }
