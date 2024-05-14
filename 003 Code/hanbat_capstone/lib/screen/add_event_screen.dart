@@ -8,6 +8,7 @@ class AddEventScreen extends StatefulWidget {
   final DateTime? selectedDate;
   final EventModel? event;
 
+
   AddEventScreen({this.selectedDate, this.event});
   @override
   _AddEventScreenState createState() => _AddEventScreenState();
@@ -20,6 +21,8 @@ class _AddEventScreenState extends State<AddEventScreen> {
   late TextEditingController _descriptionController;
   late bool isRecurring;
 
+
+
   @override
   void initState() {
     super.initState();
@@ -29,6 +32,9 @@ class _AddEventScreenState extends State<AddEventScreen> {
     _descriptionController =
         TextEditingController(text: widget.event?.eventContent ?? '');
     isRecurring = widget.event?.isRecurring ?? false;
+
+
+
   }
 
   Future<void> _selectDate(BuildContext context) async {
@@ -129,7 +135,7 @@ class _AddEventScreenState extends State<AddEventScreen> {
                     eventId: widget.event?.eventId ?? '',
                     categoryId: widget.event?.categoryId ?? '',
                     userId: widget.event?.userId ?? '',
-                    eventDate: selectedDate!,
+                    eventDate:  selectedDate!,
                     eventSttTime: DateTime(
                       selectedDate!.year,
                       selectedDate!.month,
@@ -148,7 +154,7 @@ class _AddEventScreenState extends State<AddEventScreen> {
                     eventContent: _descriptionController.text,
                     allDayYn: 'N',
                     completeYn: 'N',
-                     isRecurring: isRecurring,
+                    isRecurring: isRecurring,
                   );
 
                   if (widget.event != null) {
@@ -158,12 +164,11 @@ class _AddEventScreenState extends State<AddEventScreen> {
                         .doc(widget.event!.eventId)
                         .update(updatedEvent.toMap());
                   } else {
-                    // 새로운 이벤트 추가
-                    final eventRef = await FirebaseFirestore.instance
-                        .collection('events')
-                        .add(updatedEvent.toMap());
-                    final eventId = eventRef.id;
-                    await eventRef.update({'eventId': eventId});
+                  final eventRef = await FirebaseFirestore.instance
+                      .collection('events')
+                      .add(updatedEvent.toMap());
+                  final eventId = eventRef.id;
+                  await eventRef.update({'eventId': eventId});
                   }
 
                   Navigator.push(

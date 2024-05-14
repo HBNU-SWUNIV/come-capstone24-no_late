@@ -3,7 +3,6 @@ import 'package:flutter/material.dart';
 import 'package:hanbat_capstone/component/review_text_field.dart';
 import 'package:hanbat_capstone/component/top_date_picker.dart';
 import 'package:hanbat_capstone/model/review_model.dart';
-import 'package:uuid/uuid.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 
 

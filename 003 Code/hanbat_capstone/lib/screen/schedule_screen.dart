@@ -1,3 +1,4 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'Schedule_CRUD.dart';
@@ -8,11 +9,18 @@ import 'Schedule_CRUD.dart';
 //schedule_screen 위젯:
 // StatelessWidget을 상속받아 구현
 // build 메서드에서는 Scaffold 위젯을 반환하고, body에 TimeListView 위젯을 할당
+// 캘린더에서 selectedDate를 받기 위해 SchedulScreen 위젯 생성
 class schedule_screen extends StatelessWidget {
+  final DateTime selectedDate;
+
+  schedule_screen({required this.selectedDate});
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: TimeListView(),
+      // body: TimeListView(selectedDate: selectedDate),
+      // body: TimeListView(selectedDate: selectedDate ?? DateTime.now()),
+      body: TimeListView(selectedDate: selectedDate),
     );
   }
 }
@@ -21,7 +29,11 @@ class schedule_screen extends StatelessWidget {
 //TimeListView 위젯:
 // StatefulWidget을 상속받아 구현
 // createState 메서드에서 _TimeListViewState를 반환
+// selectedDate 전달
 class TimeListView extends StatefulWidget {
+  final DateTime selectedDate;
+
+  TimeListView({required this.selectedDate});
   @override
   _TimeListViewState createState() => _TimeListViewState();
 }
@@ -32,17 +44,18 @@ class TimeListView extends StatefulWidget {
 // selectedDate, timeList, scheduleList 변수를 적절히 초기화
 // initState 메서드에서 _loadSchedules 메서드를 호출하여 초기 데이터를 로드
 class _TimeListViewState extends State<TimeListView> {
-  DateTime selectedDate = DateTime.now();
+  // DateTime selectedDate = DateTime.now();
+  late DateTime selectedDate;
 
   final List<String> timeList = List.generate(24, (index) {
     return '${index.toString().padLeft(2, '0')}:00';
   });
 
-  List<Schedule_CRUD> scheduleList = List.generate(24, (_) => Schedule_CRUD(day: DateTime.now().day, time: '', planedwork: '', unplanedwork: ''));
-
+  List<Schedule_CRUD> scheduleList = List.generate(24, (_) => Schedule_CRUD(day: DateTime.now().day, time: "", planedwork: "", unplanedwork: ""));
   @override
   void initState() {
     super.initState();
+    selectedDate = widget.selectedDate;
     _loadSchedules();
   }
 
@@ -51,7 +64,26 @@ class _TimeListViewState extends State<TimeListView> {
   // 비동기 함수로 구현됨, Schedule_CRUD.getSchedulesByDate 메서드를 사용하여 선택된 날짜의 일정을 가져옴
   // 가져온 일정을 기반으로 scheduleList를 업데이트
   Future<void> _loadSchedules() async {
-    final schedules = await Schedule_CRUD.getSchedulesByDate(selectedDate);
+
+    final selectedDateTimestamp = Timestamp.fromDate(DateTime(selectedDate.year, selectedDate.month, selectedDate.day));
+    final querySnapshot = await FirebaseFirestore.instance
+        .collection('events')
+        .where('eventDate', isEqualTo: selectedDateTimestamp)
+        .get();
+
+    final schedules = querySnapshot.docs.map((doc) {
+      final eventData = doc.data();
+      final eventTitle = eventData['eventTitle'] as String? ?? '';
+      final eventTime = (eventData['eventSttTime'] as Timestamp?)?.toDate();
+
+      return Schedule_CRUD(
+          day: selectedDate.day,
+        time: DateFormat('HH:mm').format(eventTime!),
+        planedwork: eventTitle,
+        unplanedwork: '',
+      );
+    }).toList();
+
     setState(() {
       scheduleList = List.generate(24, (index) {
         final time = timeList[index];
@@ -61,6 +93,18 @@ class _TimeListViewState extends State<TimeListView> {
         );
       });
     });
+
+
+    // final schedules = await Schedule_CRUD.getSchedulesByDate(selectedDate);
+    // setState(() {
+    //   scheduleList = List.generate(24, (index) {
+    //     final time = timeList[index];
+    //     return schedules.firstWhere(
+    //           (schedule) => schedule.time == time,
+    //       orElse: () => Schedule_CRUD(day: selectedDate.day, time: time, planedwork: '', unplanedwork: ''),
+    //     );
+    //   });
+    // });
   }
 
 
