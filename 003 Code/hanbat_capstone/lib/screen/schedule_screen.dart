@@ -1,9 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
-import 'schedule_crud.dart';
+import 'Schedule_CRUD.dart';
 
 
 
+
+//schedule_screen 위젯:
+// StatelessWidget을 상속받아 구현
+// build 메서드에서는 Scaffold 위젯을 반환하고, body에 TimeListView 위젯을 할당
 class schedule_screen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
@@ -13,11 +17,20 @@ class schedule_screen extends StatelessWidget {
   }
 }
 
+
+//TimeListView 위젯:
+// StatefulWidget을 상속받아 구현
+// createState 메서드에서 _TimeListViewState를 반환
 class TimeListView extends StatefulWidget {
   @override
   _TimeListViewState createState() => _TimeListViewState();
 }
 
+
+//TimeListViewState 클래스:
+// TimeListView 위젯의 상태를 관리
+// selectedDate, timeList, scheduleList 변수를 적절히 초기화
+// initState 메서드에서 _loadSchedules 메서드를 호출하여 초기 데이터를 로드
 class _TimeListViewState extends State<TimeListView> {
   DateTime selectedDate = DateTime.now();
 
@@ -33,6 +46,10 @@ class _TimeListViewState extends State<TimeListView> {
     _loadSchedules();
   }
 
+
+  //_loadSchedules 메서드:
+  // 비동기 함수로 구현됨, Schedule_CRUD.getSchedulesByDate 메서드를 사용하여 선택된 날짜의 일정을 가져옴
+  // 가져온 일정을 기반으로 scheduleList를 업데이트
   Future<void> _loadSchedules() async {
     final schedules = await Schedule_CRUD.getSchedulesByDate(selectedDate);
     setState(() {
@@ -46,6 +63,9 @@ class _TimeListViewState extends State<TimeListView> {
     });
   }
 
+
+  //_updateDate 메서드:
+  // 선택된 날짜를 변경하고 _loadSchedules 메서드를 호출하여 해당 날짜의 일정을 로드
   void _updateDate(int daysOffset) {
     setState(() {
       selectedDate = selectedDate.add(Duration(days: daysOffset));
@@ -53,12 +73,15 @@ class _TimeListViewState extends State<TimeListView> {
     });
   }
 
+  // 일단 남겨둔 코드
   // void _copyPlanToActual(int index) {
   //   setState(() {
   //     scheduleList[index]['actual'] = scheduleList[index]['plan']!;
   //   });
   // }
 
+  //_copyPlanToActual 메서드:
+  //계획을 실제 활동으로 복사하고, Schedule_CRUD.updateSchedule 메서드를 사용하여 일정을 업데이트
   void _copyPlanToActual(int index) {
     setState(() {
       scheduleList[index].unplanedwork = scheduleList[index].planedwork;
@@ -66,6 +89,11 @@ class _TimeListViewState extends State<TimeListView> {
     });
   }
 
+
+  //_addSchedule 메서드:
+  // 다이얼로그를 통해 새로운 일정을 추가할 수 있음
+  // 입력된 값을 기반으로 Schedule_CRUD 객체를 생성하고, Schedule_CRUD.createSchedule 메서드를 사용하여 일정을 생성
+  // 생성된 일정을 scheduleList에 추가
   void _addSchedule(int index) async {
     final schedule = await showDialog<Map<String, String>>(
       context: context,
@@ -110,6 +138,10 @@ class _TimeListViewState extends State<TimeListView> {
     }
   }
 
+
+  //_add_actually_Schedule 메서드:
+  // 다이얼로그를 통해 실제 활동을 추가할 수 있음
+  // 입력된 값을 기반으로 기존 일정을 업데이트하고, Schedule_CRUD.updateSchedule 메서드를 사용하여 일정을 업데이트
   void _add_actually_Schedule(int index) async {
     final schedule = await showDialog<Map<String, String>>(
       context: context,
@@ -149,6 +181,13 @@ class _TimeListViewState extends State<TimeListView> {
     }
   }
 
+
+  //build 메서드:
+  // 화면 크기에 따라 동적으로 컬럼 너비를 계산
+  // AppBar에는 선택된 날짜와 이전/다음 날짜로 이동할 수 있는 아이콘 버튼 존재
+  // body에는 SingleChildScrollView 내부에 DataTable 위젯 존재
+  // DataTable은 시간, 일정, 조정, 결과에 대한 컬럼을 가지고 있음
+  // 각 행은 해당 시간대의 일정을 나타내며, 일정과 결과를 탭하여 수정할 수 있음
   @override
   Widget build(BuildContext context) {
     double screenWidth = MediaQuery.of(context).size.width;
