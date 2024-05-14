@@ -1,7 +1,6 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
-import 'package:hanbat_capstone/screen/calendar_screen.dart';
 import '../model/event_model.dart';
 import 'root_screen.dart';
 
@@ -148,7 +147,7 @@ class _AddEventScreenState extends State<AddEventScreen> {
                     eventTitle: _titleController.text,
                     eventContent: _descriptionController.text,
                     allDayYn: 'N',
-                    completeYn: 'N', 
+                    completeYn: 'N',
                      isRecurring: isRecurring,
                   );
 
