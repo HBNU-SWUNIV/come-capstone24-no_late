@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:hanbat_capstone/screen/schedule_screen.dart';
 
 import '../model/event_model.dart';
-import 'addeventscreen.dart';
+import 'add_event_screen.dart';
 import 'review_screen.dart';
 import 'setting_screen.dart';
 import 'calendar_screen.dart';
