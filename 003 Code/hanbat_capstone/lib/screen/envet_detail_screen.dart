@@ -40,7 +40,7 @@ class EventDetailScreen extends StatelessWidget {
           IconButton(
             icon: Icon(Icons.delete),
             onPressed: () {
-              if (event.isRecurring) {
+              if (event.isRecurring ?? false) {
                 showDialog(
                   context: context,
                   builder: (context) => AlertDialog(
@@ -94,7 +94,7 @@ class EventDetailScreen extends StatelessWidget {
             ),
             SizedBox(height: 10),
             Text(
-              '일정 시작 시간: ${DateFormat('HH:mm').format(event.eventSttTime)}',
+              '일정 시작 시간: ${DateFormat('HH:mm').format(event.eventSttTime ?? DateTime.now())}',
               style: TextStyle(fontSize: 18),
             ),
             SizedBox(height: 20),
@@ -104,7 +104,7 @@ class EventDetailScreen extends StatelessWidget {
             ),
             SizedBox(height: 10),
             Text(
-              event.eventContent,
+              event.eventContent?? 'no details avilable',
               style: TextStyle(fontSize: 18),
             ),
           ],

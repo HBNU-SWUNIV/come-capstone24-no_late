@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'chat_screen.dart';
 import 'schedule_screen.dart';
 
 import 'add_event_screen.dart';
@@ -53,6 +54,16 @@ class _RootScreenState extends State<RootScreen> {
         child: renderChildren(widget.selectedDate).elementAt(_selectedIndex),
       ),
       bottomNavigationBar: renderBottomNavigation(),
+      floatingActionButton: FloatingActionButton(
+        onPressed: () {
+          // 채팅창 열기
+          Navigator.push(
+            context,
+            MaterialPageRoute(builder: (context) => ChatScreen()),
+          );
+        },
+        child: Icon(Icons.chat),
+      ),
     );
   }
 

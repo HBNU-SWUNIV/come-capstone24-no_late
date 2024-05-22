@@ -8,6 +8,8 @@ import '../model/event_model.dart';
 import 'add_event_screen.dart';
 import 'package:intl/intl.dart';
 
+import 'day_events_screen.dart';
+
 class CalendarScreen extends StatefulWidget {
   @override
   _CalendarScreenState createState() => _CalendarScreenState();
@@ -20,7 +22,9 @@ class _CalendarScreenState extends State<CalendarScreen> {
   CalendarFormat _calendarFormat = CalendarFormat.month; // 캘린더 형식 : 달
   DateTime _focusedDay = DateTime.now(); // 현재 포거스된 날짜
   DateTime? _selectedDay; //선택한 날짜
-  late ValueNotifier<List<EventModel>> _selectedEvents; //선택한 날짜의 이벤트 목록
+  late ValueNotifier<List<EventModel>> _selectedEvents;
+  //선택한 날짜의 이벤트 목록
+  bool _isLoading= true;
 
   @override
   void initState() {
@@ -28,24 +32,28 @@ class _CalendarScreenState extends State<CalendarScreen> {
     _selectedDay = _focusedDay; //// _selectedDay 초기화
     _selectedEvents = ValueNotifier<List<EventModel>>([]); // 빈목록으로 초기화 해 일정 가져옴
     _fetchEvents();
+
   }
 
-  @override
-  void dispose() {
-    _selectedEvents.dispose(); // _slectedEvents 리소스 해제
-    super.dispose();
-  }
 
-  void _fetchEvents() async {
-    final snapshot = await FirebaseFirestore.instance
-        .collection('events')
-        .get(); // 1. Firebase Firestore에서 일정 데이터 가저옴
-    final events = snapshot.docs
-        .map((doc) => EventModel.fromMap(doc.data()))
-        .toList(); //2. 가저온 데이터를 EventModel로 변환
+  Future<void> _fetchEvents() async {
     setState(() {
-      kEvents = _groupEvents(events); //3. _groupEvents로 일정을 그룹화 -> kEvent에 저장
+      _isLoading = true;
     });
+
+    try {
+      final snapshot = await FirebaseFirestore.instance.collection('events').get();
+      final events = snapshot.docs.map((doc) => EventModel.fromMap(doc.data())).toList();
+      setState(() {
+        kEvents = _groupEvents(events);
+        _isLoading = false;
+      });
+    } catch (error) {
+      // 에러 처리 로직 추가
+      setState(() {
+        _isLoading = false;
+      });
+    }
   }
 
   Map<DateTime, List<EventModel>> _groupEvents(List<EventModel> events) {
@@ -53,7 +61,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
     final groupedEvents = <DateTime, List<EventModel>>{};
     for (final event in events) {
       final date = DateTime.utc(
-          event.eventDate.year, event.eventDate.month, event.eventDate.day);
+        event.eventDate?.year ?? 0, event.eventDate?.month ?? 0, event.eventDate?.day?? 0, );
       groupedEvents
           .putIfAbsent(date, () => [])
           .add(event); // 각 날짜에 해당하는 일정들을 groupedEvents에 저장
@@ -113,14 +121,14 @@ class _CalendarScreenState extends State<CalendarScreen> {
       );
       if (result != null) {
         // 일정 추가 후 캘린더 갱신
-        _fetchEvents();
+        await _fetchEvents();
       }
     } else {
       // 일정이 있는 경우, 스케줄러 화면으로 이동
       Navigator.push(
         context,
         MaterialPageRoute(
-          builder: (context) => RootScreen(selectedDate: selectedDay),
+            builder: (context) => DayEventsScreen(selectedDate: selectedDay, events: [], updateCalendar: () {  },)
         ),
       );
     }
@@ -220,7 +228,9 @@ class _CalendarScreenState extends State<CalendarScreen> {
         (size.height - kToolbarHeight - MediaQuery.of(context).padding.top) / 6;
 
     return Scaffold(
-      body: ListView(
+      body: _isLoading
+          ? Center(child: CircularProgressIndicator())
+          : ListView(
         children: [
           TableCalendar<EventModel>(
             locale: 'ko_KR',
@@ -277,8 +287,8 @@ class _CalendarScreenState extends State<CalendarScreen> {
                   );
                 }
               },
-              markerBuilder: (context, date, events) =>
-                  _buildEventsMarker(date, events),
+              markerBuilder: (context, day, events) =>
+                  _buildEventsMarker(day, events),
               defaultBuilder: (context, day, focusedDay) {
                 return Stack(children: [
                   Align(

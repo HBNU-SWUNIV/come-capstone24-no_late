@@ -66,7 +66,7 @@ class _DayEventsScreenState extends State<DayEventsScreen> {
           final event = widget.events[index];
           return ListTile(
             title: Text(event.eventTitle),
-            subtitle: Text(DateFormat('HH:mm').format(event.eventSttTime)),
+            subtitle: Text(DateFormat('HH:mm').format(event.eventSttTime ?? DateTime.now())),
             trailing: IconButton(
               icon: Icon(Icons.delete),
               onPressed: () => _deleteEvent(event),
