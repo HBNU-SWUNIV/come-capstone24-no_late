@@ -12,6 +12,7 @@ class EventModel {
   final String? eventContent; // 이벤트 내용
   final String allDayYn; // 종일 여부
   final bool? isRecurring; // 중복 여부
+  final String? completeYn;
 
   EventModel({
     required this.eventId,
@@ -24,6 +25,7 @@ class EventModel {
     this.eventContent,
     required this.allDayYn,
     this.isRecurring,
+    this.completeYn,
   });
 
   Map<String, dynamic> toMap() {
