@@ -1,3 +1,5 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
+
 /**
  * 회고관리 모델
  */
@@ -27,11 +29,22 @@ class ReviewModel {
         reviewTitle = json['reviewTitle'],
         reviewContent = json['reviewContent'];
 
+  factory ReviewModel.fromDocument(DocumentSnapshot doc) {
+    return ReviewModel(
+      reviewId: doc['reviewId'],
+      userId: doc['userId'],
+      reviewDate: doc['reviewDate'],
+      reviewTitle: doc['reviewTitle'],
+      reviewContent: doc['reviewContent']
+    );
+  }
+
   /**
    * 모델을 JSON으로 변환
    */
   Map<String, dynamic> toJson () {
     return {
+      'type' : 'review',
       'reviewId': reviewId,
       'userId': userId,
       'reviewDate': '${reviewDate.year}${reviewDate.month.toString().padLeft(2,'0')}${reviewDate.day.toString().padLeft(2,'0')}',
