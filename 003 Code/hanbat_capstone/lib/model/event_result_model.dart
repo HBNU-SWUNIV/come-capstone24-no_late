@@ -1,21 +1,56 @@
 class EventResultModel {
-  final String eventRetId;         // 이벤트 결과 ID
-  final String categoryId;         // 카테고리 ID
-  final String userId;             // 사용자 ID
-  final DateTime eventRetDate;     // 이벤트 결과 날짜
-  final DateTime eventRetSttTime;  // 이벤트 결과 시작시간
-  final DateTime eventRetEndTime;  // 이벤트 결과 종료시간
-  final String eventRetTitle;      // 이벤트 결과 제목
-  final String eventRetContent;    // 이벤트 결과 내용
+  final String eventResultId; // 이벤트 결과 ID
+  final String eventId; // 이벤트 ID
+  final String categoryId; // 카테고리 ID
+  final String userId; // 사용자 ID
+  final DateTime eventResultDate; // 이벤트 결과 날짜
+  final DateTime eventResultSttTime; // 이벤트 결과 시작시간
+  final DateTime eventResultEndTime; // 이벤트 결과 종료시간
+  final String eventResultTitle; // 이벤트 결과 제목
+  final String eventResultContent; // 이벤트 결과 내용
+  final String completeYn; // 완료 여부
 
   EventResultModel({
-    required this.eventRetId,
+    required this.eventResultId,
+    required this.eventId,
     required this.categoryId,
     required this.userId,
-    required this.eventRetDate,
-    required this.eventRetSttTime,
-    required this.eventRetEndTime,
-    required this.eventRetTitle,
-    required this.eventRetContent,
+    required this.eventResultDate,
+    required this.eventResultSttTime,
+    required this.eventResultEndTime,
+    required this.eventResultTitle,
+    required this.eventResultContent,
+    required this.completeYn,
   });
+
+  // toMap, fromMap 메서드 추가
+  Map<String, dynamic> toMap() {
+    return {
+      'eventResultId': eventResultId,
+      'eventId': eventId,
+      'categoryId': categoryId,
+      'userId': userId,
+      'eventResultDate': eventResultDate,
+      'eventResultSttTime': eventResultSttTime,
+      'eventResultEndTime': eventResultEndTime,
+      'eventResultTitle': eventResultTitle,
+      'eventResultContent': eventResultContent,
+      'completeYn': completeYn,
+    };
+  }
+
+  factory EventResultModel.fromMap(Map<String, dynamic> map) {
+    return EventResultModel(
+      eventResultId: map['eventResultId'],
+      eventId: map['eventId'],
+      categoryId: map['categoryId'],
+      userId: map['userId'],
+      eventResultDate: map['eventResultDate'].toDate(),
+      eventResultSttTime: map['eventResultSttTime'].toDate(),
+      eventResultEndTime: map['eventResultEndTime'].toDate(),
+      eventResultTitle: map['eventResultTitle'],
+      eventResultContent: map['eventResultContent'],
+      completeYn: map['completeYn'],
+    );
+  }
 }

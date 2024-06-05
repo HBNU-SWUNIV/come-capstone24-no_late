@@ -1,15 +1,12 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
+import 'package:hanbat_capstone/screen/Schedule_CRUD.dart';
 import 'package:intl/intl.dart';
-import 'Schedule_CRUD.dart';
+import 'package:hanbat_capstone/model/event_model.dart';
+import 'package:hanbat_capstone/model/event_result_model.dart';
+import 'add_event_screen.dart';
+import 'package:hanbat_capstone/screen/envet_detail_screen.dart';
 
-
-
-
-//schedule_screen 위젯:
-// StatelessWidget을 상속받아 구현
-// build 메서드에서는 Scaffold 위젯을 반환하고, body에 TimeListView 위젯을 할당
-// 캘린더에서 selectedDate를 받기 위해 SchedulScreen 위젯 생성
 class schedule_screen extends StatelessWidget {
   final DateTime selectedDate;
 
@@ -18,18 +15,11 @@ class schedule_screen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      // body: TimeListView(selectedDate: selectedDate),
-      // body: TimeListView(selectedDate: selectedDate ?? DateTime.now()),
       body: TimeListView(selectedDate: selectedDate),
     );
   }
 }
 
-
-//TimeListView 위젯:
-// StatefulWidget을 상속받아 구현
-// createState 메서드에서 _TimeListViewState를 반환
-// selectedDate 전달
 class TimeListView extends StatefulWidget {
   final DateTime selectedDate;
 
@@ -38,168 +28,161 @@ class TimeListView extends StatefulWidget {
   _TimeListViewState createState() => _TimeListViewState();
 }
 
-
-//TimeListViewState 클래스:
-// TimeListView 위젯의 상태를 관리
-// selectedDate, timeList, scheduleList 변수를 적절히 초기화
-// initState 메서드에서 _loadSchedules 메서드를 호출하여 초기 데이터를 로드
 class _TimeListViewState extends State<TimeListView> {
-  // DateTime selectedDate = DateTime.now();
   late DateTime selectedDate;
 
   final List<String> timeList = List.generate(24, (index) {
     return '${index.toString().padLeft(2, '0')}:00';
   });
 
-  List<Schedule_CRUD> scheduleList = List.generate(24, (_) => Schedule_CRUD(day: DateTime.now().day, time: "", planedwork: "", unplanedwork: ""));
+  List<EventModel> scheduleList = List.generate(24, (_) => EventModel(
+    eventId: '',
+    categoryId: '',
+    userId: '',
+    eventTitle: '',
+    allDayYn: 'N',
+  ));
+
+  List<EventResultModel> resultList = List.generate(24, (_) => EventResultModel(
+    eventResultId: '',
+    eventId: '',
+    categoryId: '',
+    userId: '',
+    eventResultDate: DateTime.now(),
+    eventResultSttTime: DateTime.now(),
+    eventResultEndTime: DateTime.now(),
+    eventResultTitle: '',
+    eventResultContent: '',
+    completeYn: 'N',
+  ));
+
   @override
   void initState() {
     super.initState();
     selectedDate = widget.selectedDate;
     _loadSchedules();
+    _loadResults();
   }
 
-
-  //_loadSchedules 메서드:
-  // 비동기 함수로 구현됨, Schedule_CRUD.getSchedulesByDate 메서드를 사용하여 선택된 날짜의 일정을 가져옴
-  // 가져온 일정을 기반으로 scheduleList를 업데이트
   Future<void> _loadSchedules() async {
+    // Firestore에서 선택한 날짜의 EventModel 데이터를 가져와 scheduleList를 업데이트하는 로직
+    // ...
+  }
 
-    final selectedDateTimestamp = Timestamp.fromDate(DateTime(selectedDate.year, selectedDate.month, selectedDate.day));
-    final querySnapshot = await FirebaseFirestore.instance
-        .collection('events')
-        .where('eventDate', isEqualTo: selectedDateTimestamp)
-        .get();
-
-    final schedules = querySnapshot.docs.map((doc) {
-      final eventData = doc.data();
-      final eventTitle = eventData['eventTitle'] as String? ?? '';
-      final eventTime = (eventData['eventSttTime'] as Timestamp?)?.toDate();
-
-      return Schedule_CRUD(
-          day: selectedDate.day,
-        time: DateFormat('HH:mm').format(eventTime!),
-        planedwork: eventTitle,
-        unplanedwork: '',
-      );
-    }).toList();
-
+  Future<void> _loadResults() async {
+    final results = await Schedule_CRUD.getEventResultsByDate(selectedDate);
     setState(() {
-      scheduleList = List.generate(24, (index) {
+      resultList = List.generate(24, (index) {
         final time = timeList[index];
-        return schedules.firstWhere(
-              (schedule) => schedule.time == time,
-          orElse: () => Schedule_CRUD(day: selectedDate.day, time: time, planedwork: '', unplanedwork: ''),
+        return results.firstWhere(
+              (result) => DateFormat('HH:mm').format(result.eventResultSttTime) == time,
+          orElse: () => EventResultModel(
+            eventResultId: '',
+            eventId: '',
+            categoryId: '',
+            userId: '',
+            eventResultDate: selectedDate,
+            eventResultSttTime: DateTime(selectedDate.year, selectedDate.month, selectedDate.day, index),
+            eventResultEndTime: DateTime(selectedDate.year, selectedDate.month, selectedDate.day, index + 1),
+            eventResultTitle: '',
+            eventResultContent: '',
+            completeYn: 'N',
+          ),
         );
       });
     });
-
-
-    // final schedules = await Schedule_CRUD.getSchedulesByDate(selectedDate);
-    // setState(() {
-    //   scheduleList = List.generate(24, (index) {
-    //     final time = timeList[index];
-    //     return schedules.firstWhere(
-    //           (schedule) => schedule.time == time,
-    //       orElse: () => Schedule_CRUD(day: selectedDate.day, time: time, planedwork: '', unplanedwork: ''),
-    //     );
-    //   });
-    // });
   }
 
-
-  //_updateDate 메서드:
-  // 선택된 날짜를 변경하고 _loadSchedules 메서드를 호출하여 해당 날짜의 일정을 로드
   void _updateDate(int daysOffset) {
     setState(() {
       selectedDate = selectedDate.add(Duration(days: daysOffset));
       _loadSchedules();
+      _loadResults();
     });
   }
 
-  // 일단 남겨둔 코드
-  // void _copyPlanToActual(int index) {
-  //   setState(() {
-  //     scheduleList[index]['actual'] = scheduleList[index]['plan']!;
-  //   });
-  // }
-
-  //_copyPlanToActual 메서드:
-  //계획을 실제 활동으로 복사하고, Schedule_CRUD.updateSchedule 메서드를 사용하여 일정을 업데이트
-  void _copyPlanToActual(int index) {
-    setState(() {
-      scheduleList[index].unplanedwork = scheduleList[index].planedwork;
-      Schedule_CRUD.updateSchedule(scheduleList[index]);
-    });
-  }
-
-
-  //_addSchedule 메서드:
-  // 다이얼로그를 통해 새로운 일정을 추가할 수 있음
-  // 입력된 값을 기반으로 Schedule_CRUD 객체를 생성하고, Schedule_CRUD.createSchedule 메서드를 사용하여 일정을 생성
-  // 생성된 일정을 scheduleList에 추가
   void _addSchedule(int index) async {
-    final schedule = await showDialog<Map<String, String>>(
-      context: context,
-      builder: (context) {
-        String planedwork = '';
-        return AlertDialog(
-          title: const Text('일정 추가'),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              TextField(
-                decoration: const InputDecoration(labelText: '계획'),
-                onChanged: (value) {
-                  planedwork = value;
-                },
-              ),
-            ],
-          ),
-          actions: [
-            TextButton(
-              onPressed: () {
-                Navigator.of(context).pop({'planedwork': planedwork});
-              },
-              child: const Text('추가'),
-            ),
-          ],
-        );
-      },
-    );
-
-    if (schedule != null && schedule['planedwork']!.isNotEmpty) {
-      final newSchedule = Schedule_CRUD(
-        day: selectedDate.day,
-        time: timeList[index],
-        planedwork: schedule['planedwork']!,
-        unplanedwork: '',
+    final eventModel = scheduleList[index];
+    if (eventModel.eventTitle.isEmpty) {
+      // 계획이 비어있는 경우 AddEventScreen 띄우기
+      final newEvent = await Navigator.push<EventModel>(
+        context,
+        MaterialPageRoute(builder: (context) => AddEventScreen(selectedDate: selectedDate)),
       );
-      await Schedule_CRUD.createSchedule(newSchedule);
-      setState(() {
-        scheduleList[index] = newSchedule;
-      });
+      if (newEvent != null) {
+        // AddEventScreen에서 입력된 데이터를 Firestore에 추가
+        final eventRef = FirebaseFirestore.instance.collection('events').doc();
+        await eventRef.set({
+          'eventId': eventRef.id,
+          'categoryId': newEvent.categoryId,
+          'userId': newEvent.userId,
+          'eventDate': newEvent.eventDate,
+          'eventSttTime': newEvent.eventSttTime,
+          'eventEndTime': newEvent.eventEndTime,
+          'eventTitle': newEvent.eventTitle,
+          'eventContent': newEvent.eventContent,
+          'allDayYn': newEvent.allDayYn,
+        });
+        _loadSchedules(); // 일정 리스트 갱신
+      }
+    } else {
+      // 계획이 비어있지 않은 경우 EventDetailScreen 띄우기
+      await Navigator.push(
+        context,
+        MaterialPageRoute(builder: (context) => EventDetailScreen(
+          event: eventModel,
+          onEventDeleted: (bool deleteAllRecurrence) async {
+            if (deleteAllRecurrence) {
+              // 모든 반복 일정 삭제
+              await FirebaseFirestore.instance
+                  .collection('events')
+                  .where('eventId', isEqualTo: eventModel.eventId)
+                  .get()
+                  .then((snapshot) {
+                for (DocumentSnapshot doc in snapshot.docs) {
+                  doc.reference.delete();
+                }
+              });
+            } else {
+              // 현재 일정만 삭제
+              await FirebaseFirestore.instance.collection('events').doc(eventModel.eventId).delete();
+            }
+            _loadSchedules(); // 일정 리스트 갱신
+          },
+          onEventEdited: (editedEvent) async {
+            await FirebaseFirestore.instance.collection('events').doc(eventModel.eventId).update({
+              'eventTitle': editedEvent.eventTitle,
+              'eventContent': editedEvent.eventContent,
+              // 수정된 다른 필드들도 업데이트
+            });
+            _loadSchedules(); // 일정 리스트 갱신
+          },
+        )),
+      );
     }
   }
 
-
-  //_add_actually_Schedule 메서드:
-  // 다이얼로그를 통해 실제 활동을 추가할 수 있음
-  // 입력된 값을 기반으로 기존 일정을 업데이트하고, Schedule_CRUD.updateSchedule 메서드를 사용하여 일정을 업데이트
   void _add_actually_Schedule(int index) async {
-    final schedule = await showDialog<Map<String, String>>(
+    final eventResult = await showDialog<Map<String, String>>(
       context: context,
       builder: (context) {
-        String unplanedwork = '';
+        String eventResultTitle = '';
+        String eventResultContent = '';
         return AlertDialog(
-          title: const Text('일정 추가'),
+          title: const Text('일정 결과 추가'),
           content: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
               TextField(
-                decoration: const InputDecoration(labelText: '실제 활동'),
+                decoration: const InputDecoration(labelText: '결과 제목'),
                 onChanged: (value) {
-                  unplanedwork = value;
+                  eventResultTitle = value;
+                },
+              ),
+              TextField(
+                decoration: const InputDecoration(labelText: '결과 내용'),
+                onChanged: (value) {
+                  eventResultContent = value;
                 },
               ),
             ],
@@ -207,7 +190,10 @@ class _TimeListViewState extends State<TimeListView> {
           actions: [
             TextButton(
               onPressed: () {
-                Navigator.of(context).pop({'unplanedwork': unplanedwork});
+                Navigator.of(context).pop({
+                  'eventResultTitle': eventResultTitle,
+                  'eventResultContent': eventResultContent,
+                });
               },
               child: const Text('추가'),
             ),
@@ -216,23 +202,47 @@ class _TimeListViewState extends State<TimeListView> {
       },
     );
 
-    if (schedule != null && schedule['unplanedwork']!.isNotEmpty) {
-      final newSchedule = scheduleList[index].copyWith(unplanedwork: schedule['unplanedwork']!);
-      await Schedule_CRUD.updateSchedule(newSchedule);
-      setState(() {
-        scheduleList[index] = newSchedule;
-      });
+    if (eventResult != null && eventResult['eventResultTitle']!.isNotEmpty) {
+      final newEventResult = EventResultModel(
+        eventResultId: '${selectedDate.millisecondsSinceEpoch}:${index}',
+        eventId: 'eventId',  // 실제 eventId로 변경 필요
+        categoryId: 'categoryId',  // 실제 categoryId로 변경 필요
+        userId: 'userId',  // 실제 userId로 변경 필요
+        eventResultDate: selectedDate,
+        eventResultSttTime: DateTime(selectedDate.year, selectedDate.month, selectedDate.day, index),
+        eventResultEndTime: DateTime(selectedDate.year, selectedDate.month, selectedDate.day, index + 1),
+        eventResultTitle: eventResult['eventResultTitle']!,
+        eventResultContent: eventResult['eventResultContent']!,
+        completeYn: 'N',
+      );
+      await Schedule_CRUD.createEventResult(newEventResult);
+      _loadResults();  // 결과 리스트 갱신
     }
   }
 
 
-  //build 메서드:
-  // 화면 크기에 따라 동적으로 컬럼 너비를 계산
-  // AppBar에는 선택된 날짜와 이전/다음 날짜로 이동할 수 있는 아이콘 버튼 존재
-  // body에는 SingleChildScrollView 내부에 DataTable 위젯 존재
-  // DataTable은 시간, 일정, 조정, 결과에 대한 컬럼을 가지고 있음
-  // 각 행은 해당 시간대의 일정을 나타내며, 일정과 결과를 탭하여 수정할 수 있음
-  @override
+  //copyPlanToResult 클래스
+  void _copyPlanToActual(int index) async {
+    final eventModel = scheduleList[index];
+    final newEventResult = EventResultModel(
+      eventResultId: '${selectedDate.millisecondsSinceEpoch}:${index}',
+      eventId: eventModel.eventId,
+      categoryId: eventModel.categoryId,
+      userId: eventModel.userId,
+      eventResultDate: selectedDate,
+      eventResultSttTime: DateTime(selectedDate.year, selectedDate.month, selectedDate.day, index),
+      eventResultEndTime: DateTime(selectedDate.year, selectedDate.month, selectedDate.day, index + 1),
+      eventResultTitle: eventModel.eventTitle,
+      eventResultContent: eventModel.eventContent ?? '',
+      completeYn: 'N',
+    );
+
+    await Schedule_CRUD.createEventResult(newEventResult);
+    _loadResults();
+  }
+
+
+    @override
   Widget build(BuildContext context) {
     double screenWidth = MediaQuery.of(context).size.width;
     double planColumnWidth = screenWidth * 0.3;
@@ -304,7 +314,7 @@ class _TimeListViewState extends State<TimeListView> {
                 Container(
                   width: planColumnWidth,
                   child: Text(
-                    scheduleList[index].planedwork,
+                    scheduleList[index].eventTitle,
                     overflow: TextOverflow.ellipsis,
                   ),
                 ),
@@ -327,7 +337,7 @@ class _TimeListViewState extends State<TimeListView> {
                 Container(
                   width: actualColumnWidth,
                   child: Text(
-                    scheduleList[index].unplanedwork,
+                    resultList[index].eventResultTitle,
                     overflow: TextOverflow.ellipsis,
                   ),
                 ),

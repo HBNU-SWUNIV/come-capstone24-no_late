@@ -77,7 +77,6 @@ class _AddEventScreenState extends State<AddEventScreen> {
         eventSttTime: _startTime,
         eventEndTime: _endTime,
         allDayYn: 'N',
-        completeYn: 'N',
         isRecurring: _isRecurring,
       );
 
