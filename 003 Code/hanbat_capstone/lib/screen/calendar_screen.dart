@@ -116,7 +116,11 @@ class _CalendarScreenState extends State<CalendarScreen> {
       final result = await Navigator.push(
         context,
         MaterialPageRoute(
-          builder: (context) => AddEventScreen(selectedDate: selectedDay),
+          builder: (context) => AddEventScreen(
+
+            selectedDate: _selectedDay!,
+
+          ),
         ),
       );
       if (result != null) {
@@ -128,7 +132,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
       Navigator.push(
         context,
         MaterialPageRoute(
-            builder: (context) => DayEventsScreen(selectedDate: selectedDay, events: [], updateCalendar: () {  },)
+          builder: (context) => RootScreen(selectedDate: selectedDay),
         ),
       );
     }
