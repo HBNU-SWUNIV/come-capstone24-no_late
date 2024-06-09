@@ -68,7 +68,7 @@ class ReviewListField extends StatelessWidget {
                   )),
               SizedBox(height: 10,),
               Container(
-                alignment: Alignment.bottomRight,
+                alignment: Alignment.bottomLeft,
                 child: IconButton(
                     onPressed: (){
                       showModalBottomSheet(context: context
