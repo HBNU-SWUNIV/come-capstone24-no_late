@@ -5,16 +5,16 @@ import 'package:cloud_firestore/cloud_firestore.dart';
  */
 class ReviewTitleModel {
   final String userId;
-  final int seq;
-  final String titleId;
+  final int? seq;
+  final String? titleId;
   final String titleNm;
   final String hintText;
   late final String useYn;
 
   ReviewTitleModel({
     required this.userId,
-    required this.seq,
-    required this.titleId,
+    this.seq,
+    this.titleId,
     required this.titleNm,
     required this.hintText,
     required this.useYn,
@@ -35,13 +35,15 @@ class ReviewTitleModel {
   ;
 
   factory ReviewTitleModel.fromDocument(DocumentSnapshot doc) {
+    var data = doc.data() as Map<String, dynamic>;
+
     return ReviewTitleModel(
-        userId: doc['userId'],
-        seq: doc['seq'],
-        titleId: doc['titleId'],
-        titleNm: doc['titleNm'],
-        hintText: doc['hintText'],
-        useYn: doc['useYn'],
+        userId: data['userId'],
+        seq: data['seq'],
+        titleId: data['titleId'],
+        titleNm: data['titleNm'],
+        hintText: data['hintText'],
+        useYn: data['useYn'],
     );
   }
 

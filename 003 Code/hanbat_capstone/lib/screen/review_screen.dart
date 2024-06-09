@@ -1,13 +1,13 @@
+import 'dart:developer';
+
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/widgets.dart';
-import 'package:hanbat_capstone/component/review_text_field.dart';
+import 'package:hanbat_capstone/component/review_list_field.dart';
 import 'package:hanbat_capstone/component/top_date_picker.dart';
 import 'package:hanbat_capstone/model/review_model.dart';
 import 'package:hanbat_capstone/model/review_title_model.dart';
-import 'package:hanbat_capstone/screen/review_add_screen.dart';
 import 'package:hanbat_capstone/screen/review_title_screen.dart';
-import 'package:uuid/uuid.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:intl/intl.dart';
 
@@ -29,15 +29,9 @@ class _ReviewScreenState extends State<ReviewScreen> {
 
   // 선택된 날짜 관리 변수
   DateTime currentDay = DateTime.utc(
-    DateTime
-        .now()
-        .year,
-    DateTime
-        .now()
-        .month,
-    DateTime
-        .now()
-        .day,
+    DateTime.now().year,
+    DateTime.now().month,
+    DateTime.now().day,
   );
 
   final FirebaseFirestore firestore = FirebaseFirestore.instance;
@@ -45,6 +39,7 @@ class _ReviewScreenState extends State<ReviewScreen> {
 
   @override
   void initState() {
+    super.initState();
     reviewData = reviewList();
   }
 
@@ -54,87 +49,76 @@ class _ReviewScreenState extends State<ReviewScreen> {
   Future<List<Map<String, dynamic>>> reviewList() async {
     List<Map<String, dynamic>> joinData = [];
     var currentDate = DateFormat('yyyyMMdd').format(currentDay);
+    DateTime now = DateTime.now();
+    DateTime today = DateTime(now.year, now.month, now.day);
 
-    // 리뷰 타이틀 목록
-    QuerySnapshot reviewTitleSnapshot = await firestore
-        .collection('reviewTitle')
-    //.where('userId', isEqualTo: 'yjkoo') // TODO 추가필요
-        .where('useYn', isEqualTo: 'Y')
-        .get();
+    try {
+      // 리뷰 타이틀 목록
+      QuerySnapshot reviewTitleSnapshot = await firestore
+          .collection('reviewTitle')
+          .get();
 
-    List<ReviewTitleModel> reviewTitles = reviewTitleSnapshot.docs
-        .map((doc) => ReviewTitleModel.fromDocument(doc))
-        .toList();
+      List<ReviewTitleModel> reviewTitles = reviewTitleSnapshot.docs
+          .map((doc) => ReviewTitleModel.fromDocument(doc))
+          .toList();
 
-    // 선택된 날짜의 리뷰 목록
-    QuerySnapshot reviewSnapshot = await firestore
-        .collection('review')
-    //.where('userId', isEqualTo: 'yjkoo') // TODO 추가필요
-        .where('reviewDate', isEqualTo: DateTime.parse(currentDate))
-        .get();
+      // 선택된 날짜의 리뷰 목록
+      QuerySnapshot reviewSnapshot = await firestore
+          .collection('review')
+          .where('userId', isEqualTo: 'yjkoo') // TODO 하드코딩 수정필요
+          .where('reviewDate', isEqualTo: currentDate)
+          .get();
 
-    List<ReviewModel> reviews = reviewSnapshot.docs
-        .map((doc) => ReviewModel.fromDocument(doc))
-        .toList();
+      List<ReviewModel> reviews = reviewSnapshot.docs
+          .map((doc) => ReviewModel.fromDocument(doc))
+          .toList();
 
-    // 1. 리뷰 목록이 없는 경우 ==> 리뷰 타이틀 목록을 보여준다.
-    if (reviews.isEmpty) {
-      joinData = reviewTitles.map((title) {
-        return {
-          'type': 'title',
-          'data': title
-          //title.toJson();
-        };
-      }).toList();
-    }
-    // 2. 리뷰 목록이 있는 경우,
-    else {
-      DateTime today = DateTime.now();
+      // 1. 리뷰 목록이 없는 경우 ==> 리뷰 타이틀 목록을 보여준다.
+      if (reviews.isEmpty) {
+        joinData = reviewTitles.map((title) {
+          return {
+            'type': 'title',
+            'data': title
+          };
+        }).toList();
 
-      for (var review in reviews) {
-        // 2-1. 선택된 날짜가 현재 날짜 같거나 이후인 경우 => 저장하지 않은 리뷰타이틀 목록도 같이 보여준다.
-        if (review.reviewDate.isAfter(today) ||
-            review.reviewDate.isAtSameMomentAs(today)) {
-          var matchingTitle = reviewTitles.firstWhere(
-                  (title) => title.titleNm == review.reviewTitle,
-              orElse: () =>
-                  ReviewTitleModel(
-                      userId: 'yjkoo',
-                      seq: 0,
-                      titleId: '',
-                      titleNm: '',
-                      hintText: '',
-                      useYn: 'N'));
-
-          joinData.add(
-              {'type': 'review', 'review': review, 'title': matchingTitle});
+        for(var item in joinData){
+          ReviewTitleModel dataItem = item['data'];
+          if(dataItem.useYn.isEmpty || dataItem.useYn == 'N'){
+            joinData.remove(item);
+          }
         }
-
-        joinData.add({
-          'type': 'review',
-          'review': review,
-        });
       }
-    }
-    return joinData;
-  }
+      // 2. 리뷰 목록이 있는 경우,
+      else {
+        for (var reviewTitle in reviewTitles) {
+          var matchingYn = false;
 
-  /**
-   * 리뷰 정보 수정
-   */
-  Future<void> updateReviewContent(String reviewId, String newContent) async {
-    await firestore
-        .collection('review')
-        .doc(reviewId)
-        .update({'reviewContent': newContent});
+          // 리뷰 타이틀과 매칭되는 데이터가 있는 경우 항목 추가
+          for(var review in reviews) {
+            if(reviewTitle.titleNm == review.reviewTitle){
+              matchingYn = true;
+              joinData.add({'type': 'review', 'review': review});
+            }
+
+            if(matchingYn) break;
+          }
+          // 매칭되지 않는 경우 (=리뷰가 저장되지 않은 경우) && 리뷰타이틀 사용여부가 Y인 경우 데이터 추가
+          if(!matchingYn && reviewTitle.useYn == "Y"){
+            joinData.add({'type': 'review', 'review': ReviewModel(reviewId: '', userId: 'yjkoo', reviewDate: today, reviewTitle: reviewTitle.titleNm, reviewContent: reviewTitle.hintText)});
+          }
+        }
+      }
+    } catch (e) {
+      print('Error fetching review data: $e');
+    }
+
+    return joinData;
   }
 
   @override
   Widget build(BuildContext context) {
-    final bottomInset = MediaQuery
-        .of(context)
-        .viewInsets
-        .bottom;
+    final bottomInset = MediaQuery.of(context).viewInsets.bottom;
     return Form(
       key: formkey,
       child: Scaffold(
@@ -164,10 +148,9 @@ class _ReviewScreenState extends State<ReviewScreen> {
                     SizedBox(
                       height: constraints.maxHeight * 0.85 + bottomInset,
                       child: FutureBuilder<List<Map<String, dynamic>>>(
-                        future: reviewList(),
+                        future: reviewData,
                         builder: (context, snapshot) {
-                          if (snapshot.connectionState ==
-                              ConnectionState.waiting) {
+                          if (snapshot.connectionState == ConnectionState.waiting) {
                             return Center(
                               child: CircularProgressIndicator(),
                             );
@@ -188,20 +171,31 @@ class _ReviewScreenState extends State<ReviewScreen> {
                                   ReviewTitleModel titleModel = item['data'];
                                   return Column(
                                     children: [
-                                      _ListField(
+                                      ReviewListField(
                                           title: titleModel.titleNm,
-                                          content: titleModel.hintText),
+                                          content: titleModel.hintText,
+                                          reviewId: '',
+                                          userId: 'yjkoo',  // TODO 하드코딩 변경해야함
+                                          reviewContent: '',
+                                          reviewDate: currentDay,
+                                          callback: callback,
+                                      ),
                                     ],
                                   );
                                 } else {
-                                  ReviewModel reviewModel = item['reveiw'];
-                                  ReviewTitleModel reviewTitleModel = item['title'];
+                                  ReviewModel reviewModel = item['review'];
 
                                   return Column(
                                     children: [
-                                      _ListField(
+                                      ReviewListField(
                                           title: reviewModel.reviewTitle,
-                                          content: reviewModel.reviewContent)
+                                          content: reviewModel.reviewContent,
+                                          reviewId: reviewModel.reviewId,
+                                          userId: 'yjkoo',  // TODO 하드코딩 변경해야함
+                                          reviewContent: reviewModel.reviewContent,
+                                          reviewDate: reviewModel.reviewDate,
+                                          callback: callback,
+                                      )
                                     ],
                                   );
                                 }
@@ -224,6 +218,7 @@ class _ReviewScreenState extends State<ReviewScreen> {
   void onPressBackBtn() {
     setState(() {
       currentDay = currentDay.subtract(Duration(days: 1));
+      reviewData = reviewList();  // 날짜 변경 시 데이터 다시 로드
     });
   }
 
@@ -245,6 +240,7 @@ class _ReviewScreenState extends State<ReviewScreen> {
     if (selectedDate != null) {
       setState(() {
         currentDay = selectedDate;
+        reviewData = reviewList();  // 날짜 변경 시 데이터 다시 로드
       });
     }
   }
@@ -256,6 +252,7 @@ class _ReviewScreenState extends State<ReviewScreen> {
   void onPressForwardBtn() {
     setState(() {
       currentDay = currentDay.add(Duration(days: 1));
+      reviewData = reviewList();  // 날짜 변경 시 데이터 다시 로드
     });
   }
 
@@ -276,98 +273,9 @@ class _ReviewScreenState extends State<ReviewScreen> {
     });
   }
 
-  /**
-   * Edit 버튼 눌렀을 때 이벤트
-   * - review 작성 화면으로 이동
-   */
-  void onPressEditBtn() async {
-    await Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (context) => ReviewAddScreen(),
-      ),
-    ).then((value) {
-      setState(() {
-        reviewData = reviewList();
-      });
+  void callback() {
+    setState(() {
+      reviewData = reviewList();
     });
-  }
-
-  /**
-   * 내용 검증 확인 함수
-   */
-  String? contentValidator(String? val) {
-    return null;
-  }
-}
-
-/**
- * List Item 컴포넌트
- */
-class _ListField extends StatelessWidget {
-  final String title;
-  final String content;
-
-  const _ListField({
-    required this.title,
-    required this.content,
-    Key? key,
-  }) : super(key: key);
-
-  get onPressEditBtn => null;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      decoration: BoxDecoration(
-          border: Border.all(width: 1, color: Colors.black12),
-          borderRadius: BorderRadius.circular(8)),
-      child: Padding(
-        padding: const EdgeInsets.all(15),
-        child: IntrinsicHeight(
-          //높이를 내부 위젯들의 최대 높이로 설정
-          child: Column(
-            children: [
-              Container(
-                child: Padding(
-                  padding: EdgeInsets.symmetric(horizontal: 15, vertical: 8),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Text(title, style: TextStyle(
-                        fontSize: 15,
-                        fontWeight: FontWeight.w600,
-                        color: Colors.black87,
-                      )),
-                    ],
-                  ),
-                ),
-              ),
-              SizedBox(height: 10,),
-              Expanded(
-                  child: Container(
-                    color: Colors.grey[200],
-                    constraints: BoxConstraints(
-                      minHeight: 100,
-                    ),
-                    alignment: Alignment.topLeft,
-                    padding: EdgeInsets.all(15),
-                    child: Text(content,
-                      style: TextStyle(
-                        fontSize: 15,
-                      ),
-                    ),
-                  )),
-              SizedBox(height: 10,),
-              Container(
-                alignment: Alignment.bottomRight,
-                child: IconButton(
-                    onPressed: onPressEditBtn, icon: Icon(Icons.edit)),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
   }
 }

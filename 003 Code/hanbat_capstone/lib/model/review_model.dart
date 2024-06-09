@@ -25,17 +25,19 @@ class ReviewModel {
     required Map<String, dynamic> json,
   }) : reviewId = json['reviewId'],
         userId = json['userId'],
-        reviewDate = json['reviewDate'],
+        reviewDate = DateTime.parse(json['reviewDate']), // 문자열을 DateTime으로 변환
         reviewTitle = json['reviewTitle'],
         reviewContent = json['reviewContent'];
 
   factory ReviewModel.fromDocument(DocumentSnapshot doc) {
+    var data = doc.data() as Map<String, dynamic>;
+
     return ReviewModel(
-      reviewId: doc['reviewId'],
-      userId: doc['userId'],
-      reviewDate: doc['reviewDate'],
-      reviewTitle: doc['reviewTitle'],
-      reviewContent: doc['reviewContent']
+        reviewId: data['reviewId'],
+        userId: data['userId'],
+        reviewDate: DateTime.parse(data['reviewDate']), // 문자열을 DateTime으로 변환
+        reviewTitle: data['reviewTitle'],
+        reviewContent: data['reviewContent']
     );
   }
 
@@ -64,11 +66,11 @@ class ReviewModel {
     String? reviewContent,
   }) {
     return ReviewModel(
-      reviewId: reviewId ?? this.reviewId,
-      userId: userId ?? this.userId,
-      reviewDate: reviewDate ?? this.reviewDate,
-      reviewTitle: reviewTitle ?? this.reviewTitle,
-      reviewContent: reviewContent ?? this.reviewContent
+        reviewId: reviewId ?? this.reviewId,
+        userId: userId ?? this.userId,
+        reviewDate: reviewDate ?? this.reviewDate,
+        reviewTitle: reviewTitle ?? this.reviewTitle,
+        reviewContent: reviewContent ?? this.reviewContent
     );
   }
 }
