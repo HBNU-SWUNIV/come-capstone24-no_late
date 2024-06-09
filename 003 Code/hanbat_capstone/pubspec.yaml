@@ -47,6 +47,7 @@ dependencies:
   # 파이어베이스 관련 플러그인
   firebase_core: 2.19.0
   cloud_firestore: 4.11.0
+  flutter_colorpicker: ^1.1.0
 
 
 dev_dependencies:

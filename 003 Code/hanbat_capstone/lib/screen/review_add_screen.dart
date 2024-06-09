@@ -63,6 +63,7 @@ class _ReviewAddScreenState extends State<ReviewAddScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
+              const SizedBox(height: 15,),
               Text(
                 reviewTitle,
                 style: TextStyle(
@@ -84,6 +85,7 @@ class _ReviewAddScreenState extends State<ReviewAddScreen> {
                     fillColor: Colors.grey[200]
                 ),
               )),
+              const SizedBox(height: 15,),
               SizedBox(
                 width: double.infinity,
                 child: ElevatedButton(
@@ -92,7 +94,8 @@ class _ReviewAddScreenState extends State<ReviewAddScreen> {
 
                   ), child: Text('저장'),
                 ),
-              )
+              ),
+              const SizedBox(height: 15,),
             ],
           ),
         )
@@ -133,7 +136,7 @@ class _ReviewAddScreenState extends State<ReviewAddScreen> {
           );
         });
 
-    await Future.delayed(Duration(seconds: 1));
+    await Future.delayed(Duration(milliseconds: 500));
     Navigator.of(context).pop();  // alertDialog 닫기
     Navigator.of(context).pop();  // 부모창으로 이동
   }
