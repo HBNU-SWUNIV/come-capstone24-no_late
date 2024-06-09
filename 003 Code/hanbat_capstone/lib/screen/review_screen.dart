@@ -82,12 +82,16 @@ class _ReviewScreenState extends State<ReviewScreen> {
           };
         }).toList();
 
+        // 리뷰타이틀 사용여부(useYn) 가 N인 경우, 해당 아이템을 삭제한다.
+        List<Map<String, dynamic>> itemsToRemove = [];  // 삭제할 데이터
         for(var item in joinData){
           ReviewTitleModel dataItem = item['data'];
           if(dataItem.useYn.isEmpty || dataItem.useYn == 'N'){
-            joinData.remove(item);
+            itemsToRemove.add(item);
           }
         }
+        joinData.removeWhere((item) => itemsToRemove.contains(item));
+
       }
       // 2. 리뷰 목록이 있는 경우,
       else {
@@ -103,7 +107,8 @@ class _ReviewScreenState extends State<ReviewScreen> {
 
             if(matchingYn) break;
           }
-          // 매칭되지 않는 경우 (=리뷰가 저장되지 않은 경우) && 리뷰타이틀 사용여부가 Y인 경우 데이터 추가
+
+          // 매칭되지 않는 경우 (= 리뷰가 저장되지 않은 경우) && 리뷰타이틀 사용여부가 Y인 경우 데이터 추가
           if(!matchingYn && reviewTitle.useYn == "Y"){
             joinData.add({'type': 'review', 'review': ReviewModel(reviewId: '', userId: 'yjkoo', reviewDate: today, reviewTitle: reviewTitle.titleNm, reviewContent: reviewTitle.hintText)});
           }

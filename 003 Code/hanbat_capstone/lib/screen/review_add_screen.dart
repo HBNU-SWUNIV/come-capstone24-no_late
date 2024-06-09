@@ -121,7 +121,20 @@ class _ReviewAddScreenState extends State<ReviewAddScreen> {
       // 기존 리뷰 업데이트
       await firestore.collection('review').doc(reviewId).update(reviewModel.toJson());
     }
+    
+    showDialog<String>(
+        context: context, 
+        builder: (BuildContext context) {
+          return AlertDialog(
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(10)
+            ),
+            content: const Text("저장되었습니다."),
+          );
+        });
 
-    Navigator.of(context).pop();
+    await Future.delayed(Duration(seconds: 1));
+    Navigator.of(context).pop();  // alertDialog 닫기
+    Navigator.of(context).pop();  // 부모창으로 이동
   }
 }
