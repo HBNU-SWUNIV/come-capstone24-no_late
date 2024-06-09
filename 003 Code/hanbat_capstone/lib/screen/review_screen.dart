@@ -1,9 +1,11 @@
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/widgets.dart';
 import 'package:hanbat_capstone/component/review_text_field.dart';
 import 'package:hanbat_capstone/component/top_date_picker.dart';
 import 'package:hanbat_capstone/model/review_model.dart';
 import 'package:hanbat_capstone/model/review_title_model.dart';
+import 'package:hanbat_capstone/screen/review_add_screen.dart';
 import 'package:hanbat_capstone/screen/review_title_screen.dart';
 import 'package:uuid/uuid.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
@@ -27,9 +29,15 @@ class _ReviewScreenState extends State<ReviewScreen> {
 
   // 선택된 날짜 관리 변수
   DateTime currentDay = DateTime.utc(
-    DateTime.now().year,
-    DateTime.now().month,
-    DateTime.now().day,
+    DateTime
+        .now()
+        .year,
+    DateTime
+        .now()
+        .month,
+    DateTime
+        .now()
+        .day,
   );
 
   final FirebaseFirestore firestore = FirebaseFirestore.instance;
@@ -40,7 +48,9 @@ class _ReviewScreenState extends State<ReviewScreen> {
     reviewData = reviewList();
   }
 
-  // 리뷰 목록 조회
+  /**
+   * 리뷰 목록 조회
+   */
   Future<List<Map<String, dynamic>>> reviewList() async {
     List<Map<String, dynamic>> joinData = [];
     var currentDate = DateFormat('yyyyMMdd').format(currentDay);
@@ -48,7 +58,7 @@ class _ReviewScreenState extends State<ReviewScreen> {
     // 리뷰 타이틀 목록
     QuerySnapshot reviewTitleSnapshot = await firestore
         .collection('reviewTitle')
-        .where('userId', isEqualTo: 'yjkoo')
+    //.where('userId', isEqualTo: 'yjkoo') // TODO 추가필요
         .where('useYn', isEqualTo: 'Y')
         .get();
 
@@ -59,7 +69,7 @@ class _ReviewScreenState extends State<ReviewScreen> {
     // 선택된 날짜의 리뷰 목록
     QuerySnapshot reviewSnapshot = await firestore
         .collection('review')
-        .where('userId', isEqualTo: 'yjkoo')
+    //.where('userId', isEqualTo: 'yjkoo') // TODO 추가필요
         .where('reviewDate', isEqualTo: DateTime.parse(currentDate))
         .get();
 
@@ -86,14 +96,15 @@ class _ReviewScreenState extends State<ReviewScreen> {
         if (review.reviewDate.isAfter(today) ||
             review.reviewDate.isAtSameMomentAs(today)) {
           var matchingTitle = reviewTitles.firstWhere(
-              (title) => title.titleNm == review.reviewTitle,
-              orElse: () => ReviewTitleModel(
-                  userId: 'yjkoo',
-                  seq: 0,
-                  titleId: '',
-                  titleNm: '',
-                  hintText: '',
-                  useYn: 'N'));
+                  (title) => title.titleNm == review.reviewTitle,
+              orElse: () =>
+                  ReviewTitleModel(
+                      userId: 'yjkoo',
+                      seq: 0,
+                      titleId: '',
+                      titleNm: '',
+                      hintText: '',
+                      useYn: 'N'));
 
           joinData.add(
               {'type': 'review', 'review': review, 'title': matchingTitle});
@@ -108,6 +119,9 @@ class _ReviewScreenState extends State<ReviewScreen> {
     return joinData;
   }
 
+  /**
+   * 리뷰 정보 수정
+   */
   Future<void> updateReviewContent(String reviewId, String newContent) async {
     await firestore
         .collection('review')
@@ -117,7 +131,10 @@ class _ReviewScreenState extends State<ReviewScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final bottomInset = MediaQuery.of(context).viewInsets.bottom;
+    final bottomInset = MediaQuery
+        .of(context)
+        .viewInsets
+        .bottom;
     return Form(
       key: formkey,
       child: Scaffold(
@@ -131,69 +148,71 @@ class _ReviewScreenState extends State<ReviewScreen> {
         ),
         body: SafeArea(child: LayoutBuilder(
             builder: (BuildContext context, BoxConstraints constraints) {
-          return SingleChildScrollView(
-            child: Column(
-              children: [
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              return SingleChildScrollView(
+                child: Column(
                   children: [
-                    TextButton(onPressed: () {}, child: Text("")),
-                    IconButton(
-                        onPressed: onPressSettingBtn,
-                        icon: Icon(Icons.settings))
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        TextButton(onPressed: () {}, child: Text("")),
+                        TextButton.icon(
+                          onPressed: onPressSettingBtn,
+                          label: Text('커스텀'),
+                          icon: Icon(Icons.settings),)
+                      ],
+                    ),
+                    SizedBox(
+                      height: constraints.maxHeight * 0.85 + bottomInset,
+                      child: FutureBuilder<List<Map<String, dynamic>>>(
+                        future: reviewList(),
+                        builder: (context, snapshot) {
+                          if (snapshot.connectionState ==
+                              ConnectionState.waiting) {
+                            return Center(
+                              child: CircularProgressIndicator(),
+                            );
+                          }
+                          if (!snapshot.hasData || snapshot.data!.isEmpty) {
+                            return Center(
+                              child: Text('회고 정보가 없습니다.'),
+                            );
+                          }
+
+                          List<Map<String, dynamic>> joinData = snapshot.data!;
+
+                          return ListView.builder(
+                              itemCount: joinData.length,
+                              itemBuilder: (context, index) {
+                                var item = joinData[index];
+                                if (item['type'] == 'title') {
+                                  ReviewTitleModel titleModel = item['data'];
+                                  return Column(
+                                    children: [
+                                      _ListField(
+                                          title: titleModel.titleNm,
+                                          content: titleModel.hintText),
+                                    ],
+                                  );
+                                } else {
+                                  ReviewModel reviewModel = item['reveiw'];
+                                  ReviewTitleModel reviewTitleModel = item['title'];
+
+                                  return Column(
+                                    children: [
+                                      _ListField(
+                                          title: reviewModel.reviewTitle,
+                                          content: reviewModel.reviewContent)
+                                    ],
+                                  );
+                                }
+                              });
+                        },
+                      ),
+                    ),
                   ],
                 ),
-                SizedBox(
-                  height: constraints.maxHeight * 0.85 + bottomInset,
-                  child: FutureBuilder<List<Map<String, dynamic>>>(
-                    future: reviewList(),
-                    builder: (context, snapshot) {
-                      if (snapshot.connectionState == ConnectionState.waiting) {
-                        return Center(
-                          child: CircularProgressIndicator(),
-                        );
-                      }
-                      if (!snapshot.hasData || snapshot.data!.isEmpty) {
-                        return Center(
-                          child: Text('회고 정보가 없습니다.'),
-                        );
-                      }
-
-                      List<Map<String, dynamic>> joinData = snapshot.data!;
-
-                      return ListView.builder(
-                          itemCount: joinData.length,
-                          itemBuilder: (context, index) {
-                            var item = joinData[index];
-                            if (item['type'] == 'title') {
-                              ReviewTitleModel titleModel = item['data'];
-                              return Column(
-                                children: [
-                                  ReviewTextField(
-                                      title: titleModel.titleNm,
-                                      content: '작성해주세요!'),
-                                ],
-                              );
-                            } else {
-                              ReviewModel reviewModel = item['reveiw'];
-                              ReviewTitleModel reviewTitleModel = item['title'];
-
-                              return Column(
-                                children: [
-                                  ReviewTextField(
-                                      title: reviewModel.reviewTitle,
-                                      content: '작성해주세요!')
-                                ],
-                              );
-                            }
-                          });
-                    },
-                  ),
-                )
-              ],
-            ),
-          );
-        })),
+              );
+            })),
       ),
     );
   }
@@ -258,6 +277,23 @@ class _ReviewScreenState extends State<ReviewScreen> {
   }
 
   /**
+   * Edit 버튼 눌렀을 때 이벤트
+   * - review 작성 화면으로 이동
+   */
+  void onPressEditBtn() async {
+    await Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => ReviewAddScreen(),
+      ),
+    ).then((value) {
+      setState(() {
+        reviewData = reviewList();
+      });
+    });
+  }
+
+  /**
    * 내용 검증 확인 함수
    */
   String? contentValidator(String? val) {
@@ -265,6 +301,9 @@ class _ReviewScreenState extends State<ReviewScreen> {
   }
 }
 
+/**
+ * List Item 컴포넌트
+ */
 class _ListField extends StatelessWidget {
   final String title;
   final String content;
@@ -274,6 +313,8 @@ class _ListField extends StatelessWidget {
     required this.content,
     Key? key,
   }) : super(key: key);
+
+  get onPressEditBtn => null;
 
   @override
   Widget build(BuildContext context) {
@@ -293,19 +334,35 @@ class _ListField extends StatelessWidget {
                   child: Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      Text(title),
-                      IconButton(
-                          onPressed: () {}, icon: Icon(Icons.edit_document))
+                      Text(title, style: TextStyle(
+                        fontSize: 15,
+                        fontWeight: FontWeight.w600,
+                        color: Colors.black87,
+                      )),
                     ],
                   ),
                 ),
               ),
-              SizedBox(
-                height: 5,
-              ),
-              Expanded(child: Text(content)),
-              SizedBox(
-                height: 5,
+              SizedBox(height: 10,),
+              Expanded(
+                  child: Container(
+                    color: Colors.grey[200],
+                    constraints: BoxConstraints(
+                      minHeight: 100,
+                    ),
+                    alignment: Alignment.topLeft,
+                    padding: EdgeInsets.all(15),
+                    child: Text(content,
+                      style: TextStyle(
+                        fontSize: 15,
+                      ),
+                    ),
+                  )),
+              SizedBox(height: 10,),
+              Container(
+                alignment: Alignment.bottomRight,
+                child: IconButton(
+                    onPressed: onPressEditBtn, icon: Icon(Icons.edit)),
               ),
             ],
           ),
