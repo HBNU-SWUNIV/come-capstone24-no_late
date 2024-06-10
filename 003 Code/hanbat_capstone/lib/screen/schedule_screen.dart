@@ -121,27 +121,38 @@ class _TimeListViewState extends State<TimeListView> {
   }
 
   Future<void> _loadResults() async {
-    final results = await Schedule_CRUD.getEventResultsByDate(selectedDate);
-    setState(() {
-      resultList = List.generate(24, (index) {
-        final time = timeList[index];
-        return results.firstWhere(
-              (result) => DateFormat('HH:mm').format(result.eventResultSttTime) == time,
-          orElse: () => EventResultModel(
-            eventResultId: '',
-            eventId: '',
-            categoryId: '',
-            userId: '',
-            eventResultDate: selectedDate,
-            eventResultSttTime: DateTime(selectedDate.year, selectedDate.month, selectedDate.day, index),
-            eventResultEndTime: DateTime(selectedDate.year, selectedDate.month, selectedDate.day, index + 1),
-            eventResultTitle: '',
-            eventResultContent: '',
-            completeYn: 'N',
-          ),
-        );
+    try {
+      final results = await Schedule_CRUD.getEventResultsByDate(selectedDate);
+      setState(() {
+        resultList = List.generate(24, (index) {
+          final time = timeList[index];
+          final matchingResults = results.where((result) {
+            final resultTime = DateFormat('HH:mm').format(result.eventResultSttTime);
+            return resultTime == time;
+          }).toList();
+
+          if (matchingResults.isNotEmpty) {
+            return matchingResults.first;
+          } else {
+            return EventResultModel(
+              eventResultId: '',
+              eventId: '',
+              categoryId: '',
+              userId: '',
+              eventResultDate: selectedDate,
+              eventResultSttTime: DateTime(selectedDate.year, selectedDate.month, selectedDate.day, index),
+              eventResultEndTime: DateTime(selectedDate.year, selectedDate.month, selectedDate.day, index + 1),
+              eventResultTitle: '',
+              eventResultContent: '',
+              completeYn: 'N',
+            );
+          }
+        });
       });
-    });
+    } catch (e) {
+      print('Error loading results: $e');
+      // 에러 처리 로직 추가
+    }
   }
 
   void _updateDate(int daysOffset) {
