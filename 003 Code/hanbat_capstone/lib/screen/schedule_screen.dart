@@ -4,7 +4,7 @@ import 'package:hanbat_capstone/screen/Schedule_CRUD.dart';
 import 'package:intl/intl.dart';
 import 'package:hanbat_capstone/model/event_model.dart';
 import 'package:hanbat_capstone/model/event_result_model.dart';
-import 'add_event_screen.dart';
+import 'package:hanbat_capstone/screen/add_event_screen.dart';
 import 'package:hanbat_capstone/screen/envet_detail_screen.dart';
 
 class schedule_screen extends StatelessWidget {
@@ -56,6 +56,8 @@ class _TimeListViewState extends State<TimeListView> {
     completeYn: 'N',
   ));
 
+  List<bool> _isChecked = List.generate(24, (_) => false);
+
   @override
   void initState() {
     super.initState();
@@ -65,8 +67,57 @@ class _TimeListViewState extends State<TimeListView> {
   }
 
   Future<void> _loadSchedules() async {
-    // Firestore에서 선택한 날짜의 EventModel 데이터를 가져와 scheduleList를 업데이트하는 로직
-    // ...
+    try {
+      final selectedDate = DateTime(this.selectedDate.year, this.selectedDate.month, this.selectedDate.day);
+      final selectedDateStart = Timestamp.fromDate(selectedDate);
+      final selectedDateEnd = Timestamp.fromDate(selectedDate.add(Duration(days: 1)).subtract(Duration(milliseconds: 1)));
+
+      final querySnapshot = await FirebaseFirestore.instance
+          .collection('events')
+          .where('eventDate', isGreaterThanOrEqualTo: selectedDateStart)
+          .where('eventDate', isLessThanOrEqualTo: selectedDateEnd)
+          .get();
+
+      final schedules = querySnapshot.docs.map((doc) {
+        final eventData = doc.data();
+        return EventModel(
+          eventId: doc.id,
+          categoryId: eventData['categoryId'],
+          userId: eventData['userId'],
+          eventDate: (eventData['eventDate'] as Timestamp?)?.toDate(),
+          eventSttTime: (eventData['eventSttTime'] as Timestamp?)?.toDate(),
+          eventEndTime: (eventData['eventEndTime'] as Timestamp?)?.toDate(),
+          eventTitle: eventData['eventTitle'],
+          eventContent: eventData['eventContent'],
+          allDayYn: eventData['allDayYn'],
+        );
+      }).toList();
+
+      setState(() {
+        scheduleList = List.generate(24, (index) {
+          final time = timeList[index];
+          final matchingSchedules = schedules.where((schedule) {
+            final eventTime = DateFormat('HH:mm').format(schedule.eventSttTime ?? DateTime.now());
+            return eventTime == time;
+          }).toList();
+
+          if (matchingSchedules.isNotEmpty) {
+            return matchingSchedules.first;
+          } else {
+            return EventModel(
+              eventId: '',
+              categoryId: '',
+              userId: '',
+              eventTitle: '',
+              allDayYn: 'N',
+            );
+          }
+        });
+      });
+    } catch (e) {
+      print('Error loading schedules: $e');
+      // 에러 처리 로직 추가
+    }
   }
 
   Future<void> _loadResults() async {
@@ -96,6 +147,7 @@ class _TimeListViewState extends State<TimeListView> {
   void _updateDate(int daysOffset) {
     setState(() {
       selectedDate = selectedDate.add(Duration(days: daysOffset));
+      _isChecked = List.generate(24, (_) => false);
       _loadSchedules();
       _loadResults();
     });
@@ -163,24 +215,29 @@ class _TimeListViewState extends State<TimeListView> {
   }
 
   void _add_actually_Schedule(int index) async {
-    final eventResult = await showDialog<Map<String, String>>(
+    final eventResult = resultList[index];
+
+    final result = await showDialog<Map<String, String>>(
       context: context,
       builder: (context) {
-        String eventResultTitle = '';
-        String eventResultContent = '';
+        String eventResultTitle = eventResult.eventResultTitle;
+        String eventResultContent = eventResult.eventResultContent;
+
         return AlertDialog(
-          title: const Text('일정 결과 추가'),
+          title: const Text('일정 결과 추가/수정'),
           content: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
               TextField(
                 decoration: const InputDecoration(labelText: '결과 제목'),
+                controller: TextEditingController(text: eventResultTitle),
                 onChanged: (value) {
                   eventResultTitle = value;
                 },
               ),
               TextField(
                 decoration: const InputDecoration(labelText: '결과 내용'),
+                controller: TextEditingController(text: eventResultContent),
                 onChanged: (value) {
                   eventResultContent = value;
                 },
@@ -195,54 +252,72 @@ class _TimeListViewState extends State<TimeListView> {
                   'eventResultContent': eventResultContent,
                 });
               },
-              child: const Text('추가'),
+              child: const Text('저장'),
             ),
+            if (eventResult.eventResultId.isNotEmpty)
+              TextButton(
+                onPressed: () async {
+                  await Schedule_CRUD.deleteEventResult(eventResult);
+                  _loadResults();
+                  Navigator.of(context).pop();
+                },
+                child: const Text('삭제'),
+              ),
           ],
         );
       },
     );
 
-    if (eventResult != null && eventResult['eventResultTitle']!.isNotEmpty) {
-      final newEventResult = EventResultModel(
-        eventResultId: '${selectedDate.millisecondsSinceEpoch}:${index}',
-        eventId: 'eventId',  // 실제 eventId로 변경 필요
-        categoryId: 'categoryId',  // 실제 categoryId로 변경 필요
-        userId: 'userId',  // 실제 userId로 변경 필요
-        eventResultDate: selectedDate,
-        eventResultSttTime: DateTime(selectedDate.year, selectedDate.month, selectedDate.day, index),
-        eventResultEndTime: DateTime(selectedDate.year, selectedDate.month, selectedDate.day, index + 1),
-        eventResultTitle: eventResult['eventResultTitle']!,
-        eventResultContent: eventResult['eventResultContent']!,
-        completeYn: 'N',
-      );
-      await Schedule_CRUD.createEventResult(newEventResult);
-      _loadResults();  // 결과 리스트 갱신
+    if (result != null) {
+      if (eventResult.eventResultId.isNotEmpty) {
+        // 기존 결과 수정
+        final updatedEventResult = eventResult.copyWith(
+          eventResultTitle: result['eventResultTitle']!,
+          eventResultContent: result['eventResultContent']!,
+        );
+        await Schedule_CRUD.updateEventResult(updatedEventResult);
+      } else {
+        // 새로운 결과 추가
+        final newEventResult = EventResultModel(
+          eventResultId: '${selectedDate.millisecondsSinceEpoch}:${index}',
+          eventId: 'eventId',
+          categoryId: 'categoryId',
+          userId: 'userId',
+          eventResultDate: selectedDate,
+          eventResultSttTime: DateTime(selectedDate.year, selectedDate.month, selectedDate.day, index),
+          eventResultEndTime: DateTime(selectedDate.year, selectedDate.month, selectedDate.day, index + 1),
+          eventResultTitle: result['eventResultTitle']!,
+          eventResultContent: result['eventResultContent']!,
+          completeYn: 'N',
+        );
+        await Schedule_CRUD.createEventResult(newEventResult);
+      }
+      _loadResults();
     }
   }
 
-
-  //copyPlanToResult 클래스
   void _copyPlanToActual(int index) async {
-    final eventModel = scheduleList[index];
-    final newEventResult = EventResultModel(
-      eventResultId: '${selectedDate.millisecondsSinceEpoch}:${index}',
-      eventId: eventModel.eventId,
-      categoryId: eventModel.categoryId,
-      userId: eventModel.userId,
-      eventResultDate: selectedDate,
-      eventResultSttTime: DateTime(selectedDate.year, selectedDate.month, selectedDate.day, index),
-      eventResultEndTime: DateTime(selectedDate.year, selectedDate.month, selectedDate.day, index + 1),
-      eventResultTitle: eventModel.eventTitle,
-      eventResultContent: eventModel.eventContent ?? '',
-      completeYn: 'N',
-    );
+    if (_isChecked[index]) {
+      final eventModel = scheduleList[index];
+      final newEventResult = EventResultModel(
+        eventResultId: '${selectedDate.millisecondsSinceEpoch}:${index}',
+        eventId: eventModel.eventId,
+        categoryId: eventModel.categoryId,
+        userId: eventModel.userId,
+        eventResultDate: selectedDate,
+        eventResultSttTime: DateTime(selectedDate.year, selectedDate.month, selectedDate.day, index),
+        eventResultEndTime: DateTime(selectedDate.year, selectedDate.month, selectedDate.day, index + 1),
+        eventResultTitle: eventModel.eventTitle,
+        eventResultContent: eventModel.eventContent ?? '',
+        completeYn: 'N',
+      );
 
-    await Schedule_CRUD.createEventResult(newEventResult);
-    _loadResults();
+      await Schedule_CRUD.createEventResult(newEventResult);
+      _loadResults();
+    }
   }
 
-
-    @override
+  @override
   Widget build(BuildContext context) {
     double screenWidth = MediaQuery.of(context).size.width;
     double planColumnWidth = screenWidth * 0.3;
@@ -287,12 +362,6 @@ class _TimeListViewState extends State<TimeListView> {
             ),
             DataColumn(
               label: Container(
-                width: adjustColumnWidth,
-                child: Text(''),
-              ),
-            ),
-            DataColumn(
-              label: Container(
                 width: actualColumnWidth,
                 child: Text('결과'),
               ),
@@ -300,52 +369,52 @@ class _TimeListViewState extends State<TimeListView> {
           ],
           rows: List.generate(
             timeList.length,
-                (index) => DataRow(cells: [
-              DataCell(
-                Container(
-                  width: timeColumnWidth,
-                  child: Text(
-                    timeList[index],
-                    overflow: TextOverflow.ellipsis,
+                (index) => DataRow(
+              selected: _isChecked[index],
+              onSelectChanged: (value) {
+                setState(() {
+                  _isChecked[index] = value!;
+                  if (value) {
+                    _copyPlanToActual(index);
+                  }
+                });
+              },
+              cells: [
+                DataCell(
+                  Container(
+                    width: timeColumnWidth,
+                    child: Text(
+                      timeList[index],
+                      overflow: TextOverflow.ellipsis,
+                    ),
                   ),
                 ),
-              ),
-              DataCell(
-                Container(
-                  width: planColumnWidth,
-                  child: Text(
-                    scheduleList[index].eventTitle,
-                    overflow: TextOverflow.ellipsis,
+                DataCell(
+                  Container(
+                    width: planColumnWidth,
+                    child: Text(
+                      scheduleList[index].eventTitle,
+                      overflow: TextOverflow.ellipsis,
+                    ),
                   ),
+                  onTap: () {
+                    _addSchedule(index);
+                  },
                 ),
-                onTap: () {
-                  _addSchedule(index);
-                },
-              ),
-              DataCell(
-                Container(
-                  width: adjustColumnWidth,
-                  child: IconButton(
-                    icon: Icon(Icons.arrow_right_alt),
-                    onPressed: () {
-                      _copyPlanToActual(index);
-                    },
+                DataCell(
+                  Container(
+                    width: actualColumnWidth,
+                    child: Text(
+                      resultList[index].eventResultTitle,
+                      overflow: TextOverflow.ellipsis,
+                    ),
                   ),
+                  onTap: () {
+                    _add_actually_Schedule(index);
+                  },
                 ),
-              ),
-              DataCell(
-                Container(
-                  width: actualColumnWidth,
-                  child: Text(
-                    resultList[index].eventResultTitle,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                ),
-                onTap: () {
-                  _add_actually_Schedule(index);
-                },
-              ),
-            ]),
+              ],
+            ),
           ),
         ),
       ),

@@ -53,4 +53,30 @@ class EventResultModel {
       completeYn: map['completeYn'],
     );
   }
+
+  EventResultModel copyWith({
+    String? eventResultId,
+    String? eventId,
+    String? categoryId,
+    String? userId,
+    DateTime? eventResultDate,
+    DateTime? eventResultSttTime,
+    DateTime? eventResultEndTime,
+    String? eventResultTitle,
+    String? eventResultContent,
+    String? completeYn,
+  }) {
+    return EventResultModel(
+      eventResultId: eventResultId ?? this.eventResultId,
+      eventId: eventId ?? this.eventId,
+      categoryId: categoryId ?? this.categoryId,
+      userId: userId ?? this.userId,
+      eventResultDate: eventResultDate ?? this.eventResultDate,
+      eventResultSttTime: eventResultSttTime ?? this.eventResultSttTime,
+      eventResultEndTime: eventResultEndTime ?? this.eventResultEndTime,
+      eventResultTitle: eventResultTitle ?? this.eventResultTitle,
+      eventResultContent: eventResultContent ?? this.eventResultContent,
+      completeYn: completeYn ?? this.completeYn,
+    );
+  }
 }
