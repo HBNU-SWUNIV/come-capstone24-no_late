@@ -56,7 +56,6 @@ class ChatService {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
 
   ChatService() {
-    // OpenAI.apiKey = 'ahfmrpTwld';
 
     OpenAI.requestsTimeOut = const Duration(seconds: 60); // 시간 제한 늘림
   }

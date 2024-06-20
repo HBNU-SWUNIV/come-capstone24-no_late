@@ -88,7 +88,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
       itemBuilder: (context, index) {
         final eventTitle = events[index].eventTitle;
         final displayTitle =
-        eventTitle.length > 20 ? '${eventTitle.substring(0, 20)}...' : eventTitle;
+        eventTitle.length > 20 ? '${eventTitle.substring(0, 20)}…' : eventTitle;
 
         return Text(
           displayTitle,
@@ -113,13 +113,12 @@ class _CalendarScreenState extends State<CalendarScreen> {
 
     if (selectedEvents.isEmpty) {
       // 일정이 없는 경우, 일정 추가 화면으로 이동
+      final selectedDateWithoutZ = selectedDay.toIso8601String().replaceAll('Z', '');
       final result = await Navigator.push(
         context,
         MaterialPageRoute(
           builder: (context) => AddEventScreen(
-
-            selectedDate: _selectedDay!,
-
+            selectedDate: DateTime.parse(selectedDateWithoutZ),
           ),
         ),
       );
@@ -134,7 +133,9 @@ class _CalendarScreenState extends State<CalendarScreen> {
         MaterialPageRoute(
           builder: (context) => RootScreen(selectedDate: selectedDay),
         ),
-      );
+      ).then((_) {
+        _fetchEvents();
+      });
     }
   }
 

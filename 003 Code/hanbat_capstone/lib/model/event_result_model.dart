@@ -3,9 +3,9 @@ class EventResultModel {
   final String eventId; // 이벤트 ID
   final String categoryId; // 카테고리 ID
   final String userId; // 사용자 ID
-  final DateTime eventResultDate; // 이벤트 결과 날짜
-  final DateTime eventResultSttTime; // 이벤트 결과 시작시간
-  final DateTime eventResultEndTime; // 이벤트 결과 종료시간
+  final String eventResultDate; // 이벤트 결과 날짜
+  final String eventResultSttTime; // 이벤트 결과 시작시간
+  final String eventResultEndTime; // 이벤트 결과 종료시간
   final String eventResultTitle; // 이벤트 결과 제목
   final String eventResultContent; // 이벤트 결과 내용
   final String completeYn; // 완료 여부
@@ -59,9 +59,9 @@ class EventResultModel {
     String? eventId,
     String? categoryId,
     String? userId,
-    DateTime? eventResultDate,
-    DateTime? eventResultSttTime,
-    DateTime? eventResultEndTime,
+    String? eventResultDate,
+    String? eventResultSttTime,
+    String? eventResultEndTime,
     String? eventResultTitle,
     String? eventResultContent,
     String? completeYn,

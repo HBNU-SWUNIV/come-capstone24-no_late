@@ -38,7 +38,7 @@ class _RootScreenState extends State<RootScreen> {
   List<Widget> renderChildren(DateTime? selectedDate) => <Widget>[
     CalendarScreen(),
 
-    schedule_screen(selectedDate: selectedDate ?? DateTime.now()),
+    TimeListView(selectedDate: selectedDate),
     AddEventScreen(),
 
     ReviewScreen(), // 회고관리 화면 연결

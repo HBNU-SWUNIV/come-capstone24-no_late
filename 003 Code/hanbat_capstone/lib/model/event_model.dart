@@ -13,6 +13,7 @@ class EventModel {
   final String allDayYn; // 종일 여부
   final bool? isRecurring; // 중복 여부
   final String? completeYn;
+  final bool showOnCalendar; // 추가: 캘린더에 표시 여부를 나타내는 필드
 
   EventModel({
     required this.eventId,
@@ -26,6 +27,8 @@ class EventModel {
     required this.allDayYn,
     this.isRecurring,
     this.completeYn,
+    this.showOnCalendar = true, // 추가: 기본값은 true로 설정
+
   });
 
   Map<String, dynamic> toMap() {
@@ -40,6 +43,7 @@ class EventModel {
       'eventContent': eventContent,
       'allDayYn': allDayYn,
       'isRecurring':isRecurring,
+      'showOnCalendar': showOnCalendar, // 추가: showOnCalendar 값을 맵에 추가
     };
   }
 
@@ -61,8 +65,41 @@ class EventModel {
       eventContent: map['eventContent'] ?? '',
       allDayYn: map['allDayYn'] ?? '',
       isRecurring: map['isRecurring'],
+      showOnCalendar: map['showOnCalendar'] ?? true, // 추가: showOnCalendar 값을 가져옴 (기본값은 true)
+
     );
   }
+  EventModel copyWith({
+    String? eventId,
+    String? eventTitle,
+    DateTime? eventDate,
+    String? eventContent,
+    String? categoryId,
+    String? userId,
+    DateTime? eventSttTime,
+    DateTime? eventEndTime,
+    String? allDayYn,
+    String? completeYn,
+    bool? isRecurring,
+    bool? showOnCalendar,
+  }) {
+    return EventModel(
+      eventId: eventId ?? this.eventId,
+      eventTitle: eventTitle ?? this.eventTitle,
+      eventDate: eventDate ?? this.eventDate,
+      eventContent: eventContent ?? this.eventContent,
+      categoryId: categoryId ?? this.categoryId,
+      userId: userId ?? this.userId,
+      eventSttTime: eventSttTime ?? this.eventSttTime,
+      eventEndTime: eventEndTime ?? this.eventEndTime,
+      allDayYn: allDayYn ?? this.allDayYn,
+      completeYn: completeYn ?? this.completeYn,
+      isRecurring: isRecurring ?? this.isRecurring,
+      showOnCalendar: showOnCalendar ?? this.showOnCalendar,
+    );
+  }
+
+
   bool isSameDay(DateTime date1, DateTime date2) {
     return date1.year == date2.year && date1.month == date2.month && date1.day == date2.day;
   }
