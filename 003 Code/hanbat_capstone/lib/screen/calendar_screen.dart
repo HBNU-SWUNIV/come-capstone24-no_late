@@ -70,11 +70,14 @@ class CalendarScreenState extends State<CalendarScreen> {
       final snapshot = await FirebaseFirestore.instance.collection('events').get();
       final events = snapshot.docs.map((doc) {
         final data = doc.data();
-        final categoryId = data['categoryId'] as String?;
-        final colorCode = categoryColors[categoryId];
-        print('Event: ${data['eventTitle']}, CategoryID: $categoryId, ColorCode: $colorCode'); // 로그 추가
-        return EventModel.fromMap({...data, 'categoryColor': colorCode});
-      }).toList();
+        final showOnCalendar = data['showOnCalendar'] as bool? ?? true;
+        if (showOnCalendar) {
+          final categoryId = data['categoryId'] as String?;
+          final colorCode = categoryColors[categoryId];
+          return EventModel.fromMap({...data, 'categoryColor': colorCode});
+        }
+        return null;
+      }).whereType<EventModel>().toList();
 
       setState(() {
         kEvents = _groupEvents(events);
@@ -131,6 +134,7 @@ class CalendarScreenState extends State<CalendarScreen> {
   }
 
   Widget _buildEventsMarker(DateTime date, List<EventModel> events) {
+    final filteredEvents = events.where((event) => event.showOnCalendar).toList();
     if (events.isEmpty) {
       return SizedBox.shrink();
     }
@@ -138,9 +142,9 @@ class CalendarScreenState extends State<CalendarScreen> {
     return ListView.builder(
       shrinkWrap: true,
       physics: NeverScrollableScrollPhysics(),
-      itemCount: events.length,
+      itemCount: filteredEvents.length,
       itemBuilder: (context, index) {
-        final event = events[index];
+        final event = filteredEvents[index];
         final eventTitle = event.eventTitle;
         final displayTitle =
         eventTitle.length > 15 ? '${eventTitle.substring(0, 15)}…' : eventTitle;
@@ -182,13 +186,14 @@ class CalendarScreenState extends State<CalendarScreen> {
 
   void _onDaySelected(DateTime selectedDay, DateTime focusedDay) async {
     setState(() {
+
       _selectedDay = selectedDay;
       _focusedDay = focusedDay;
       _selectedEvents.value = _getEventsForDay(selectedDay);
     });
 
     // 선택한 날짜의 이벤트를 가져와서 DayEventsScreen으로 이동
-    final selectedEvents = _getEventsForDay(selectedDay);
+    final selectedEvents = _getEventsForDay(selectedDay).where((event) => event.showOnCalendar).toList();
 
     if (selectedEvents.isEmpty) {
       // 일정이 없는 경우, 일정 추가 화면으로 이동
@@ -480,3 +485,4 @@ class CalendarScreenState extends State<CalendarScreen> {
     );
   }
 }
+
