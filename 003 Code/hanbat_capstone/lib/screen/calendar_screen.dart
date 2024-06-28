@@ -11,14 +11,18 @@ import 'package:intl/intl.dart';
 import 'day_events_screen.dart';
 
 class CalendarScreen extends StatefulWidget {
+  final Key? key;
+
+  CalendarScreen({this.key}) : super(key: key);
+
   @override
-  _CalendarScreenState createState() => _CalendarScreenState();
+  CalendarScreenState createState() => CalendarScreenState();
 }
 
 Map<DateTime, List<EventModel>> kEvents = {};
 // 일정 목록을 저장 하는 맵
 
-class _CalendarScreenState extends State<CalendarScreen> {
+class CalendarScreenState extends State<CalendarScreen> {
   CalendarFormat _calendarFormat = CalendarFormat.month; // 캘린더 형식 : 달
   DateTime _focusedDay = DateTime.now(); // 현재 포거스된 날짜
   DateTime? _selectedDay; //선택한 날짜
@@ -26,14 +30,35 @@ class _CalendarScreenState extends State<CalendarScreen> {
   //선택한 날짜의 이벤트 목록
   bool _isLoading= true;
 
+  void refreshCalendar() {
+    setState(() {
+      _fetchEvents();
+    });
+  }
+  Map<String, String> categoryColors = {};
+
+  Future<void> _loadCategories() async {
+    try {
+      final snapshot = await FirebaseFirestore.instance.collection('category').get();
+      categoryColors = Map.fromEntries(
+          snapshot.docs.map((doc) => MapEntry(doc.id, doc.data()['colorCode'] as String))
+      );
+      print('Loaded categories: $categoryColors'); // 로그 추가
+    } catch (e) {
+      print('Error loading categories: $e');
+    }
+  }
+
   @override
   void initState() {
     super.initState(); // 위젯 처음 생성시 호출
     _selectedDay = _focusedDay; //// _selectedDay 초기화
     _selectedEvents = ValueNotifier<List<EventModel>>([]); // 빈목록으로 초기화 해 일정 가져옴
-    _fetchEvents();
-
+    _loadCategories().then((_) {
+      updateExistingEvents().then((_) => _fetchEvents());
+    });
   }
+
 
 
   Future<void> _fetchEvents() async {
@@ -43,16 +68,47 @@ class _CalendarScreenState extends State<CalendarScreen> {
 
     try {
       final snapshot = await FirebaseFirestore.instance.collection('events').get();
-      final events = snapshot.docs.map((doc) => EventModel.fromMap(doc.data())).toList();
+      final events = snapshot.docs.map((doc) {
+        final data = doc.data();
+        final categoryId = data['categoryId'] as String?;
+        final colorCode = categoryColors[categoryId];
+        print('Event: ${data['eventTitle']}, CategoryID: $categoryId, ColorCode: $colorCode'); // 로그 추가
+        return EventModel.fromMap({...data, 'categoryColor': colorCode});
+      }).toList();
+
       setState(() {
         kEvents = _groupEvents(events);
         _isLoading = false;
+        _selectedEvents.value = _getEventsForDay(_selectedDay ?? DateTime.now());
       });
     } catch (error) {
-      // 에러 처리 로직 추가
+      print('Error fetching events: $error');
       setState(() {
         _isLoading = false;
       });
+    }
+  }
+
+  Future<void> updateExistingEvents() async {
+    try {
+      final snapshot = await FirebaseFirestore.instance.collection('events').get();
+      final batch = FirebaseFirestore.instance.batch();
+
+      for (var doc in snapshot.docs) {
+        final data = doc.data();
+        if (data['categoryId'] == null || data['categoryId'] == '') {
+          // 카테고리 ID가 없는 경우, 기본 카테고리 할당
+          if (categoryColors.isNotEmpty) {
+            batch.update(doc.reference, {'categoryId': categoryColors.keys.first});
+          } else {
+            print('No categories available to assign default category');
+          }        }
+      }
+
+      await batch.commit();
+      print('Updated existing events with default category');
+    } catch (e) {
+      print('Error updating existing events: $e');
     }
   }
 
@@ -75,8 +131,6 @@ class _CalendarScreenState extends State<CalendarScreen> {
   }
 
   Widget _buildEventsMarker(DateTime date, List<EventModel> events) {
-    // 날짜의 일정 표시 생성
-    // 일정이 없는 경우 -> 빈 위젯 생성
     if (events.isEmpty) {
       return SizedBox.shrink();
     }
@@ -86,20 +140,45 @@ class _CalendarScreenState extends State<CalendarScreen> {
       physics: NeverScrollableScrollPhysics(),
       itemCount: events.length,
       itemBuilder: (context, index) {
-        final eventTitle = events[index].eventTitle;
+        final event = events[index];
+        final eventTitle = event.eventTitle;
         final displayTitle =
-        eventTitle.length > 20 ? '${eventTitle.substring(0, 20)}…' : eventTitle;
+        eventTitle.length > 15 ? '${eventTitle.substring(0, 15)}…' : eventTitle;
 
-        return Text(
-          displayTitle,
-          textAlign: TextAlign.right,
-          style: TextStyle(color: Colors.black, fontSize: 10),
-          maxLines: 1,
-          overflow: TextOverflow.ellipsis,
+        return Container(
+          margin: EdgeInsets.only(bottom: 2, left: 2, right: 2),
+          decoration: BoxDecoration(
+            border: Border.all(
+              color: _getCategoryColor(event.categoryColor),
+              width: 1,
+            ),
+            borderRadius: BorderRadius.circular(2),
+          ),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 2, vertical: 1),
+            child: Text(
+              displayTitle,
+              style: TextStyle(color: Colors.black, fontSize: 10),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+            ),
+          ),
         );
       },
     );
   }
+
+  Color _getCategoryColor(String? colorCode) {
+    if (colorCode != null && colorCode.isNotEmpty) {
+      try {
+        return Color(int.parse(colorCode));
+      } catch (e) {
+        print('Error parsing color code: $colorCode');
+      }
+    }
+    return Colors.grey; // 기본 색상
+  }
+
 
   void _onDaySelected(DateTime selectedDay, DateTime focusedDay) async {
     setState(() {
@@ -133,8 +212,11 @@ class _CalendarScreenState extends State<CalendarScreen> {
         MaterialPageRoute(
           builder: (context) => RootScreen(selectedDate: selectedDay),
         ),
-      ).then((_) {
-        _fetchEvents();
+      ).then((_) async {
+        await _fetchEvents();  // RootScreen에서 돌아온 후 데이터 갱신
+        setState(() {
+          _selectedEvents.value = _getEventsForDay(selectedDay);  // 선택된 날짜의 이벤트 갱신
+        });
       });
     }
   }
@@ -292,103 +374,94 @@ class _CalendarScreenState extends State<CalendarScreen> {
                   );
                 }
               },
-              markerBuilder: (context, day, events) =>
-                  _buildEventsMarker(day, events),
+              markerBuilder: (context, day, events) {
+                return SizedBox.shrink(); // 마커 빌더는 사용하지 않음
+              },
               defaultBuilder: (context, day, focusedDay) {
-                return Stack(children: [
-                  Align(
-                    alignment: Alignment.topRight,
-                    child: Container(
-                      padding: EdgeInsets.all(4.0),
-                      decoration: BoxDecoration(
-                        borderRadius: BorderRadius.circular(4.0),
-                      ),
+                return Stack(
+                  children: [
+                    Positioned(
+                      right: 5,
+                      top: 5,
                       child: Text(
                         day.day.toString(),
-                        style: TextStyle(
-                          color: day.weekday == DateTime.sunday
-                              ? Colors.red
-                              : Colors.black,
-                          fontSize: 16.0,
-                          fontWeight: FontWeight.bold,
-                        ),
+                        style: TextStyle(fontSize: 16,
+                          color: day.weekday == DateTime.sunday ? Colors.red : Colors.black,),
                       ),
                     ),
-                  ),
-                ]);
-              },
-              selectedBuilder: (context, day, focusedDay) {
-                return Container(
-                  decoration: BoxDecoration(
-                    border: Border.all(
-                      color: Colors.green,
-                      width: 1,
+                    Positioned.fill(
+                      top: 25, // 날짜 아래에 위치하도록 조정
+                      child: _buildEventsMarker(day, _getEventsForDay(day)),
                     ),
-                  ),
-                  child: Stack(children: [
-                    Align(
-                      alignment: Alignment.topRight,
-                      child: Container(
-                        padding: EdgeInsets.all(4.0),
-                        decoration: BoxDecoration(
-                          borderRadius: BorderRadius.circular(4.0),
-                        ),
-                        child: Text(
-                          day.day.toString(),
-                          style: TextStyle(
-                            fontWeight: FontWeight.bold,
-                            color: Colors.green,
-                            fontSize: 16.0,
-                          ),
-                        ),
-                      ),
-                    ),
-                  ]),
+                  ],
                 );
               },
-              todayBuilder: (context, day, focusedDay) {
-                return Stack(children: [
-                  Align(
-                    alignment: Alignment.topRight,
-                    child: Container(
-                      padding: EdgeInsets.all(4.0),
-                      decoration: BoxDecoration(
-                        borderRadius: BorderRadius.circular(4.0),
-                      ),
-                      child: Text(
-                        day.day.toString(),
-                        style: TextStyle(
-                          color: Colors.indigo,
-                          fontSize: 16.0,
-                          fontWeight: FontWeight.bold,
+              selectedBuilder: (context, day, focusedDay) {
+                return Stack(
+                  children: [
+                    Positioned.fill(
+                      child: Container(
+                        margin: const EdgeInsets.all(1),
+                        decoration: BoxDecoration(
+                          color: Colors.green.withOpacity(0.1),
+                          border: Border.all(color: Colors.green, width: 1),
+                          borderRadius: BorderRadius.circular(5),
                         ),
                       ),
                     ),
-                  ),
-                ]);
+                    Positioned(
+                      right: 5,
+                      top: 5,
+                      child: Text(
+                        day.day.toString(),
+                        style: TextStyle(fontSize: 16, color: Colors.green),
+                      ),
+                    ),
+                    Positioned.fill(
+                      top: 25,
+                      child: _buildEventsMarker(day, _getEventsForDay(day)),
+                    ),
+                  ],
+                );
+              },
+
+              todayBuilder: (context, day, focusedDay) {
+                return Stack(
+                  children: [
+                    Positioned(
+                      right: 5,
+                      top: 5,
+                      child: Text(
+                        day.day.toString(),
+                        style: TextStyle(fontSize: 16, color: Colors.blue),
+                      ),
+                    ),
+                    Positioned.fill(
+                      top: 25,
+                      child: _buildEventsMarker(day, _getEventsForDay(day)),
+                    ),
+                  ],
+                );
               },
               outsideBuilder: (context, day, focusedDay) {
-                return Stack(children: [
-                  Align(
-                    alignment: Alignment.topRight,
-                    child: Container(
-                      padding: EdgeInsets.all(4.0),
-                      decoration: BoxDecoration(
-                        borderRadius: BorderRadius.circular(4.0),
-                      ),
+                return Stack(
+                  children: [
+                    Positioned(
+                      right: 5,
+                      top: 5,
                       child: Text(
                         day.day.toString(),
-                        style: TextStyle(
-                          color: day.weekday == DateTime.sunday
-                              ? Colors.red[200]!
-                              : Colors.grey[600]!,
-                          fontSize: 16.0,
-                        ),
+                        style: TextStyle(fontSize: 16, color: day.weekday == DateTime.sunday ? Colors.red.withOpacity(0.5) : Colors.grey,),
                       ),
                     ),
-                  ),
-                ]);
+                    Positioned.fill(
+                      top: 25,
+                      child: _buildEventsMarker(day, _getEventsForDay(day)),
+                    ),
+                  ],
+                );
               },
+
             ),
             onHeaderTapped: (_) => _showMonthPicker(),
             headerStyle: HeaderStyle(

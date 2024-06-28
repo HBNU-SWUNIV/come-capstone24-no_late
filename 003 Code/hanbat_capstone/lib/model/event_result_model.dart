@@ -1,56 +1,71 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
+
 class EventResultModel {
-  final String eventResultId; // 이벤트 결과 ID
-  final String eventId; // 이벤트 ID
-  final String categoryId; // 카테고리 ID
-  final String userId; // 사용자 ID
-  final String eventResultDate; // 이벤트 결과 날짜
-  final String eventResultSttTime; // 이벤트 결과 시작시간
-  final String eventResultEndTime; // 이벤트 결과 종료시간
-  final String eventResultTitle; // 이벤트 결과 제목
-  final String eventResultContent; // 이벤트 결과 내용
-  final String completeYn; // 완료 여부
+  final String eventResultId;
+  final String eventId;
+  final String categoryId;
+  final String userId;
+  final DateTime? eventResultDate;
+  final DateTime? eventResultSttTime;
+  final DateTime? eventResultEndTime;
+  final String eventResultTitle;
+  final String? eventResultContent;
+  final String? allDayYn;
+  final String completeYn;
+  final bool showOnCalendar;
 
   EventResultModel({
     required this.eventResultId,
     required this.eventId,
     required this.categoryId,
     required this.userId,
-    required this.eventResultDate,
-    required this.eventResultSttTime,
-    required this.eventResultEndTime,
+    this.eventResultDate,
+    this.eventResultSttTime,
+    this.eventResultEndTime,
     required this.eventResultTitle,
-    required this.eventResultContent,
+    this.eventResultContent,
+    this.allDayYn,
     required this.completeYn,
+    this.showOnCalendar = true,
   });
 
-  // toMap, fromMap 메서드 추가
   Map<String, dynamic> toMap() {
     return {
       'eventResultId': eventResultId,
       'eventId': eventId,
       'categoryId': categoryId,
       'userId': userId,
-      'eventResultDate': eventResultDate,
-      'eventResultSttTime': eventResultSttTime,
-      'eventResultEndTime': eventResultEndTime,
+      'eventResultDate': eventResultDate?.toIso8601String(),
+      'eventResultSttTime': eventResultSttTime?.toIso8601String(),
+      'eventResultEndTime': eventResultEndTime?.toIso8601String(),
       'eventResultTitle': eventResultTitle,
       'eventResultContent': eventResultContent,
+      'allDayYn': allDayYn,
       'completeYn': completeYn,
+      'showOnCalendar': showOnCalendar,
     };
   }
 
   factory EventResultModel.fromMap(Map<String, dynamic> map) {
     return EventResultModel(
-      eventResultId: map['eventResultId'],
-      eventId: map['eventId'],
-      categoryId: map['categoryId'],
-      userId: map['userId'],
-      eventResultDate: map['eventResultDate'].toDate(),
-      eventResultSttTime: map['eventResultSttTime'].toDate(),
-      eventResultEndTime: map['eventResultEndTime'].toDate(),
-      eventResultTitle: map['eventResultTitle'],
-      eventResultContent: map['eventResultContent'],
-      completeYn: map['completeYn'],
+      eventResultId: map['eventResultId'] ?? '',
+      eventId: map['eventId'] ?? '',
+      categoryId: map['categoryId'] ?? '',
+      userId: map['userId'] ?? '',
+      eventResultDate: map['eventResultDate'] != null
+          ? DateTime.parse(map['eventResultDate'])
+          : null,
+      eventResultSttTime: map['eventResultSttTime'] != null
+          ? DateTime.parse(map['eventResultSttTime'])
+          : null,
+      eventResultEndTime: map['eventResultEndTime'] != null
+          ? DateTime.parse(map['eventResultEndTime'])
+          : null,
+      eventResultTitle: map['eventResultTitle'] ?? '',
+      eventResultContent: map['eventResultContent'] ?? '',
+      allDayYn: map['allDayYn'] ?? '',
+      completeYn: map['completeYn'] ?? '',
+      showOnCalendar: map['showOnCalendar'] ?? true,
     );
   }
 
@@ -59,12 +74,14 @@ class EventResultModel {
     String? eventId,
     String? categoryId,
     String? userId,
-    String? eventResultDate,
-    String? eventResultSttTime,
-    String? eventResultEndTime,
+    DateTime? eventResultDate,
+    DateTime? eventResultSttTime,
+    DateTime? eventResultEndTime,
     String? eventResultTitle,
     String? eventResultContent,
+    String? allDayYn,
     String? completeYn,
+    bool? showOnCalendar,
   }) {
     return EventResultModel(
       eventResultId: eventResultId ?? this.eventResultId,
@@ -76,7 +93,13 @@ class EventResultModel {
       eventResultEndTime: eventResultEndTime ?? this.eventResultEndTime,
       eventResultTitle: eventResultTitle ?? this.eventResultTitle,
       eventResultContent: eventResultContent ?? this.eventResultContent,
+      allDayYn: allDayYn ?? this.allDayYn,
       completeYn: completeYn ?? this.completeYn,
+      showOnCalendar: showOnCalendar ?? this.showOnCalendar,
     );
+  }
+
+  bool isSameDay(DateTime date1, DateTime date2) {
+    return date1.year == date2.year && date1.month == date2.month && date1.day == date2.day;
   }
 }

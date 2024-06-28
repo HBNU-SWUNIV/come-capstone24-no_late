@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:hanbat_capstone/model/event_model.dart';
 import 'chat_screen.dart';
 import 'schedule_screen.dart';
 
@@ -20,6 +21,8 @@ class RootScreen extends StatefulWidget {
 
 class _RootScreenState extends State<RootScreen> {
   int _selectedIndex = 0;
+  final GlobalKey<CalendarScreenState> _calendarKey =
+  GlobalKey<CalendarScreenState>();
 
   @override
   void initState() {
@@ -34,17 +37,29 @@ class _RootScreenState extends State<RootScreen> {
       _selectedIndex = index;
     });
   }
-
   List<Widget> renderChildren(DateTime? selectedDate) => <Widget>[
-    CalendarScreen(),
-
+    CalendarScreen(key: _calendarKey),
     TimeListView(selectedDate: selectedDate),
     AddEventScreen(),
-
     ReviewScreen(), // 회고관리 화면 연결
-    SettingScreen() // 설정관리 화면 연결
+    SettingScreen(), // 설정관리 화면 연결
   ];
 
+  void _onAddEvent() async {
+    final result = await Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => AddEventScreen(selectedDate: widget.selectedDate),
+      ),
+    );
+    if (result == true) {
+      // 이벤트가 저장되었다면 캘린더 화면 갱신
+      _calendarKey.currentState?.refreshCalendar();
+      setState(() {
+        _selectedIndex = 0; // 캘린더 화면으로 이동
+      });
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -67,13 +82,16 @@ class _RootScreenState extends State<RootScreen> {
     );
   }
 
-
-
-
   BottomNavigationBar renderBottomNavigation() {
     return BottomNavigationBar(
         currentIndex: _selectedIndex,
-        onTap: _onItemTapped,
+        onTap: (index) {
+          if (index == 2) { // 일정 추가 아이템의 인덱스
+            _onAddEvent();
+          } else {
+            _onItemTapped(index);
+          }
+        },
         items: [
           BottomNavigationBarItem(
             icon: Icon(Icons.calendar_month),

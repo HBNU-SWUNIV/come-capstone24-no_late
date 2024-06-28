@@ -14,6 +14,7 @@ class EventModel {
   final bool? isRecurring; // 중복 여부
   final String? completeYn;
   final bool showOnCalendar; // 추가: 캘린더에 표시 여부를 나타내는 필드
+  final String? categoryColor;
 
   EventModel({
     required this.eventId,
@@ -28,6 +29,7 @@ class EventModel {
     this.isRecurring,
     this.completeYn,
     this.showOnCalendar = true, // 추가: 기본값은 true로 설정
+    this.categoryColor,
 
   });
 
@@ -48,7 +50,7 @@ class EventModel {
   }
 
   factory EventModel.fromMap(Map<String, dynamic> map) {
-    return EventModel(
+    final eventModel = EventModel(
       eventId: map['eventId'] ?? '',
       categoryId: map['categoryId'] ?? '',
       userId: map['userId'] ?? '',
@@ -66,8 +68,11 @@ class EventModel {
       allDayYn: map['allDayYn'] ?? '',
       isRecurring: map['isRecurring'],
       showOnCalendar: map['showOnCalendar'] ?? true, // 추가: showOnCalendar 값을 가져옴 (기본값은 true)
-
+      categoryColor: map['categoryColor'],
     );
+    print('Created EventModel: ${eventModel.eventTitle}, CategoryID: ${eventModel.categoryId}, CategoryColor: ${eventModel.categoryColor}');
+    return eventModel;
+    return eventModel;
   }
   EventModel copyWith({
     String? eventId,
@@ -82,6 +87,7 @@ class EventModel {
     String? completeYn,
     bool? isRecurring,
     bool? showOnCalendar,
+    String? categoryColor,
   }) {
     return EventModel(
       eventId: eventId ?? this.eventId,
@@ -96,6 +102,7 @@ class EventModel {
       completeYn: completeYn ?? this.completeYn,
       isRecurring: isRecurring ?? this.isRecurring,
       showOnCalendar: showOnCalendar ?? this.showOnCalendar,
+      categoryColor: categoryColor ?? this.categoryColor,
     );
   }
 

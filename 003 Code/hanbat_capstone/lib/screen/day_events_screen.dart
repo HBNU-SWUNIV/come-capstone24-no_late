@@ -4,7 +4,7 @@
 // import 'package:table_calendar/table_calendar.dart';
 // import '../model/event_model.dart';
 // import 'add_event_screen.dart';
-// import 'envet_detail_screen.dart';
+// import 'event_detail_screen.dart';
 //
 //
 // class DayEventsScreen extends StatefulWidget {
