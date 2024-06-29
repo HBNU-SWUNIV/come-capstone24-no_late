@@ -249,7 +249,7 @@ class _AddEventScreenState extends State<AddEventScreen> {
 
         String message = widget.isEditing ? '일정이 수정되었습니다.' : '일정이 추가되었습니다.';
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message)));
-        Navigator.of(context).popUntil((route) => route.isFirst);
+        Navigator.of(context).pop(true);
       } catch (e) {
         print('Error saving event: $e');
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('일정 처리에 실패했습니다.')));

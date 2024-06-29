@@ -795,49 +795,67 @@ class _TimeListViewState extends State<TimeListView> {
       final eventStartTime = DateTime(
           eventDate.year, eventDate.month, eventDate.day, startTime + index);
 
-
-      final eventSnapshot = await FirebaseFirestore.instance
-          .collection('events')
-          .where('eventDate', isEqualTo: eventDate.toIso8601String())
-          .where('eventTitle', isEqualTo: planTitle)
+      // 기존에 저장된 동일한 계획 이벤트가 있는지 확인
+      final existingResultSnapshot = await FirebaseFirestore.instance
+          .collection('result_events')
+          .where('eventResultDate', isEqualTo: eventDate.toIso8601String())
+          .where('eventResultTitle', isEqualTo: planTitle)
           .get();
 
-      if (eventSnapshot.docs.isNotEmpty) {
-        final eventData = eventSnapshot.docs.first.data();
-        final event = EventModel.fromMap(eventData);
+      if (existingResultSnapshot.docs.isNotEmpty) {
+        // 기존 이벤트가 있다면 종료 시간을 1시간 늘림
+        final existingResultData = existingResultSnapshot.docs.first.data();
+        final existingResult = EventResultModel.fromMap(existingResultData);
+        final newEndTime = existingResult.eventResultEndTime!.add(Duration(hours: 1));
 
-        final eventResult = EventResultModel(
-          eventResultId:
-          FirebaseFirestore.instance
-              .collection('result_events')
-              .doc()
-              .id,
-          eventId: event.eventId,
-          categoryId: event.categoryId,
-          userId: event.userId,
-          eventResultDate: eventDate,
-          eventResultSttTime: event.eventSttTime,
-          eventResultEndTime: event.eventEndTime,
-          eventResultTitle: event.eventTitle,
-          eventResultContent: event.eventContent,
-          allDayYn: event.allDayYn,
-          // allDayYn 추가
-          completeYn: 'Y',
-        );
-
-        // 문서가 추가된 후 ID를 가져와서 실제 일정을 업데이트합니다.
         await FirebaseFirestore.instance
             .collection('result_events')
-            .doc(eventResult.eventResultId)
-            .set(eventResult.toMap());
+            .doc(existingResult.eventResultId)
+            .update({'eventResultEndTime': newEndTime.toIso8601String()});
 
         setState(() {
-          scheduleData[formattedDate]?[index]['actual'] =
-              eventResult.eventResultTitle;
+          scheduleData[formattedDate]?[index]['actual'] = existingResult.eventResultTitle;
         });
+      } else {
+        // 기존 이벤트가 없다면 새 이벤트 생성
+        final eventSnapshot = await FirebaseFirestore.instance
+            .collection('events')
+            .where('eventDate', isEqualTo: eventDate.toIso8601String())
+            .where('eventTitle', isEqualTo: planTitle)
+            .get();
 
-        _fetchEvents();
+        if (eventSnapshot.docs.isNotEmpty) {
+          final eventData = eventSnapshot.docs.first.data();
+          final event = EventModel.fromMap(eventData);
+
+          final eventResult = EventResultModel(
+            eventResultId: FirebaseFirestore.instance.collection('result_events').doc().id,
+            eventId: event.eventId,
+            categoryId: event.categoryId,
+            userId: event.userId,
+            eventResultDate: eventDate,
+            eventResultSttTime: eventStartTime,
+            eventResultEndTime: eventStartTime.add(Duration(hours: 1)),
+            eventResultTitle: event.eventTitle,
+            eventResultContent: event.eventContent,
+            allDayYn: event.allDayYn,
+            completeYn: 'Y',
+          );
+
+          await FirebaseFirestore.instance
+              .collection('result_events')
+              .doc(eventResult.eventResultId)
+              .set(eventResult.toMap());
+
+          setState(() {
+            scheduleData[formattedDate]?[index]['actual'] = eventResult.eventResultTitle;
+          });
+        } else {
+          print('No matching event found in Firestore.');
+        }
       }
+    } else {
+      print('No planTitle found for index $index.');
     }
     _toggleCheckbox(index);
   }
