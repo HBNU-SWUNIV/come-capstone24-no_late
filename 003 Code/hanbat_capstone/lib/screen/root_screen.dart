@@ -1,8 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:hanbat_capstone/model/event_model.dart';
 import 'chat_screen.dart';
 import 'schedule_screen.dart';
-
 import 'add_event_screen.dart';
 import 'review_screen.dart';
 import 'setting_screen.dart';
@@ -39,7 +37,7 @@ class _RootScreenState extends State<RootScreen> {
   }
   List<Widget> renderChildren(DateTime? selectedDate) => <Widget>[
     CalendarScreen(key: _calendarKey),
-    TimeListView(selectedDate: selectedDate),
+    ScheduleScreen(selectedDate: selectedDate?? DateTime.now()),
     AddEventScreen(),
     ReviewScreen(), // 회고관리 화면 연결
     SettingScreen(), // 설정관리 화면 연결

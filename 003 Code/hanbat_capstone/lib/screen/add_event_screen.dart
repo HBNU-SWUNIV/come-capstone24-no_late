@@ -115,11 +115,6 @@ class _AddEventScreenState extends State<AddEventScreen> {
       // 에러 처리 로직 추가 (예: 사용자에게 알림)
     }
   }
-  void _selectCategory(CategoryModel category) {
-    setState(() {
-      selectedCategory = category;
-    });
-  }
 
 
   Future<void> _selectDate(BuildContext context) async {
@@ -145,68 +140,6 @@ class _AddEventScreenState extends State<AddEventScreen> {
       _isAllDay = value;
     });
   }
-
-  // Future<void> _selectTime(BuildContext context, bool isStartTime) async {
-  //   final selectedTime = await showTimePicker(
-  //     context: context,
-  //     initialTime: TimeOfDay.fromDateTime(
-  //         isStartTime ? _startTime ?? DateTime.now() : _endTime ?? DateTime.now()),
-  //   );
-  //   if (selectedTime != null) {
-  //     setState(() {
-  //       final date = _selectedDate ?? DateTime.now();
-  //       if (isStartTime) {
-  //         _startTime = DateTime(date.year, date.month, date.day, selectedTime.hour,
-  //             selectedTime.minute);
-  //       } else {
-  //         _endTime = DateTime(date.year, date.month, date.day, selectedTime.hour,
-  //             selectedTime.minute);
-  //       }
-  //     });
-  //   }
-  // }
-
-  // Future<void> _selectTime(BuildContext context, bool isStartTime) async {
-  //   final TimeOfDay? selectedTime = await showTimePicker(
-  //     context: context,
-  //     initialTime: TimeOfDay(
-  //         hour: isStartTime
-  //             ? _startTime?.hour ?? TimeOfDay.now().hour
-  //             : _endTime?.hour ?? (TimeOfDay.now().hour + 1) % 24,
-  //         minute: 0
-  //     ),
-  //     initialEntryMode: TimePickerEntryMode.input,
-  //     builder: (BuildContext context, Widget? child) {
-  //       return MediaQuery(
-  //         data: MediaQuery.of(context).copyWith(alwaysUse24HourFormat: true),
-  //         child: Theme(
-  //           data: ThemeData.light().copyWith(
-  //             timePickerTheme: TimePickerThemeData(
-  //               hourMinuteTextStyle: TextStyle(fontSize: 32, fontWeight: FontWeight.bold),
-  //               dialTextColor: Colors.grey,
-  //               entryModeIconColor: Colors.grey,
-  //             ),
-  //           ),
-  //           child: child!,
-  //         ),
-  //       );
-  //     },
-  //     helpText: '시간 선택',
-  //     cancelText: '취소',
-  //     confirmText: '확인',
-  //   );
-  //
-  //   if (selectedTime != null) {
-  //     setState(() {
-  //       final date = _selectedDate ?? DateTime.now();
-  //       if (isStartTime) {
-  //         _startTime = DateTime(date.year, date.month, date.day, selectedTime.hour, 0);
-  //       } else {
-  //         _endTime = DateTime(date.year, date.month, date.day, selectedTime.hour, 0);
-  //       }
-  //     });
-  //   }
-  // }
 
   Future<void> _selectTime(BuildContext context, bool isStartTime) async {
     final selectedTime = await showTimePicker(

@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:dart_openai/dart_openai.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/date_symbol_data_local.dart';
 import 'package:hanbat_capstone/screen/root_screen.dart';
@@ -22,6 +23,8 @@ Future<void> main() async {
   await Firebase.initializeApp(
     options: DefaultFirebaseOptions.currentPlatform,
   );
+
+
 
   runApp(
     MaterialApp(

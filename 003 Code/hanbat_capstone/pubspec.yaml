@@ -45,6 +45,7 @@ dependencies:
   uuid: 4.1.0               # uuID 생성할 수 있게 하는 플러그인
   dart_openai: ^5.1.0
   shared_preferences: ^2.2.3
+  provider: ^6.1.2
   # 파이어베이스 관련 플러그인
   firebase_core: 2.19.0
   cloud_firestore: 4.11.0
