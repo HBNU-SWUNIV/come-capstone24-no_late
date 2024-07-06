@@ -9,9 +9,13 @@ class TimeCell extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       width: 60,
-      child: Text(
-        time,
-        overflow: TextOverflow.ellipsis,
+      height: 50,
+      child: Center(
+        child: Text(
+          '${time}시',
+          textAlign: TextAlign.center,
+
+        ),
       ),
     );
   }

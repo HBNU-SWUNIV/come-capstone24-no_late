@@ -31,7 +31,7 @@ class CalendarService {
         userId: data['userId'] ?? '',
         eventSttTime: _toDate(data['eventSttTime']),
         eventEndTime: _toDate(data['eventEndTime']),
-        allDayYn: data['allDayYn'] ?? 'N',
+        isAllDay: data['isAllDay'] ?? false,
         completeYn: data['completeYn'] ?? 'N',
         isRecurring: data['isRecurring'] ?? false,
       );

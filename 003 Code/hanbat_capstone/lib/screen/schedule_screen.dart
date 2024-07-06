@@ -1,4 +1,6 @@
 
+import 'dart:math';
+
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:intl/intl.dart';
@@ -50,15 +52,10 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
   }
 
 
-
-
-
-
-
-
   Future<void> _fetchEvents() async {
     final events = await eventService.getEventsForDate(selectedDate);
-    final resultEvents = await eventService.getResultEventsForDate(selectedDate);
+    final resultEvents = await eventService.getResultEventsForDate(
+        selectedDate);
 
     setState(() {
       scheduleData[formattedDate] = eventService.generateScheduleData(
@@ -84,15 +81,14 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
   }
 
   void _handleCheckboxChange(int index) async {
-    if (!selectedStates[index]) {  // 체크되어 있지 않은 상태에서만 실행
+    if (!selectedStates[index]) { // 체크되어 있지 않은 상태에서만 실행
       await eventService.copyEventToResult(formattedDate, index, startTime);
       setState(() {
-        selectedStates[index] = true;  // 체크박스 상태 변경
-        _fetchEvents();  // UI 업데이트
+        selectedStates[index] = true; // 체크박스 상태 변경
+        _fetchEvents(); // UI 업데이트
       });
     }
   }
-
 
 
   void _handlePlanCellTap(int index) async {
@@ -118,15 +114,16 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
     Navigator.push(
       context,
       MaterialPageRoute(
-        builder: (context) => AddEventScreen(
-          selectedDate: selectedDate,
-          selectedTime: DateTime(
-            selectedDate.year,
-            selectedDate.month,
-            selectedDate.day,
-            startTime + index,
-          ),
-        ),
+        builder: (context) =>
+            AddEventScreen(
+              selectedDate: selectedDate,
+              selectedTime: DateTime(
+                selectedDate.year,
+                selectedDate.month,
+                selectedDate.day,
+                startTime + index,
+              ),
+            ),
       ),
     ).then((_) => _fetchEvents());
   }
@@ -135,25 +132,28 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
     Navigator.push(
       context,
       MaterialPageRoute(
-        builder: (context) => AddEventScreen(
-          selectedDate: selectedDate,
-          selectedTime: DateTime(
-            selectedDate.year,
-            selectedDate.month,
-            selectedDate.day,
-            startTime + index,
-          ),
-          isFinalEvent: true,
-        ),
+        builder: (context) =>
+            AddEventScreen(
+              selectedDate: selectedDate,
+              selectedTime: DateTime(
+                selectedDate.year,
+                selectedDate.month,
+                selectedDate.day,
+                startTime + index,
+              ),
+              isFinalEvent: true,
+            ),
       ),
     ).then((_) => _fetchEvents());
   }
 
 
-  void _openEventDetail(String eventTitle, int index, {required bool isplan}) async {
+  void _openEventDetail(String eventTitle, int index,
+      {required bool isplan}) async {
     print("Opening event detail for: $eventTitle, isplan: $isplan");
 
-    final eventDate = DateTime(selectedDate.year, selectedDate.month, selectedDate.day);
+    final eventDate = DateTime(
+        selectedDate.year, selectedDate.month, selectedDate.day);
 
     print("Querying Firestore for event on $eventDate");
 
@@ -163,7 +163,9 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
           .where(isplan ? 'eventDate' : 'eventResultDate',
           isGreaterThanOrEqualTo: eventDate.toUtc().toIso8601String())
           .where(isplan ? 'eventDate' : 'eventResultDate',
-          isLessThan: eventDate.add(Duration(days: 1)).toUtc().toIso8601String())
+          isLessThan: eventDate.add(Duration(days: 1))
+              .toUtc()
+              .toIso8601String())
           .get();
 
       print("Firestore query result: ${snapshot.docs.length} documents");
@@ -175,7 +177,8 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
 
         // 제목이 일치하는 이벤트 찾기
         final matchingEvent = snapshot.docs.firstWhere(
-              (doc) => doc.get(isplan ? 'eventTitle' : 'eventResultTitle') == eventTitle,
+              (doc) =>
+          doc.get(isplan ? 'eventTitle' : 'eventResultTitle') == eventTitle,
         );
 
         if (matchingEvent != null) {
@@ -186,32 +189,37 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
           print("Matching event found: ${event.toString()}");
 
           Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) => EventDetailScreen(
-                      event: isplan ? event as EventModel : null,
-                      eventResult: isplan ? null : event as EventResultModel,
-                      selectedDate: selectedDate,
-                      updateCalendar: _fetchEvents,
-                      onEventDeleted: (fasle) async {
-                        if (isplan) {
-                          await eventService.deleteEvent('events', (event as EventModel).eventId);
-                        } else {
-                          await eventService.deleteEvent('result_events', (event as EventResultModel).eventResultId);
-                        }
+            context,
+            MaterialPageRoute(
+              builder: (context) =>
+                  EventDetailScreen(
+                    event: isplan ? event as EventModel : null,
+                    eventResult: isplan ? null : event as EventResultModel,
+                    selectedDate: selectedDate,
+                    updateCalendar: _fetchEvents,
+                    onEventDeleted: (fasle) async {
+                      if (isplan) {
+                        await eventService.deleteEvent(
+                            'events', (event as EventModel).eventId);
+                      } else {
+                        await eventService.deleteEvent('result_events',
+                            (event as EventResultModel).eventResultId);
+                      }
+                      _fetchEvents();
+                    },
+                    onEventEdited: (editedEvent) async {
+                      if (editedEvent != null) {
+                        await FirebaseFirestore.instance
+                            .collection(isplan ? 'events' : 'result_events')
+                            .doc(isplan
+                            ? (event as EventModel).eventId
+                            : (event as EventResultModel).eventResultId)
+                            .update(editedEvent.toMap());
                         _fetchEvents();
-                      },
-                      onEventEdited: (editedEvent) async {
-                        if (editedEvent != null) {
-                          await FirebaseFirestore.instance
-                              .collection(isplan ? 'events' : 'result_events')
-                              .doc(isplan ? (event as EventModel).eventId : (event as EventResultModel).eventResultId)
-                              .update(editedEvent.toMap());
-                          _fetchEvents();
-                        }
-                      },
-                    ),
+                      }
+                    },
                   ),
+            ),
           );
         } else {
           print("No matching event found for title: $eventTitle");
@@ -253,7 +261,7 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
       ),
       body: SingleChildScrollView(
         child: DataTable(
-          columnSpacing: 10,
+          columnSpacing: 0,
           columns: [
             DataColumn(label: Container(width: 40, child: Text(''))),
             DataColumn(label: Container(width: 60, child: Text('시간'))),
@@ -262,23 +270,28 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
           ],
           rows: List.generate(
             endTime - startTime + 1,
-                (index) => DataRow(cells: [
-              DataCell(
-                CheckboxComponent(
-                  isChecked: selectedStates[index],
-                  onChanged: (value) => _handleCheckboxChange(index),
-                ),
-              ),
-              DataCell(TimeCell(time: '${(startTime + index).toString().padLeft(2, '0')}:00')),
-              DataCell(EventCell(
-                eventTitle: scheduleData[formattedDate]?[index]['plan'] ?? '',
-                onTap: () => _handlePlanCellTap(index),
-              )),
-              DataCell(EventCell(
-                eventTitle: scheduleData[formattedDate]?[index]['actual'] ?? '',
-                onTap: () => _handleActualCellTap(index),
-              )),
-            ]),
+                (index) =>
+                DataRow(cells: [
+                  DataCell(
+                    CheckboxComponent(
+                      isChecked: selectedStates[index],
+                      onChanged: (value) => _handleCheckboxChange(index),
+                    ),
+                  ),
+                  DataCell(TimeCell(
+                      time: '${(startTime + index).toString().padLeft(
+                          2, '0')}')),
+                  DataCell(EventCell(
+                    eventTitle: scheduleData[formattedDate]?[index]['plan'] ??
+                        '',
+                    onTap: () => _handlePlanCellTap(index),
+                  )),
+                  DataCell(EventCell(
+                    eventTitle: scheduleData[formattedDate]?[index]['actual'] ??
+                        '',
+                    onTap: () => _handleActualCellTap(index),
+                  )),
+                ]),
           ),
         ),
       ),

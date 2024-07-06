@@ -10,7 +10,7 @@ class EventResultModel {
   final DateTime? eventResultEndTime;
   final String eventResultTitle;
   final String? eventResultContent;
-  final String? allDayYn;
+  final bool? isAllDay;
   final String completeYn;
   final bool showOnCalendar;
 
@@ -24,7 +24,7 @@ class EventResultModel {
     this.eventResultEndTime,
     required this.eventResultTitle,
     this.eventResultContent,
-    this.allDayYn,
+    this.isAllDay = false,
     required this.completeYn,
     this.showOnCalendar = true,
   });
@@ -40,7 +40,7 @@ class EventResultModel {
       'eventResultEndTime': eventResultEndTime?.toIso8601String(),
       'eventResultTitle': eventResultTitle,
       'eventResultContent': eventResultContent,
-      'allDayYn': allDayYn,
+      'isAllDay': isAllDay,
       'completeYn': completeYn,
       'showOnCalendar': showOnCalendar,
     };
@@ -63,7 +63,7 @@ class EventResultModel {
           : null,
       eventResultTitle: map['eventResultTitle'] ?? '',
       eventResultContent: map['eventResultContent'] ?? '',
-      allDayYn: map['allDayYn'] ?? '',
+      isAllDay: map['isAllDay'] ?? '',
       completeYn: map['completeYn'] ?? '',
       showOnCalendar: map['showOnCalendar'] ?? true,
     );
@@ -79,7 +79,7 @@ class EventResultModel {
     DateTime? eventResultEndTime,
     String? eventResultTitle,
     String? eventResultContent,
-    String? allDayYn,
+    bool? isAllDay,
     String? completeYn,
     bool? showOnCalendar,
   }) {
@@ -93,7 +93,7 @@ class EventResultModel {
       eventResultEndTime: eventResultEndTime ?? this.eventResultEndTime,
       eventResultTitle: eventResultTitle ?? this.eventResultTitle,
       eventResultContent: eventResultContent ?? this.eventResultContent,
-      allDayYn: allDayYn ?? this.allDayYn,
+      isAllDay: isAllDay ?? this.isAllDay,
       completeYn: completeYn ?? this.completeYn,
       showOnCalendar: showOnCalendar ?? this.showOnCalendar,
     );

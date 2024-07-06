@@ -90,7 +90,7 @@ class _AddEventScreenState extends State<AddEventScreen> {
         ? (widget.isFinalEvent ? true : widget.event?.showOnCalendar ?? true)
         : true;
     _isAllDay =
-        widget.event?.allDayYn == 'Y' || widget.actualevent?.allDayYn == 'Y';
+        widget.event?.isAllDay == true || widget.actualevent?.isAllDay == true;
     _loadCategories();
   }
 
@@ -207,7 +207,7 @@ class _AddEventScreenState extends State<AddEventScreen> {
       eventResultEndTime: _endTime ?? DateTime.now().add(Duration(hours: 1)),
       eventResultTitle: _titleController.text,
       eventResultContent: _contentController.text,
-      allDayYn: _isAllDay ? 'Y' : 'N',
+      isAllDay: _isAllDay ? true : false,
       completeYn: '',
     );
 
@@ -242,7 +242,7 @@ class _AddEventScreenState extends State<AddEventScreen> {
       userId: '',
       eventSttTime: _startTime,
       eventEndTime: _endTime,
-      allDayYn: 'N',
+      isAllDay: _isAllDay,
       completeYn: 'N',
       isRecurring: _isRecurring,
       showOnCalendar: _showOnCalendar,

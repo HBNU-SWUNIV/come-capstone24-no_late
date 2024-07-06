@@ -505,7 +505,7 @@ class CalendarScreenState extends State<CalendarScreen> {
   DateTime? _selectedDay; //선택한 날짜
   late ValueNotifier<List<EventModel>> _selectedEvents;
   //선택한 날짜의 이벤트 목록
-  bool _isLoading= true;
+
 
   void refreshCalendar() {
     setState(() {
@@ -539,9 +539,7 @@ class CalendarScreenState extends State<CalendarScreen> {
 
 
   Future<void> _fetchEvents() async {
-    setState(() {
-      _isLoading = true;
-    });
+
 
     try {
       final snapshot = await FirebaseFirestore.instance
@@ -558,13 +556,13 @@ class CalendarScreenState extends State<CalendarScreen> {
 
       setState(() {
         kEvents = _groupEvents(events);
-        _isLoading = false;
+
         _selectedEvents.value = _getEventsForDay(_selectedDay ?? DateTime.now());
       });
     } catch (error) {
       print('Error fetching events: $error');
       setState(() {
-        _isLoading = false;
+
       });
     }
   }
@@ -626,20 +624,20 @@ class CalendarScreenState extends State<CalendarScreen> {
         final displayTitle =
         eventTitle.length > 15 ? '${eventTitle.substring(0, 15)}…' : eventTitle;
 
+        Color categoryColor = _getCategoryColor(event.categoryColor);
+        Color backgroundColor = _getLighterColor(categoryColor);
+
         return Container(
           margin: EdgeInsets.only(bottom: 2, left: 2, right: 2),
           decoration: BoxDecoration(
-            border: Border.all(
-              color: _getCategoryColor(event.categoryColor),
-              width: 1,
-            ),
+            color: backgroundColor,
             borderRadius: BorderRadius.circular(2),
           ),
           child: Padding(
             padding: const EdgeInsets.symmetric(horizontal: 2, vertical: 1),
             child: Text(
               displayTitle,
-              style: TextStyle(color: Colors.black, fontSize: 10),
+              style: TextStyle(color: categoryColor, fontSize: 10),
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
             ),
@@ -647,6 +645,12 @@ class CalendarScreenState extends State<CalendarScreen> {
         );
       },
     );
+  }
+
+// 선택한 색의 명도를 높이는 함수
+  Color _getLighterColor(Color color) {
+    final hslColor = HSLColor.fromColor(color);
+    return hslColor.withLightness((hslColor.lightness + 0.4).clamp(0.0, 1.0)).toColor();
   }
 
   Color _getCategoryColor(String? colorCode) {
@@ -796,8 +800,7 @@ class CalendarScreenState extends State<CalendarScreen> {
         (size.height - kToolbarHeight - MediaQuery.of(context).padding.top) / 6;
 
     return Scaffold(
-      body: _isLoading
-          ? Center(child: CircularProgressIndicator())
+      body
           : ListView(
         children: [
           TableCalendar<EventModel>(

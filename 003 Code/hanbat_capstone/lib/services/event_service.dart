@@ -18,6 +18,7 @@ class EventService {
           .collection('events')
           .where('eventDate', isGreaterThanOrEqualTo: startOfDayStr)
           .where('eventDate', isLessThanOrEqualTo: endOfDayStr)
+          .where('isAllDay', isEqualTo: false) // 종일 이벤트 제외
           .get();
 
       final List<EventModel> events = snapshot.docs
@@ -29,6 +30,8 @@ class EventService {
       return [];
     }
   }
+
+
 
   Future<List<EventResultModel>> getResultEventsForDate(DateTime date) async {
     try {
@@ -183,7 +186,7 @@ class EventService {
             eventResultEndTime: eventStartTime.add(Duration(hours: 1)),
             eventResultTitle: event.eventTitle,
             eventResultContent: event.eventContent,
-            allDayYn: event.allDayYn,
+            isAllDay: event.isAllDay,
             completeYn: 'Y',
           );
 

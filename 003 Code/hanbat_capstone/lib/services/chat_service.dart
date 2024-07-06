@@ -13,27 +13,24 @@ class ChatService {
     OpenAI.requestsTimeOut = const Duration(seconds: 60);
   }
 
-
-
-
-
   Future<String> createModel(String sendMessage) async {
     final systemMessage = OpenAIChatCompletionChoiceMessageModel(
       content: [
         OpenAIChatCompletionChoiceMessageContentItemModel.text(
-            "너는 아주 훌륭한 상대방의 개인 비서야."
-                + "현대의 사람들은 할일이 많아서 시간 관리에 어려움을 겪고 있는 사람들이 많아"
-                + "나는 그런 사람들에게 너라는 도구를 이용해서 사람들에게 도움을 주고 싶어"
-        ),
+            "너는 아주 훌륭한 개인 비서야." +
+                "사용자가 회고 요청 하면 회고 내용을 요약해 주세요. 주요 항목은 다음과 같습니다 1. 잘한 점 2. 개선할 점 3. 칭찬할 점" +
+                "사용자가 일정 추가,삭제 수정,조회를 요청하면 아래의 형식을 보여주세요" +
+                "일정 추가 요청문 : 일정 이름: ..., 날짜: 0000-00-00, 시작 시간: 00;00, 종료 시간: 00;00, 세부사항: ... , 일정 추가 해줘" +
+                " 일정 수정 요청문 : 일정 제목: ..., 새 제목: ..., 새 날짜: 0000-00-00, 새 시작 시간: 00;00, 새 종료 시간: 00;00, 새 세부사항: ... , 일정 수정 해줘" +
+                "일정 조회 요청문 : 일정 조회 해줘" +
+                "일정 삭제 요청문 : 일정 제목: ..., 삭제 해줘" +
+                "")
       ],
       role: OpenAIChatMessageRole.system,
     );
 
-
-
     final userMessage = OpenAIChatCompletionChoiceMessageModel(
       content: [
-
         OpenAIChatCompletionChoiceMessageContentItemModel.text(
           sendMessage,
         ),
@@ -43,18 +40,19 @@ class ChatService {
 
     final requestMessages = [systemMessage, userMessage];
 
-
-
     OpenAIChatCompletionModel chatCompletion =
     await OpenAI.instance.chat.create(
-      model: 'gpt-3.5-turbo',
+      model: 'gpt-4',
       messages: requestMessages,
       maxTokens: 250,
     );
 
     String aiResponse =
     chatCompletion.choices.first.message.content![0].text.toString();
-
+    if (sendMessage.toLowerCase().contains("회고 요약") ||
+        sendMessage.toLowerCase().contains("회고 요약해줘")) {
+      aiResponse = await summarizeRetrospective();
+    }
     // Firestore에서 일정 조회
     if (sendMessage.toString().endsWith("조회해줘") ||
         sendMessage.toString().endsWith("조회 해줘")) {
@@ -64,8 +62,7 @@ class ChatService {
       } else {
         String eventDetails = events.map((event) {
           return "${event.eventTitle} 일정이 ${DateFormat('yyyy-MM-dd').format(
-              event.eventDate ?? DateTime.now())} ${DateFormat('HH:mm')
-              .format(
+              event.eventDate ?? DateTime.now())} ${DateFormat('HH:mm').format(
               event.eventSttTime ?? DateTime.now())}시에 있습니다. 세부사항 내용은 ${event
               .eventContent} 입니다";
         }).join("\n");
@@ -83,10 +80,57 @@ class ChatService {
       aiResponse = await _updateEvent(sendMessage);
     }
 
+
+
     return aiResponse;
   }
 
-    Future<String> _addEvent(String sendMessage) async {
+  Future<List<String>> getRetrospectives() async {
+    final snapshot = await _firestore.collection('review').get();
+    return snapshot.docs.map((doc) => doc['reviewContent'] as String).toList();
+  }
+
+  Future<String> summarizeRetrospective() async {
+    final retrospectives = await getRetrospectives();
+    if (retrospectives.isEmpty) {
+      return "회고 내용이 없습니다.";
+    }
+
+    final combinedRetrospective = retrospectives.join("\n\n");
+
+    final systemMessage = OpenAIChatCompletionChoiceMessageModel(
+      content: [
+        OpenAIChatCompletionChoiceMessageContentItemModel.text(
+            "다음 회고 내용을 요약해주세요. 주요 항목은 다음과 같습니다: 1. 잘한 점 2. 개선할 점 3. 칭찬할 점"
+        )
+      ],
+      role: OpenAIChatMessageRole.system,
+    );
+
+    final userMessage = OpenAIChatCompletionChoiceMessageModel(
+      content: [
+        OpenAIChatCompletionChoiceMessageContentItemModel.text(
+          combinedRetrospective,
+        ),
+      ],
+      role: OpenAIChatMessageRole.user,
+    );
+
+    final requestMessages = [systemMessage, userMessage];
+
+    OpenAIChatCompletionModel chatCompletion =
+    await OpenAI.instance.chat.create(
+      model: 'gpt-3.5-turbo',
+      messages: requestMessages,
+      maxTokens: 500,
+    );
+
+    return chatCompletion.choices.first.message.content![0].text.toString();
+  }
+
+
+
+  Future<String> _addEvent(String sendMessage) async {
     try {
       // 예시 명령어: "add event title: Meeting, date: 2024-05-22, start: 14:00, end: 15:00, content: Team meeting"
       final regExp = RegExp(
@@ -108,8 +152,11 @@ class ChatService {
         );
         final content = match.group(5)?.trim();
 
-        if (title != null && date != null && startTime != null &&
-            endTime != null && content != null) {
+        if (title != null &&
+            date != null &&
+            startTime != null &&
+            endTime != null &&
+            content != null) {
           final newEvent = EventModel(
             eventTitle: title,
             eventDate: date,
@@ -117,33 +164,30 @@ class ChatService {
             eventId: '',
             categoryId: '',
             userId: '',
-            eventSttTime: DateTime(
-                date.year, date.month, date.day, startTime.hour,
-                startTime.minute),
+            eventSttTime: DateTime(date.year, date.month, date.day,
+                startTime.hour, startTime.minute),
             eventEndTime: DateTime(
                 date.year, date.month, date.day, endTime.hour, endTime.minute),
-            allDayYn: 'N',
+            isAllDay: false,
             completeYn: 'N',
             isRecurring: false,
           );
 
-          final eventRef = await _firestore.collection('events').add(
-              newEvent.toMap());
+          final eventRef =
+              await _firestore.collection('events').add(newEvent.toMap());
           final eventId = eventRef.id;
           await eventRef.update({'eventId': eventId});
 
           // 시간 형식 변환
           String formatTimeOfDay(TimeOfDay time) {
             final now = DateTime.now();
-            final dt = DateTime(
-                now.year, now.month, now.day, time.hour, time.minute);
+            final dt =
+                DateTime(now.year, now.month, now.day, time.hour, time.minute);
             final format = DateFormat.Hm(); // or add your favorite format
             return format.format(dt);
           }
 
-          return "일정 추가되었습니다 : $title 일정을 ${DateFormat('yyyy-MM-dd').format(
-              date)} 일 ${formatTimeOfDay(startTime)}시 부터 ${formatTimeOfDay(
-              endTime)}시 사이에 저장했습니다 ";
+          return "일정 추가되었습니다 : $title 일정을 ${DateFormat('yyyy-MM-dd').format(date)} 일 ${formatTimeOfDay(startTime)}시 부터 ${formatTimeOfDay(endTime)}시 사이에 저장했습니다 ";
         } else {
           return "정확한 정보를 입력해주세요";
         }
@@ -210,8 +254,12 @@ class ChatService {
         );
         final newContent = match.group(6)?.trim();
 
-        if (oldTitle != null && newTitle != null && newDate != null &&
-            newStartTime != null && newEndTime != null && newContent != null) {
+        if (oldTitle != null &&
+            newTitle != null &&
+            newDate != null &&
+            newStartTime != null &&
+            newEndTime != null &&
+            newContent != null) {
           final events = await _calendarService.getEvents();
           final index = events.indexWhere((e) => e.eventTitle == oldTitle);
 
@@ -224,13 +272,11 @@ class ChatService {
               eventId: event.eventId,
               categoryId: event.categoryId,
               userId: event.userId,
-              eventSttTime: DateTime(
-                  newDate.year, newDate.month, newDate.day, newStartTime.hour,
-                  newStartTime.minute),
-              eventEndTime: DateTime(
-                  newDate.year, newDate.month, newDate.day, newEndTime.hour,
-                  newEndTime.minute),
-              allDayYn: event.allDayYn,
+              eventSttTime: DateTime(newDate.year, newDate.month, newDate.day,
+                  newStartTime.hour, newStartTime.minute),
+              eventEndTime: DateTime(newDate.year, newDate.month, newDate.day,
+                  newEndTime.hour, newEndTime.minute),
+              isAllDay: event.isAllDay,
               completeYn: event.completeYn,
               isRecurring: event.isRecurring,
             );
@@ -251,4 +297,3 @@ class ChatService {
     }
   }
 }
-
