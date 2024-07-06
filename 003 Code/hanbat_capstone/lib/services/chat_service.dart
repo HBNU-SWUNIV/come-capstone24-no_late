@@ -6,8 +6,12 @@ import '../model/event_model.dart';
 import 'calendar_service.dart';
 
 class ChatService {
+
+
+
   final CalendarService _calendarService = CalendarService();
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
+
 
   ChatService() {
     OpenAI.requestsTimeOut = const Duration(seconds: 60);
@@ -18,7 +22,6 @@ class ChatService {
       content: [
         OpenAIChatCompletionChoiceMessageContentItemModel.text(
             "너는 아주 훌륭한 개인 비서야." +
-                "사용자가 회고 요청 하면 회고 내용을 요약해 주세요. 주요 항목은 다음과 같습니다 1. 잘한 점 2. 개선할 점 3. 칭찬할 점" +
                 "사용자가 일정 추가,삭제 수정,조회를 요청하면 아래의 형식을 보여주세요" +
                 "일정 추가 요청문 : 일정 이름: ..., 날짜: 0000-00-00, 시작 시간: 00;00, 종료 시간: 00;00, 세부사항: ... , 일정 추가 해줘" +
                 " 일정 수정 요청문 : 일정 제목: ..., 새 제목: ..., 새 날짜: 0000-00-00, 새 시작 시간: 00;00, 새 종료 시간: 00;00, 새 세부사항: ... , 일정 수정 해줘" +
@@ -85,15 +88,18 @@ class ChatService {
     return aiResponse;
   }
 
-  Future<List<String>> getRetrospectives() async {
+  Future<List<String>> getRetrospectives(String formattedYesterday) async {
     final snapshot = await _firestore.collection('review').get();
     return snapshot.docs.map((doc) => doc['reviewContent'] as String).toList();
   }
 
   Future<String> summarizeRetrospective() async {
-    final retrospectives = await getRetrospectives();
+    final yesterday = DateTime.now().subtract(Duration(days: 1));
+    final formattedYesterday = DateFormat('yyyyMMdd').format(yesterday);
+
+    final retrospectives = await getRetrospectives(formattedYesterday);
     if (retrospectives.isEmpty) {
-      return "회고 내용이 없습니다.";
+      return "$formattedYesterday의 회고 내용이 없습니다.";
     }
 
     final combinedRetrospective = retrospectives.join("\n\n");
@@ -101,7 +107,7 @@ class ChatService {
     final systemMessage = OpenAIChatCompletionChoiceMessageModel(
       content: [
         OpenAIChatCompletionChoiceMessageContentItemModel.text(
-            "다음 회고 내용을 요약해주세요. 주요 항목은 다음과 같습니다: 1. 잘한 점 2. 개선할 점 3. 칭찬할 점"
+            "다음 회고 내용을 요약해주세요. 전체 내용을 3줄로 요약해 주세요"
         )
       ],
       role: OpenAIChatMessageRole.system,
@@ -120,9 +126,9 @@ class ChatService {
 
     OpenAIChatCompletionModel chatCompletion =
     await OpenAI.instance.chat.create(
-      model: 'gpt-3.5-turbo',
+      model: 'gpt-4',
       messages: requestMessages,
-      maxTokens: 500,
+      maxTokens: 300,
     );
 
     return chatCompletion.choices.first.message.content![0].text.toString();

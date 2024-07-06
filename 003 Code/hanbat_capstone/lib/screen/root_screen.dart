@@ -84,11 +84,11 @@ class _RootScreenState extends State<RootScreen> {
     return BottomNavigationBar(
         currentIndex: _selectedIndex,
         onTap: (index) {
-          if (index == 2) { // 일정 추가 아이템의 인덱스
-            _onAddEvent();
-          } else {
+          // if (index == 2) { // 일정 추가 아이템의 인덱스
+          //   _onAddEvent();
+          // } else {
             _onItemTapped(index);
-          }
+          // }
         },
         items: [
           BottomNavigationBarItem(

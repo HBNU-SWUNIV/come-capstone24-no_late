@@ -695,7 +695,7 @@ class CalendarScreenState extends State<CalendarScreen> {
       Navigator.push(
         context,
         MaterialPageRoute(
-          builder: (context) => RootScreen(selectedDate: selectedDay),
+          builder: (context) => DayEventsScreen(selectedDate: selectedDay, events: [], updateCalendar: () {  },),
         ),
       ).then((_) async {
         await _fetchEvents();  // RootScreen에서 돌아온 후 데이터 갱신
