@@ -258,42 +258,77 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
           onPreviousDay: () => _updateDate(-1),
           onNextDay: () => _updateDate(1),
         ),
+        backgroundColor: Colors.white,
+        elevation: 0,
       ),
-      body: SingleChildScrollView(
-        child: DataTable(
-          columnSpacing: 0,
-          columns: [
-            DataColumn(label: Container(width: 40, child: Text(''))),
-            DataColumn(label: Container(width: 60, child: Text('시간'))),
-            DataColumn(label: Container(width: 120, child: Text('일정'))),
-            DataColumn(label: Container(width: 120, child: Text('결과'))),
-          ],
-          rows: List.generate(
-            endTime - startTime + 1,
-                (index) =>
-                DataRow(cells: [
-                  DataCell(
-                    CheckboxComponent(
-                      isChecked: selectedStates[index],
-                      onChanged: (value) => _handleCheckboxChange(index),
-                    ),
-                  ),
-                  DataCell(TimeCell(
-                      time: '${(startTime + index).toString().padLeft(
-                          2, '0')}')),
-                  DataCell(EventCell(
-                    eventTitle: scheduleData[formattedDate]?[index]['plan'] ??
-                        '',
-                    onTap: () => _handlePlanCellTap(index),
-                  )),
-                  DataCell(EventCell(
-                    eventTitle: scheduleData[formattedDate]?[index]['actual'] ??
-                        '',
-                    onTap: () => _handleActualCellTap(index),
-                  )),
-                ]),
+      body: Column(
+        children: [
+          Container(
+            padding: EdgeInsets.symmetric(vertical: 8, horizontal: 16),
+            color: Colors.grey[200],
+            child: Row(
+              children: [
+                Expanded(flex: 1, child: Text('  ', style: TextStyle(fontWeight: FontWeight.bold))),
+                Expanded(flex: 1, child: Text('시간', style: TextStyle(fontWeight: FontWeight.bold))),
+                Expanded(flex: 3, child: Text('일정', style: TextStyle(fontWeight: FontWeight.bold))),
+                Expanded(flex: 3, child: Text('실제로 한 일정', style: TextStyle(fontWeight: FontWeight.bold))),
+              ],
+            ),
           ),
-        ),
+          Expanded(
+            child: ListView.builder(
+              itemCount: endTime - startTime + 1,
+              itemBuilder: (context, index) {
+                return Container(
+                  decoration: BoxDecoration(
+                    border: Border(bottom: BorderSide(color: Colors.grey[300]!)),
+                  ),
+                  child: Row(
+                    children: [
+                      SizedBox(
+                        width: 40,
+                        child: Center(
+                          child: CheckboxComponent(
+                            isChecked: selectedStates[index],
+                            onChanged: (bool? value) {
+                              if (value != null) {
+                                _handleCheckboxChange(index);
+                              }
+                            },
+                          ),
+                        ),
+                      ),
+                      Expanded(
+                        flex: 1,
+                        child: Container(
+                          padding: EdgeInsets.symmetric(vertical: 12),
+                          alignment: Alignment.center,
+                          child: Text('${(startTime + index).toString().padLeft(2, '0')}시'),
+                        ),
+                      ),
+                      Expanded(
+                        flex: 2,
+                        child: EventCell(
+                          eventTitle: scheduleData[formattedDate]?[index]['plan'] ?? '',
+                          categoryId: scheduleData[formattedDate]?[index]['planCategoryId'] ?? '',
+                          onTap: () => _handlePlanCellTap(index),
+                        ),
+                      ),
+                      Expanded(
+                        flex: 2,
+                        child: EventCell(
+                          eventTitle: scheduleData[formattedDate]?[index]['actual'] ?? '',
+                          categoryId: scheduleData[formattedDate]?[index]['actualCategoryId'] ?? '',
+                          onTap: () => _handleActualCellTap(index),
+                        ),
+                      ),
+                    ],
+                  ),
+                );
+              },
+            ),
+          ),
+        ],
       ),
     );
   }

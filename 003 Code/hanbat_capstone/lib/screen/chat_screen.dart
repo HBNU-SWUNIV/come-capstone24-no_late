@@ -451,7 +451,7 @@ class _ChatScreenState extends State<ChatScreen> {
       },
       child: Scaffold(
         appBar: AppBar(
-          title: Text('ChatGPT App'),
+          title: Text('개인비서 AI'),
         ),
         body: Column(
           children: [

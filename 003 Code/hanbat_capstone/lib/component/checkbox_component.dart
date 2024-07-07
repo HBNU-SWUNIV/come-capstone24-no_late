@@ -11,6 +11,10 @@ class CheckboxComponent extends StatelessWidget {
     return Checkbox(
       value: isChecked,
       onChanged: onChanged,
+      activeColor: Theme.of(context).primaryColor,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(4),
+      ),
     );
   }
 }

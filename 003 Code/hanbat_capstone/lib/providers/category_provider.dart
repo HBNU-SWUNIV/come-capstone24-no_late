@@ -8,6 +8,10 @@ class CategoryProvider extends ChangeNotifier {
 
   final FirestoreService _firestoreService = FirestoreService();
 
+  CategoryProvider() {
+    loadCategories();
+  }
+
   Future<void> loadCategories() async {
     _categoryColors = await _firestoreService.getCategories();
     notifyListeners();

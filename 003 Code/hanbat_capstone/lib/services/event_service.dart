@@ -104,7 +104,9 @@ class EventService {
 
       return {
         'plan': eventForTime?.eventTitle ?? '',
+        'planCategoryId': eventForTime?.categoryId ?? '',
         'actual': resultEventForTime?.eventResultTitle ?? '',
+        'actualCategoryId': resultEventForTime?.categoryId ?? '',
       };
     });
   }
