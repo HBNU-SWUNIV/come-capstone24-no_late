@@ -536,6 +536,24 @@ class CalendarScreenState extends State<CalendarScreen> {
     });
   }
 
+  void _onFormatChanged(CalendarFormat format) {
+    setState(() {
+      _calendarFormat = format;
+    });
+  }
+
+  void _changeCalendarFormat() {
+    setState(() {
+      if (_calendarFormat == CalendarFormat.month) {
+        _calendarFormat = CalendarFormat.twoWeeks;
+      } else if (_calendarFormat == CalendarFormat.twoWeeks) {
+        _calendarFormat = CalendarFormat.week;
+      } else {
+        _calendarFormat = CalendarFormat.month;
+      }
+    });
+  }
+
 
 
   Future<void> _fetchEvents() async {
@@ -565,6 +583,31 @@ class CalendarScreenState extends State<CalendarScreen> {
 
       });
     }
+  }
+  List<EventModel> _getEventsForWeek(DateTime day) {
+    final weekStart = day.subtract(Duration(days: day.weekday - 1));
+    final weekEnd = weekStart.add(Duration(days: 7));
+
+    return kEvents.entries
+        .where((entry) => entry.key.isAfter(weekStart.subtract(Duration(days: 1)))
+        && entry.key.isBefore(weekEnd))
+        .expand((entry) => entry.value)
+        .toList();
+  }
+
+  Widget _buildWeeklyEventList() {
+    final weekEvents = _getEventsForWeek(_focusedDay);
+    return ListView.builder(
+      shrinkWrap: true,
+      itemCount: weekEvents.length,
+      itemBuilder: (context, index) {
+        final event = weekEvents[index];
+        return ListTile(
+          title: Text(event.eventTitle),
+          subtitle: Text(DateFormat('yyyy-MM-dd HH:mm').format(event.eventDate!)),
+        );
+      },
+    );
   }
 
 
@@ -801,7 +844,7 @@ class CalendarScreenState extends State<CalendarScreen> {
 
     return Scaffold(
       body
-          : ListView(
+          : Column(
         children: [
           TableCalendar<EventModel>(
             locale: 'ko_KR',
@@ -809,7 +852,8 @@ class CalendarScreenState extends State<CalendarScreen> {
             lastDay: DateTime.utc(2030, 3, 14),
             focusedDay: _focusedDay,
             calendarFormat: _calendarFormat,
-            availableGestures: AvailableGestures.none,
+            availableGestures: AvailableGestures.verticalSwipe,
+
 
             calendarStyle: CalendarStyle(
               cellMargin: EdgeInsets.zero,
@@ -819,11 +863,18 @@ class CalendarScreenState extends State<CalendarScreen> {
               ),
             ),
             rowHeight: rowHeight,
-            daysOfWeekHeight: 50,
+            availableCalendarFormats: {
+              CalendarFormat.month: '월',
+              CalendarFormat.twoWeeks: '2주',
+              CalendarFormat.week: '주',
+            },
+            onFormatChanged: _onFormatChanged,
+            daysOfWeekHeight: 40,
             eventLoader: _getEventsForDay,
             selectedDayPredicate: (day) => isSameDay(_selectedDay, day),
             onDaySelected: _onDaySelected,
             calendarBuilders: CalendarBuilders(
+
               dowBuilder: (context, day) {
                 if (day.weekday == DateTime.sunday) {
                   final text = DateFormat.E("ko_KR").format(day);
@@ -917,24 +968,49 @@ class CalendarScreenState extends State<CalendarScreen> {
                   ],
                 );
               },
+              // outsideBuilder: (context, day, focusedDay) {
+              //   return Stack(
+              //     children: [
+              //       Positioned(
+              //         right: 5,
+              //         top: 5,
+              //         child: Text(
+              //           day.day.toString(),
+              //           style: TextStyle(fontSize: 16, color: day.weekday == DateTime.sunday ? Colors.red.withOpacity(0.5) : Colors.grey,),
+              //         ),
+              //       ),
+              //       Positioned.fill(
+              //         top: 25,
+              //         child: _buildEventsMarker(day, _getEventsForDay(day)),
+              //       ),
+              //     ],
+              //   );
+              // },
               outsideBuilder: (context, day, focusedDay) {
+
                 return Stack(
-                  children: [
-                    Positioned(
-                      right: 5,
-                      top: 5,
-                      child: Text(
-                        day.day.toString(),
-                        style: TextStyle(fontSize: 16, color: day.weekday == DateTime.sunday ? Colors.red.withOpacity(0.5) : Colors.grey,),
+                    children: [
+                      Positioned(
+                        right: 5,
+                        top: 5,
+                        child: Text(
+                          day.day.toString(),
+                          style: TextStyle(fontSize: 16, color: day.weekday == DateTime.sunday ? Colors.red.withOpacity(0.5) : Colors.grey,),
+                        ),
                       ),
-                    ),
-                    Positioned.fill(
-                      top: 25,
-                      child: _buildEventsMarker(day, _getEventsForDay(day)),
-                    ),
-                  ],
-                );
+                      Positioned.fill(
+                        top: 25,
+                        child: _buildEventsMarker(day, _getEventsForDay(day)),
+                      ),
+                    ],
+                  );
+                //   child: Text(
+                //     day.day.toString(),
+                //     style: TextStyle(color: Colors.grey),
+                //   ),
+                // );
               },
+
 
             ),
             onHeaderTapped: (_) => _showMonthPicker(),
@@ -949,6 +1025,8 @@ class CalendarScreenState extends State<CalendarScreen> {
                   DateFormat.yMMM(locale).format(date),
             ),
           ),
+          if (_calendarFormat != CalendarFormat.month)
+            Expanded(child: _buildWeeklyEventList()),
         ],
       ),
     );
