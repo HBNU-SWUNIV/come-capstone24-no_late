@@ -11,6 +11,9 @@ import 'package:hanbat_capstone/screen/review_title_screen.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:intl/intl.dart';
 
+/**
+ * 회고관리 화면
+ */
 class ReviewScreen extends StatefulWidget {
   const ReviewScreen({Key? key}) : super(key: key);
 
