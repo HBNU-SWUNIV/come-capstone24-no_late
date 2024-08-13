@@ -8,7 +8,7 @@ import 'package:firebase_core/firebase_core.dart';
 import 'package:provider/provider.dart';
 import 'firebase_options.dart';
 import 'providers/category_provider.dart';
-
+import 'package:hanbat_capstone/services/notification_service.dart';
 
 
 Future<void> main() async {
@@ -26,11 +26,20 @@ Future<void> main() async {
     options: DefaultFirebaseOptions.currentPlatform,
   );
 
+  // 알림 설정 **************************************************
+  final notificationService = NotificationService();
+  await notificationService.init();
+  await notificationService.eventNotificationFromFirestore(); // // 앱 시작 시 Firestore에서 이벤트를 가져와 알림 예약
+  //************************************************************
 
-  runApp(MyApp());
+  runApp(MyApp(notificationService: notificationService));
 }
 
 class MyApp extends StatelessWidget {
+
+  final NotificationService notificationService;
+  MyApp({required this.notificationService});
+
   @override
   Widget build(BuildContext context) {
     return MultiProvider(
@@ -46,7 +55,7 @@ class MyApp extends StatelessWidget {
               backgroundColor: Colors.white,
             )
         ),
-        home: RootScreen(),
+        home: RootScreen(notificationService: notificationService),
       ),
     );
   }

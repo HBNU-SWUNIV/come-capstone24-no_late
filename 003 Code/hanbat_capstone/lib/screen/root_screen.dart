@@ -5,13 +5,19 @@ import 'add_event_screen.dart';
 import 'review_screen.dart';
 import 'setting_screen.dart';
 import 'calendar_screen.dart';
+import 'package:hanbat_capstone/services/notification_service.dart';
 
 class RootScreen extends StatefulWidget {
   // const RootScreen({Key? key}) : super(key: key);
 
   final DateTime? selectedDate;
+  final NotificationService notificationService;
 
-  const RootScreen({Key? key, this.selectedDate}) : super(key: key);
+  const RootScreen({
+    Key? key,
+    this.selectedDate,
+    required this.notificationService,
+  }) : super(key: key);
 
   @override
   State createState() => _RootScreenState();
