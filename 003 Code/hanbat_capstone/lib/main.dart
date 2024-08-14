@@ -7,8 +7,10 @@ import 'package:hanbat_capstone/screen/root_screen.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:provider/provider.dart';
 import 'firebase_options.dart';
+import 'providers/auth_provider.dart';
 import 'providers/category_provider.dart';
 import 'package:hanbat_capstone/services/notification_service.dart';
+import 'screen/auth_screen.dart';
 
 
 Future<void> main() async {
@@ -44,6 +46,7 @@ class MyApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MultiProvider(
       providers: [
+        ChangeNotifierProvider(create: (_) => AuthProvider()),
         ChangeNotifierProvider(create: (context) => CategoryProvider()),
         // 다른 provider들...
       ],
@@ -56,7 +59,32 @@ class MyApp extends StatelessWidget {
             )
         ),
         home: RootScreen(notificationService: notificationService),
+        // home: AuthWrapper(notificationService: notificationService),
       ),
+    );
+  }
+}
+
+class AuthWrapper extends StatelessWidget {
+  final NotificationService notificationService;
+
+  AuthWrapper({required this.notificationService});
+
+  @override
+  Widget build(BuildContext context) {
+    final authProvider = Provider.of<AuthProvider>(context);
+    return StreamBuilder(
+      stream: authProvider.authStateChanges,
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.active) {
+          final user = snapshot.data;
+          if (user == null) {
+            return AuthScreen();
+          }
+          return RootScreen(notificationService: notificationService);
+        }
+        return Scaffold(body: Center(child: CircularProgressIndicator()));
+      },
     );
   }
 }
