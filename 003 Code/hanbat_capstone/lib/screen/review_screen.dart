@@ -2,6 +2,7 @@ import 'dart:developer';
 
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
 import 'package:flutter/widgets.dart';
 import 'package:hanbat_capstone/component/review_list_field.dart';
 import 'package:hanbat_capstone/component/top_date_picker.dart';
@@ -9,6 +10,7 @@ import 'package:hanbat_capstone/model/review_model.dart';
 import 'package:hanbat_capstone/model/review_title_model.dart';
 import 'package:hanbat_capstone/screen/review_title_screen.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:hanbat_capstone/services/review_service.dart';
 import 'package:intl/intl.dart';
 
 /**
@@ -38,12 +40,23 @@ class _ReviewScreenState extends State<ReviewScreen> {
   );
 
   final FirebaseFirestore firestore = FirebaseFirestore.instance;
+  final ReviewService _reviewService = ReviewService();
+
   late Future<List<Map<String, dynamic>>> reviewData;
+  late Future<String> aiReviewText;
 
   @override
   void initState() {
     super.initState();
     reviewData = reviewList();
+    aiReviewText = fetchAiReviewText();
+  }
+
+  /**
+   * 계획 및 결과 요약정보 조회
+   */
+  Future<String> fetchAiReviewText() async {
+    return await _reviewService.summarizeRetrospective(currentDay);
   }
 
   /**
@@ -152,6 +165,52 @@ class _ReviewScreenState extends State<ReviewScreen> {
                           label: Text('커스텀'),
                           icon: Icon(Icons.settings),)
                       ],
+                    ),
+                    FutureBuilder<String>(
+                      future: fetchAiReviewText(),
+                      builder: (context, snapshot) {
+                        if (snapshot.connectionState == ConnectionState.waiting) {
+                          return CircularProgressIndicator();
+                        } else if (snapshot.hasError) {
+                          return Container(
+                            color: Colors.grey[200],
+                            constraints: BoxConstraints(
+                              minHeight: 100,
+                            ),
+                            alignment: Alignment.topLeft,
+                            padding: EdgeInsets.all(15),
+                            child: Text(
+                              '오류 : ${snapshot.error}',
+                              style: TextStyle(fontSize: 15),
+                            ),
+                          );
+                        } else if (snapshot.hasData) {
+                          return Container( // Expanded 대신 Container 사용
+                            constraints: BoxConstraints(
+                              minHeight: 100,
+                            ),
+                            alignment: Alignment.topLeft,
+                            padding: EdgeInsets.all(15),
+                            child: Text(
+                              snapshot.data ?? 'No data available',
+                              style: TextStyle(fontSize: 16),
+                            ),
+                          );
+                        } else {
+                          return Container(
+                            color: Colors.grey[200],
+                            constraints: BoxConstraints(
+                              minHeight: 100,
+                            ),
+                            alignment: Alignment.topLeft,
+                            padding: EdgeInsets.all(15),
+                            child: Text(
+                              '오류 : 데이터가 없습니다.',
+                              style: TextStyle(fontSize: 15),
+                            ),
+                          );
+                        }
+                      },
                     ),
                     SizedBox(
                       height: constraints.maxHeight * 0.85 + bottomInset,
