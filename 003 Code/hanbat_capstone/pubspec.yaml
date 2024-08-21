@@ -53,6 +53,7 @@ dependencies:
   flutter_local_notifications: ^14.0.0  #알림 패키지
   timezone: ^0.9.0
   firebase_auth: ^4.6.0  #로그인을 위해 새로 추가한 패키지
+  intl: ^0.18.0
 
 
 dev_dependencies:
