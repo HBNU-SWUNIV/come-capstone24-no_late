@@ -68,9 +68,13 @@ class _RootScreenState extends State<RootScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      //resizeToAvoidBottomInset: false,
       body: SafeArea(
-        // child: renderChildren.elementAt(_selectedIndex),
-        child: renderChildren(widget.selectedDate).elementAt(_selectedIndex),
+        child: Column(
+          children: [
+            Expanded(child: renderChildren(widget.selectedDate).elementAt(_selectedIndex),)
+          ],
+        )
       ),
       bottomNavigationBar: renderBottomNavigation(),
       floatingActionButton: FloatingActionButton(
@@ -90,11 +94,7 @@ class _RootScreenState extends State<RootScreen> {
     return BottomNavigationBar(
         currentIndex: _selectedIndex,
         onTap: (index) {
-          // if (index == 2) { // 일정 추가 아이템의 인덱스
-          //   _onAddEvent();
-          // } else {
             _onItemTapped(index);
-          // }
         },
         items: [
           BottomNavigationBarItem(
@@ -117,6 +117,10 @@ class _RootScreenState extends State<RootScreen> {
             icon: Icon(Icons.settings),
             label: '설정',
           )
-        ]);
+        ],
+      backgroundColor: Colors.white,
+      selectedItemColor: Colors.blue,
+      unselectedItemColor: Colors.grey,
+    );
   }
 }
