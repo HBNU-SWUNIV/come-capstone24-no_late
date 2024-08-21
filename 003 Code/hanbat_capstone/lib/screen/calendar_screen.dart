@@ -373,9 +373,7 @@ class CalendarScreenState extends State<CalendarScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final size = MediaQuery.of(context).size;
-    final rowHeight =
-        (size.height - kToolbarHeight - MediaQuery.of(context).padding.top) / 6;
+
 
     return Scaffold(body: LayoutBuilder(
       builder: (context, constraints) {
@@ -568,11 +566,17 @@ class CalendarScreenState extends State<CalendarScreen> {
                 titleTextStyle: TextStyle(
                   fontSize: 24,
                   fontWeight: FontWeight.bold,
+                  color: Colors.white,
                 ),
+                headerPadding: EdgeInsets.symmetric(vertical: 4), // 수직 패딩 줄이기
+                headerMargin: EdgeInsets.only(bottom: 8), // 하단 마진 줄이기
                 titleCentered: true,
                 formatButtonVisible: false,
                 titleTextFormatter: (date, locale) =>
                     DateFormat.yMMM(locale).format(date),
+                decoration: BoxDecoration(
+                  color: Colors.lightBlue[900],
+                ),
               ),
             )),
             if (_calendarFormat != CalendarFormat.month)

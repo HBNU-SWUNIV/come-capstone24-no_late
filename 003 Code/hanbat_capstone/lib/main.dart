@@ -28,23 +28,46 @@ Future<void> main() async {
         ChangeNotifierProvider(create: (_) => AuthProvider()),
         ChangeNotifierProvider(create: (_) => CategoryProvider()),
       ],
-      child: MyApp(notificationService: notificationService),
+      child: MyApp(notificationService: notificationService,
+        theme: ThemeData(
+        scaffoldBackgroundColor: Colors.white,
+        appBarTheme: AppBarTheme(
+            backgroundColor: Colors.lightBlue[900],
+            foregroundColor: Colors.white,
+            titleTextStyle: TextStyle(
+              color: Colors.white,
+              fontSize: 24,
+              fontWeight: FontWeight.bold,
+            )
+        ),
+        bottomNavigationBarTheme: BottomNavigationBarThemeData(
+          backgroundColor: Colors.white,
+          selectedItemColor: Colors.lightBlue[900],
+          unselectedItemColor: Colors.grey,
+        ),
+        pageTransitionsTheme: PageTransitionsTheme(
+          builders: {
+            TargetPlatform.android: FadeUpwardsPageTransitionsBuilder(),
+            TargetPlatform.iOS: CupertinoPageTransitionsBuilder(),
+          },
+        ),
+      ),
+      ),
     ),
   );
 }
 
 class MyApp extends StatelessWidget {
   final NotificationService notificationService;
+  final ThemeData theme;
 
-  MyApp({required this.notificationService});
+  MyApp({required this.notificationService, required this.theme});
 
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
       title: 'Hanbat Capstone',
-      theme: ThemeData(
-        primarySwatch: Colors.blue,
-      ),
+      theme: theme,
       home: AuthWrapper(notificationService: notificationService),
     );
   }

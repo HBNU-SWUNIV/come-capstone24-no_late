@@ -31,6 +31,8 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
   int endTime = 23;
   List<bool> selectedStates = List.generate(24, (index) => false);
   final EventService eventService = EventService();
+  late PageController _pageController;
+  int initialPage = 5000;
 
   @override
   void initState() {
@@ -40,6 +42,7 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
     _initScheduleList();
     _fetchEvents();
     _loadCheckboxStates();
+    _pageController = PageController(initialPage: initialPage);
   }
 
   void _initScheduleList() {
@@ -258,78 +261,101 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
           onPreviousDay: () => _updateDate(-1),
           onNextDay: () => _updateDate(1),
         ),
-        backgroundColor: Colors.white,
         elevation: 0,
       ),
-      body: Column(
-        children: [
-          Container(
-            padding: EdgeInsets.symmetric(vertical: 8, horizontal: 16),
-            color: Colors.grey[200],
-            child: Row(
-              children: [
-                Expanded(flex: 1, child: Text('  ', style: TextStyle(fontWeight: FontWeight.bold))),
-                Expanded(flex: 1, child: Text('시간', style: TextStyle(fontWeight: FontWeight.bold))),
-                Expanded(flex: 3, child: Text('일정', style: TextStyle(fontWeight: FontWeight.bold))),
-                Expanded(flex: 3, child: Text('실제로 한 일정', style: TextStyle(fontWeight: FontWeight.bold))),
-              ],
-            ),
-          ),
-          Expanded(
-            child: ListView.builder(
-              itemCount: endTime - startTime + 1,
-              itemBuilder: (context, index) {
-                return Container(
-                  decoration: BoxDecoration(
-                    border: Border(bottom: BorderSide(color: Colors.grey[300]!)),
-                  ),
-                  child: Row(
-                    children: [
-                      SizedBox(
-                        width: 40,
-                        child: Center(
-                          child: CheckboxComponent(
-                            isChecked: selectedStates[index],
-                            onChanged: (bool? value) {
-                              if (value != null) {
-                                _handleCheckboxChange(index);
-                              }
-                            },
-                          ),
-                        ),
-                      ),
-                      Expanded(
-                        flex: 1,
-                        child: Container(
-                          padding: EdgeInsets.symmetric(vertical: 12),
-                          alignment: Alignment.center,
-                          child: Text('${(startTime + index).toString().padLeft(2, '0')}시'),
-                        ),
-                      ),
-                      Expanded(
-                        flex: 2,
-                        child: EventCell(
-                          eventTitle: scheduleData[formattedDate]?[index]['plan'] ?? '',
-                          categoryId: scheduleData[formattedDate]?[index]['planCategoryId'] ?? '',
-                          onTap: () => _handlePlanCellTap(index),
-                        ),
-                      ),
-                      Expanded(
-                        flex: 2,
-                        child: EventCell(
-                          eventTitle: scheduleData[formattedDate]?[index]['actual'] ?? '',
-                          categoryId: scheduleData[formattedDate]?[index]['actualCategoryId'] ?? '',
-                          onTap: () => _handleActualCellTap(index),
-                        ),
-                      ),
-                    ],
-                  ),
-                );
-              },
-            ),
-          ),
-        ],
+      body: PageView.builder(
+        controller: _pageController,
+        onPageChanged: (pageIndex) {
+          int dayDifference = pageIndex - initialPage;
+          _updateDate(dayDifference);
+          initialPage = pageIndex;
+        },
+        itemBuilder: (context, index) {
+          return Column(
+            children: [
+
+              Expanded(
+                child: ListView.builder(
+                  itemCount: endTime - startTime + 1,
+                  itemBuilder: (context, index) {
+                    return _buildTimeBlock(index);
+                  },
+                ),
+              ),
+            ],
+          );
+        },
       ),
     );
   }
+  Widget _buildTimeBlock(int index) {
+    return Card(
+      margin: EdgeInsets.symmetric(vertical: 4, horizontal: 8),
+      child: Padding(
+        padding: EdgeInsets.all(8),
+        child: Row(
+          children: [
+            Expanded(
+              flex: 1,
+              child: Column(
+                children: [
+                  Text('${(startTime + index).toString().padLeft(2, '0')}:00'),
+                  CheckboxComponent(
+                    isChecked: selectedStates[index],
+                    onChanged: (bool? value) {
+                      if (value != null) {
+                        _handleCheckboxChange(index);
+                      }
+                    },
+                  ),
+                ],
+              ),
+            ),
+            Expanded(
+              flex: 2,
+              child: _buildEventCell(
+                scheduleData[formattedDate]?[index]['plan'] ?? '',
+                scheduleData[formattedDate]?[index]['planCategoryId'] ?? '',
+                    () => _handlePlanCellTap(index),
+                Colors.blue.withOpacity(0.1),
+
+              ),
+            ),
+            Expanded(
+              flex: 2,
+              child: _buildEventCell(
+                scheduleData[formattedDate]?[index]['actual'] ?? '',
+                scheduleData[formattedDate]?[index]['actualCategoryId'] ?? '',
+                    () => _handleActualCellTap(index),
+                Colors.green.withOpacity(0.1),
+
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildEventCell(String eventTitle, String categoryId, VoidCallback onTap, Color backgroundColor) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: EdgeInsets.all(8),
+        decoration: BoxDecoration(
+          color: backgroundColor,
+          borderRadius: BorderRadius.circular(8),
+        ),
+        child: EventCell(
+          eventTitle: eventTitle,
+          categoryId: categoryId,
+          onTap: onTap,
+        ),
+      ),
+    );
+  }
+
+// ... 기존의 다른 메서드들 유지 ...
 }
+
+

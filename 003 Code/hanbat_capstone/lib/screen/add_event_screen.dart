@@ -278,135 +278,152 @@ class _AddEventScreenState extends State<AddEventScreen> {
           .set(recurringEvent.toMap());
     }
   }
+  final Color mainColor = Colors.lightBlueAccent.withOpacity(0.1); // 스케줄러의 계획 항목 바탕색
+  final Color accentColor = Colors.lightBlueAccent.withOpacity(0.5); // 강조색
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
         title: Text(widget.isEditing ? '일정 수정' : '일정 추가'),
-        actions: [
-          IconButton(
-            icon: Icon(Icons.save),
-            onPressed: _saveEvent,
-          ),
-        ],
       ),
-      body: Form(
-        key: _formKey,
-        child: ListView(
-          padding: EdgeInsets.all(16.0),
-          children: <Widget>[
-            TextFormField(
-              controller: _titleController,
-              decoration: InputDecoration(
-                labelText: '일정 이름',
-                border: OutlineInputBorder(),
-              ),
-              keyboardType: TextInputType.text,
-              validator: (value) {
-                if (value?.isEmpty ?? true) {
-                  return '제목을 입력하세요';
-                }
-                return null;
-              },
-            ),
-            SizedBox(height: 10),
-            TextFormField(
-              controller: _contentController,
-              decoration: InputDecoration(labelText: '내용'),
-              validator: (value) {
-                if (value == null || value.isEmpty) {
-                  return '내용을 입력하세요';
-                }
-                return null;
-              },
-              keyboardType: TextInputType.text,
-              maxLines: 3,
-            ),
-            ListTile(
-              title: Text('날짜 선택'),
-              subtitle: Text(_selectedDate != null
-                  ? DateFormat.yMd().format(_selectedDate!)
-                  : '날짜를 선택하세요'),
-              onTap: () => _selectDate(context),
-            ),
-            ListTile(
-              title: Text('시작 시간'),
-              subtitle: Text(_startTime != null
-                  ? DateFormat('HH:00').format(_startTime!)
-                  : '시작 시간을 선택하세요'),
-              onTap: () => _selectTime(context, true),
-            ),
-            ListTile(
-              title: Text('종료 시간'),
-              subtitle: Text(_endTime != null
-                  ? DateFormat('HH:00').format(_endTime!)
-                  : '종료 시간을 선택하세요'),
-              onTap: () => _selectTime(context, false),
-            ),
-            SwitchListTile(
-              title: Text('반복 여부'),
-              value: _isRecurring,
-              onChanged: (value) {
-                setState(() {
-                  _isRecurring = value;
-                });
-              },
-            ),
-            SwitchListTile(
-              title: Text('캘린더에 표시'),
-              value: _showOnCalendar,
-              onChanged: (value) {
-                setState(() {
-                  _showOnCalendar = value;
-                });
-              },
-            ),
-            DropdownButton<String>(
-              value: selectedCategoryId,
-              hint: Text('카테고리 선택'),
-              onChanged: (String? newValue) {
-                if (newValue != null) {
-                  setState(() {
-                    selectedCategoryId = newValue;
-                  });
-                }
-              },
-              items: categories.map<DropdownMenuItem<String>>((Map<String, dynamic> category) {
-                return DropdownMenuItem<String>(
-                  value: category['categoryId'] as String,
-                  child: Row(
-                    children: [
-                      Container(
-                        width: 20,
-                        height: 20,
-                        decoration: BoxDecoration(
-                          color: Color(int.parse(category['colorCode'])),
-                          shape: BoxShape.circle,
-                        ),
+      body: Container(
+        child: SingleChildScrollView(
+          child: Padding(
+            padding: EdgeInsets.all(16.0),
+            child: Form(
+              key: _formKey,
+              child: Column(
+                children: <Widget>[
+                  _buildCard(
+                    child: TextFormField(
+                      controller: _titleController,
+                      decoration: InputDecoration(
+                        labelText: '일정 이름',
+                        prefixIcon: Icon(Icons.event, color: accentColor),
+                        border: InputBorder.none,
                       ),
-                      SizedBox(width: 10),
-                      Text(category['categoryName'] as String),
-                    ],
+                      validator: (value) => value?.isEmpty ?? true ? '제목을 입력하세요' : null,
+                    ),
                   ),
-                );
-              }).toList(),
+                  SizedBox(height: 16),
+                  _buildCard(
+                    child: TextFormField(
+                      controller: _contentController,
+                      decoration: InputDecoration(
+                        labelText: '내용',
+                        prefixIcon: Icon(Icons.description, color: accentColor),
+                        border: InputBorder.none,
+                      ),
+                      maxLines: 3,
+                      validator: (value) => value?.isEmpty ?? true ? '내용을 입력하세요' : null,
+                    ),
+                  ),
+                  SizedBox(height: 16),
+                  _buildCard(
+                    child: Column(
+                      children: [
+                        ListTile(
+                          leading: Icon(Icons.calendar_today, color: accentColor),
+                          title: Text('날짜 및 시간'),
+                          subtitle: Text(
+                            _selectedDate != null
+                                ? '${DateFormat.yMd().format(_selectedDate!)} ${_startTime != null ? DateFormat('HH:mm').format(_startTime!) : ''} - ${_endTime != null ? DateFormat('HH:mm').format(_endTime!) : ''}'
+                                : '날짜와 시간을 선택하세요',
+                          ),
+                          onTap: () async {
+                            await _selectDate(context);
+                            if (_selectedDate != null) {
+                              await _selectTime(context, true);
+                              await _selectTime(context, false);
+                            }
+                          },
+                        ),
+                      ],
+                    ),
+                  ),
+                  SizedBox(height: 16),
+                  _buildCard(
+                    child: DropdownButtonFormField<String>(
+                      value: selectedCategoryId,
+                      decoration: InputDecoration(
+                        labelText: '카테고리',
+                        prefixIcon: Icon(Icons.category, color: accentColor),
+                        border: InputBorder.none,
+                      ),
+                      items: categories.map((category) {
+                        return DropdownMenuItem<String>(
+                          value: category['categoryId'] as String,
+                          child: Row(
+                            children: [
+                              Container(
+                                width: 20,
+                                height: 20,
+                                decoration: BoxDecoration(
+                                  color: Color(int.parse(category['colorCode'])),
+                                  shape: BoxShape.circle,
+                                ),
+                              ),
+                              SizedBox(width: 10),
+                              Text(category['categoryName'] as String),
+                            ],
+                          ),
+                        );
+                      }).toList(),
+                      onChanged: (String? newValue) {
+                        if (newValue != null) {
+                          setState(() {
+                            selectedCategoryId = newValue;
+                          });
+                        }
+                      },
+                    ),
+                  ),
+                  SizedBox(height: 16),
+                  _buildCard(
+                    child: Column(
+                      children: [
+                        _buildSwitch('반복 여부', _isRecurring, (value) => setState(() => _isRecurring = value)),
+                        _buildSwitch('캘린더에 표시', _showOnCalendar, (value) => setState(() => _showOnCalendar = value)),
+                        _buildSwitch('종일', _isAllDay, (value) => _toggleAllDay(value)),
+                      ],
+                    ),
+                  ),
+                  SizedBox(height: 24),
+                  ElevatedButton(
+                    onPressed: _saveEvent,
+                    child: Text('저장', style: TextStyle(fontSize: 18)),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: accentColor,
+                      padding: EdgeInsets.symmetric(horizontal: 50, vertical: 15),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(30),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
             ),
-            CheckboxListTile(
-              title: Text('종일'),
-              value: _isAllDay,
-              onChanged: (bool? value) {
-                _toggleAllDay(value!);
-              },
-            ),
-            SizedBox(height: 20),
-            ElevatedButton(
-              onPressed: _saveEvent,
-              child: Text('저장'),
-            ),
-          ],
+          ),
         ),
       ),
+    );
+  }
+  Widget _buildCard({required Widget child}) {
+    return Card(
+      elevation: 4,
+      color: Colors.white, // 카드 내부는 흰색으로 유지
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      child: Padding(padding: EdgeInsets.all(16), child: child),
+    );
+  }
+
+  Widget _buildSwitch(String title, bool value, ValueChanged<bool> onChanged) {
+    return SwitchListTile(
+      title: Text(title),
+      value: value,
+      onChanged: onChanged,
+      activeColor: accentColor,
     );
   }
 }
