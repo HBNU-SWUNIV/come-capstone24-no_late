@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:hanbat_capstone/screen/category_screen.dart';
 import 'chat_screen.dart';
 import 'schedule_screen.dart';
 import 'add_event_screen.dart';
@@ -26,7 +27,7 @@ class RootScreen extends StatefulWidget {
 class _RootScreenState extends State<RootScreen> {
   int _selectedIndex = 0;
   final GlobalKey<CalendarScreenState> _calendarKey =
-  GlobalKey<CalendarScreenState>();
+      GlobalKey<CalendarScreenState>();
 
   @override
   void initState() {
@@ -41,13 +42,14 @@ class _RootScreenState extends State<RootScreen> {
       _selectedIndex = index;
     });
   }
+
   List<Widget> renderChildren(DateTime? selectedDate) => <Widget>[
-    CalendarScreen(key: _calendarKey),
-    ScheduleScreen(selectedDate: selectedDate?? DateTime.now()),
-    AddEventScreen(),
-    ReviewScreen(), // 회고관리 화면 연결
-    SettingScreen(), // 설정관리 화면 연결
-  ];
+        CalendarScreen(key: _calendarKey),
+        ScheduleScreen(selectedDate: selectedDate ?? DateTime.now()),
+        AddEventScreen(),
+        ReviewScreen(), // 회고관리 화면 연결
+        SettingScreen(), // 설정관리 화면 연결
+      ];
 
   void _onAddEvent() async {
     final result = await Navigator.push(
@@ -70,12 +72,14 @@ class _RootScreenState extends State<RootScreen> {
     return Scaffold(
       //resizeToAvoidBottomInset: false,
       body: SafeArea(
-        child: Column(
-          children: [
-            Expanded(child: renderChildren(widget.selectedDate).elementAt(_selectedIndex),)
-          ],
-        )
-      ),
+          child: Column(
+        children: [
+          Expanded(
+            child:
+                renderChildren(widget.selectedDate).elementAt(_selectedIndex),
+          )
+        ],
+      )),
       bottomNavigationBar: renderBottomNavigation(),
       floatingActionButton: FloatingActionButton(
         onPressed: () {
@@ -92,35 +96,34 @@ class _RootScreenState extends State<RootScreen> {
 
   BottomNavigationBar renderBottomNavigation() {
     return BottomNavigationBar(
-        currentIndex: _selectedIndex,
-        onTap: (index) {
-            _onItemTapped(index);
-        },
-        items: [
-          BottomNavigationBarItem(
+      selectedItemColor: Colors.lightBlue[900],
+      unselectedItemColor: Colors.grey,
+      currentIndex: _selectedIndex,
+      onTap: (index) {
+        _onItemTapped(index);
+      },
+      items: [
+        BottomNavigationBarItem(
             icon: Icon(Icons.calendar_month),
             label: '캘린더',
-          ),
-          BottomNavigationBarItem(
+            backgroundColor: Colors.white),
+        BottomNavigationBarItem(
             icon: Icon(Icons.calendar_view_day),
             label: '하루일정',
-          ),
-          BottomNavigationBarItem(
+            backgroundColor: Colors.white),
+        BottomNavigationBarItem(
             icon: Icon(Icons.add_circle),
             label: '일정추가',
-          ),
-          BottomNavigationBarItem(
+            backgroundColor: Colors.white),
+        BottomNavigationBarItem(
             icon: Icon(Icons.fact_check),
             label: '회고관리',
-          ),
-          BottomNavigationBarItem(
+            backgroundColor: Colors.white),
+        BottomNavigationBarItem(
             icon: Icon(Icons.settings),
             label: '설정',
-          )
-        ],
-      backgroundColor: Colors.white,
-      selectedItemColor: Colors.blue,
-      unselectedItemColor: Colors.grey,
+            backgroundColor: Colors.white)
+      ],
     );
   }
 }

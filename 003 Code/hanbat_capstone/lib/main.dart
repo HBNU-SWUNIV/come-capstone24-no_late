@@ -9,6 +9,7 @@ import 'package:hanbat_capstone/screen/auth_screen.dart';
 import 'package:hanbat_capstone/screen/root_screen.dart';
 import 'package:provider/provider.dart';
 import 'package:hanbat_capstone/providers/auth_provider.dart';
+import 'package:dart_openai/dart_openai.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -21,7 +22,7 @@ Future<void> main() async {
 
   final notificationService = NotificationService();
   await notificationService.init();
-
+  
   runApp(
     MultiProvider(
       providers: [
@@ -39,11 +40,6 @@ Future<void> main() async {
               fontSize: 24,
               fontWeight: FontWeight.bold,
             )
-        ),
-        bottomNavigationBarTheme: BottomNavigationBarThemeData(
-          backgroundColor: Colors.white,
-          selectedItemColor: Colors.lightBlue[900],
-          unselectedItemColor: Colors.grey,
         ),
         pageTransitionsTheme: PageTransitionsTheme(
           builders: {
@@ -68,6 +64,7 @@ class MyApp extends StatelessWidget {
     return MaterialApp(
       title: 'Hanbat Capstone',
       theme: theme,
+      debugShowCheckedModeBanner: false,
       home: AuthWrapper(notificationService: notificationService),
     );
   }

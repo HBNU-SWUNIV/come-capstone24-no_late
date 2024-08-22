@@ -26,7 +26,8 @@ class TopDatePicker extends StatelessWidget {
         ),
         TextButton(
           onPressed: onPressDate,
-          child: Text('${currentDay.year}.${currentDay.month}.${currentDay.day}'),
+          child: Text('${currentDay.year}-${currentDay.month}-${currentDay.day}'
+          ,style: TextStyle(color: Colors.white),),
         ),
         IconButton(
           icon: Icon(Icons.chevron_right),

@@ -6,6 +6,7 @@ import 'package:flutter/rendering.dart';
 import 'package:flutter/widgets.dart';
 import 'package:hanbat_capstone/component/review_list_field.dart';
 import 'package:hanbat_capstone/component/top_date_picker.dart';
+import 'package:hanbat_capstone/const/colors.dart';
 import 'package:hanbat_capstone/model/review_model.dart';
 import 'package:hanbat_capstone/model/review_title_model.dart';
 import 'package:hanbat_capstone/screen/review_title_screen.dart';
@@ -43,20 +44,30 @@ class _ReviewScreenState extends State<ReviewScreen> {
   final ReviewService _reviewService = ReviewService();
 
   late Future<List<Map<String, dynamic>>> reviewData;
-  late Future<String> aiReviewText;
+  String? aiReviewText;
+  String? aiErrorMessage;
 
   @override
   void initState() {
     super.initState();
+    fetchAiReviewText();
     reviewData = reviewList();
-    aiReviewText = fetchAiReviewText();
   }
 
   /**
    * 계획 및 결과 요약정보 조회
    */
-  Future<String> fetchAiReviewText() async {
-    return await _reviewService.summarizeRetrospective(currentDay);
+  Future<void> fetchAiReviewText() async {
+    try {
+      final result = await await _reviewService.summarizeRetrospective(currentDay);
+      setState(() {
+        aiReviewText = result;
+      });
+    } catch(e) {
+      setState(() {
+        aiErrorMessage = '오류가 발생했습니다. \n오류내용 : $e';
+      });
+    }
   }
 
   /**
@@ -159,61 +170,34 @@ class _ReviewScreenState extends State<ReviewScreen> {
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        TextButton(onPressed: () {}, child: Text("")),
                         TextButton.icon(
                           onPressed: onPressSettingBtn,
                           label: Text('커스텀'),
                           icon: Icon(Icons.settings),)
                       ],
                     ),
-                    FutureBuilder<String>(
-                      future: fetchAiReviewText(),
-                      builder: (context, snapshot) {
-                        if (snapshot.connectionState == ConnectionState.waiting) {
-                          return CircularProgressIndicator();
-                        } else if (snapshot.hasError) {
-                          return Container(
-                            color: Colors.grey[200],
-                            constraints: BoxConstraints(
-                              minHeight: 100,
-                            ),
-                            alignment: Alignment.topLeft,
-                            padding: EdgeInsets.all(15),
-                            child: Text(
-                              '오류 : ${snapshot.error}',
-                              style: TextStyle(fontSize: 15),
-                            ),
-                          );
-                        } else if (snapshot.hasData) {
-                          return Container( // Expanded 대신 Container 사용
-                            constraints: BoxConstraints(
-                              minHeight: 100,
-                            ),
-                            alignment: Alignment.topLeft,
-                            padding: EdgeInsets.all(15),
-                            child: Text(
-                              snapshot.data ?? 'No data available',
-                              style: TextStyle(fontSize: 16),
-                            ),
-                          );
-                        } else {
-                          return Container(
-                            color: Colors.grey[200],
-                            constraints: BoxConstraints(
-                              minHeight: 100,
-                            ),
-                            alignment: Alignment.topLeft,
-                            padding: EdgeInsets.all(15),
-                            child: Text(
-                              '오류 : 데이터가 없습니다.',
-                              style: TextStyle(fontSize: 15),
-                            ),
-                          );
-                        }
-                      },
+                    Container(
+                      margin: EdgeInsets.all(10),
+                      // constraints: BoxConstraints(
+                      //   maxHeight: 150
+                      // ),
+                      decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(10),
+                          border:
+                          Border.all(width: 1, color: COLOR_GREY_200!)),
+                      alignment: Alignment.topLeft,
+                      padding: EdgeInsets.all(15),
+                      child: Padding(
+                        padding: const EdgeInsets.all(5),
+                        child: Text(
+                          aiReviewText ?? aiErrorMessage ?? 'chatGPT가 열심히 분석하고 있어요 !\n잠시만 기다려주세요!',
+                          style: TextStyle(fontSize: 15),
+                        ),
+                      ),
                     ),
                     SizedBox(
-                      height: constraints.maxHeight * 0.85 + bottomInset,
+                      height: constraints.maxHeight * 0.7 + bottomInset,
                       child: FutureBuilder<List<Map<String, dynamic>>>(
                         future: reviewData,
                         builder: (context, snapshot) {
@@ -285,6 +269,8 @@ class _ReviewScreenState extends State<ReviewScreen> {
   void onPressBackBtn() {
     setState(() {
       currentDay = currentDay.subtract(Duration(days: 1));
+      aiReviewText = null;
+      fetchAiReviewText();
       reviewData = reviewList();  // 날짜 변경 시 데이터 다시 로드
     });
   }
@@ -307,6 +293,8 @@ class _ReviewScreenState extends State<ReviewScreen> {
     if (selectedDate != null) {
       setState(() {
         currentDay = selectedDate;
+        aiReviewText = null;
+        fetchAiReviewText();
         reviewData = reviewList();  // 날짜 변경 시 데이터 다시 로드
       });
     }
@@ -319,6 +307,8 @@ class _ReviewScreenState extends State<ReviewScreen> {
   void onPressForwardBtn() {
     setState(() {
       currentDay = currentDay.add(Duration(days: 1));
+      aiReviewText = null;
+      fetchAiReviewText();
       reviewData = reviewList();  // 날짜 변경 시 데이터 다시 로드
     });
   }

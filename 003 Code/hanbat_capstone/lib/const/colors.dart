@@ -1,7 +1,26 @@
 import 'package:flutter/material.dart';
 
-const PRIMARY_COLOR = Color(0xff008cba);
-final DARK_GREY_COLOR = Color(0xff969fa8);
-final TEXT_FIELD_FILL_COLOR = Color(0xffe8e8e8);
-final BACKGROUND_COLOR = Color(0xfffafafa);
-final DEFAULT_COLOR = Color(0xff333333);
+final PRIMARY_COLOR = Colors.lightBlue[900];
+final ERROR_COLOR = Colors.redAccent;
+
+final COLOR_WHITE = Colors.white;
+final COLOR_BLACK = Colors.black;
+final COLOR_BLACK_12 = Colors.black12;
+final COLOR_GREY_200 = Colors.grey[200];
+
+
+// 캘린더 관련 디자인
+final CALENDAR_BOX_COLOR = Colors.lightBlue[900];
+
+// 카테고리 관련 디자인
+final CATEGORY_DEF_PICKER_COLOR = Colors.black;
+
+final ALERT_DIALOG_TITLE_TEXTSTYLE = TextStyle(
+  color: COLOR_BLACK,
+  fontSize: 20,
+  fontWeight: FontWeight.bold,
+  letterSpacing: 1.0,
+  wordSpacing: 3.0,
+  fontFamily: 'Arial',
+  backgroundColor: COLOR_WHITE,
+);
