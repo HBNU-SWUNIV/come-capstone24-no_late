@@ -32,7 +32,7 @@ class CalendarService {
         eventSttTime: _toDate(data['eventSttTime']),
         eventEndTime: _toDate(data['eventEndTime']),
         isAllDay: data['isAllDay'] ?? false,
-        completeYn: data['completeYn'] ?? 'N',
+        completedYn: data['completedYn'] ?? 'N',
         isRecurring: data['isRecurring'] ?? false,
       );
     }).toList();

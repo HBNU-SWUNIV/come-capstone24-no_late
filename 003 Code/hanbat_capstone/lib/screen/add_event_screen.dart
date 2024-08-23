@@ -243,7 +243,7 @@ class _AddEventScreenState extends State<AddEventScreen> {
       eventSttTime: _startTime,
       eventEndTime: _endTime,
       isAllDay: _isAllDay,
-      completeYn: 'N',
+      completedYn: 'N',
       isRecurring: _isRecurring,
       showOnCalendar: _showOnCalendar,
     );
@@ -279,7 +279,7 @@ class _AddEventScreenState extends State<AddEventScreen> {
     }
   }
   final Color mainColor = Colors.lightBlueAccent.withOpacity(0.1); // 스케줄러의 계획 항목 바탕색
-  final Color accentColor = Colors.lightBlueAccent.withOpacity(0.5); // 강조색
+  final Color accentColor =  Colors.lightBlue[900]!; // 강조색
 
   @override
   Widget build(BuildContext context) {
@@ -350,6 +350,7 @@ class _AddEventScreenState extends State<AddEventScreen> {
                         labelText: '카테고리',
                         prefixIcon: Icon(Icons.category, color: accentColor),
                         border: InputBorder.none,
+
                       ),
                       items: categories.map((category) {
                         return DropdownMenuItem<String>(

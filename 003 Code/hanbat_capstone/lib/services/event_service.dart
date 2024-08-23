@@ -30,7 +30,37 @@ class EventService {
       return [];
     }
   }
+  Future<void> updateEventCompletedStatus(String formattedDate, int hour, String status) async {
+    final eventDate = DateTime.parse(formattedDate);
+    final eventStartTime = DateTime(eventDate.year, eventDate.month, eventDate.day, hour);
+    final eventEndTime = eventStartTime.add(Duration(hours: 1));
 
+    final snapshot = await _firestore
+        .collection('events')
+        .where('eventDate', isEqualTo: eventDate.toIso8601String())
+
+        .get();
+
+    for (var doc in snapshot.docs) {
+      final event = EventModel.fromMap(doc.data());
+      if (event.eventSttTime != null &&
+          event.eventEndTime != null &&
+          event.eventSttTime!.isBefore(eventEndTime) &&
+          event.eventEndTime!.isAfter(eventStartTime)) {
+        await doc.reference.update({'completedYn': status});
+      }
+    }
+  }
+  Future<void> toggleEventCompletedStatus(String eventId) async {
+    final docSnapshot = await _firestore.collection('events').doc(eventId).get();
+
+    if (docSnapshot.exists) {
+      final event = EventModel.fromMap(docSnapshot.data()!);
+      final newStatus = event.completedYn == 'Y' ? 'N' : 'Y';
+
+      await docSnapshot.reference.update({'completedYn': newStatus});
+    }
+  }
 
 
   Future<List<EventResultModel>> getResultEventsForDate(DateTime date) async {
@@ -107,6 +137,8 @@ class EventService {
         'planCategoryId': eventForTime?.categoryId ?? '',
         'actual': resultEventForTime?.eventResultTitle ?? '',
         'actualCategoryId': resultEventForTime?.categoryId ?? '',
+        'completedYn': eventForTime?.completedYn ?? 'N', //
+        'eventId': eventForTime?.eventId ?? '',
       };
     });
   }
@@ -224,5 +256,33 @@ class EventService {
       print('Error deleting event: $e');
       throw e; // 에러를 상위로 전파하여 UI에서 처리할 수 있게 함
     }
+  }
+  Future<void> saveTimeBasedCheckboxState(String date, int hour, bool state) async {
+    final prefs = await SharedPreferences.getInstance();
+    final key = '${date}_checkbox_$hour';
+    await prefs.setBool(key, state);
+  }
+  Future<Map<int, bool>> loadTimeBasedCheckboxStatesForDate(String formattedDate) async {
+    final prefs = await SharedPreferences.getInstance();
+    Map<int, bool> states = {};
+
+    for (int i = 0; i < 24; i++) {
+      final key = '${formattedDate}_checkbox_$i';
+      states[i] = prefs.getBool(key) ?? false;
+    }
+
+    final resultEvents = await getResultEventsForDate(DateTime.parse(formattedDate));
+    for (var event in resultEvents) {
+      if (event.eventResultSttTime != null) {
+        int startHour = event.eventResultSttTime!.hour;
+        int endHour = event.eventResultEndTime?.hour ?? (startHour + 1);
+        for (int i = startHour; i < endHour && i < 24; i++) {
+          states[i] = true;
+          await saveTimeBasedCheckboxState(formattedDate, i, true);
+        }
+      }
+    }
+
+    return states;
   }
 }

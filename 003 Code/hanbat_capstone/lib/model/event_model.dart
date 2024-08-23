@@ -12,7 +12,7 @@ class EventModel {
   final String? eventContent; // 이벤트 내용
   final bool isAllDay; // 종일 여부
   final bool? isRecurring; // 중복 여부
-  final String? completeYn;
+  final String? completedYn;
   final bool showOnCalendar; // 추가: 캘린더에 표시 여부를 나타내는 필드
   final String? categoryColor;
 
@@ -27,9 +27,10 @@ class EventModel {
     this.eventContent,
     this.isAllDay = false,
     this.isRecurring,
-    this.completeYn,
+    this.completedYn = 'N',
     this.showOnCalendar = true, // 추가: 기본값은 true로 설정
     this.categoryColor,
+
 
   });
 
@@ -46,6 +47,7 @@ class EventModel {
       'isAllDay': isAllDay,
       'isRecurring':isRecurring,
       'showOnCalendar': showOnCalendar, // 추가: showOnCalendar 값을 맵에 추가
+      'completedYn': completedYn,
     };
   }
 
@@ -69,6 +71,8 @@ class EventModel {
       isRecurring: map['isRecurring'],
       showOnCalendar: map['showOnCalendar'] ?? true, // 추가: showOnCalendar 값을 가져옴 (기본값은 true)
       categoryColor: map['categoryColor'],
+      completedYn: map['completedYn'] ?? 'N',
+
     );
     print('Created EventModel: ${eventModel.eventTitle}, CategoryID: ${eventModel.categoryId}, CategoryColor: ${eventModel.categoryColor}');
     return eventModel;
@@ -84,7 +88,7 @@ class EventModel {
     DateTime? eventSttTime,
     DateTime? eventEndTime,
     bool? isAllDay,
-    String? completeYn,
+    String? completedYn,
     bool? isRecurring,
     bool? showOnCalendar,
     String? categoryColor,
@@ -99,7 +103,7 @@ class EventModel {
       eventSttTime: eventSttTime ?? this.eventSttTime,
       eventEndTime: eventEndTime ?? this.eventEndTime,
       isAllDay: isAllDay ?? this.isAllDay,
-      completeYn: completeYn ?? this.completeYn,
+      completedYn: completedYn ?? this.completedYn,
       isRecurring: isRecurring ?? this.isRecurring,
       showOnCalendar: showOnCalendar ?? this.showOnCalendar,
       categoryColor: categoryColor ?? this.categoryColor,

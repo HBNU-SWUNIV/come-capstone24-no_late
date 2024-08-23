@@ -4,6 +4,7 @@ import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:intl/intl.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../model/event_model.dart';
 import '../model/event_result_model.dart';
 import '../component/date_selector.dart';
@@ -29,7 +30,7 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
   Map<String, List<Map<String, String>>> scheduleData = {};
   int startTime = 0;
   int endTime = 23;
-  List<bool> selectedStates = List.generate(24, (index) => false);
+  Map<int, bool> selectedStates = {};
   final EventService eventService = EventService();
   late PageController _pageController;
   int initialPage = 5000;
@@ -39,10 +40,19 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
     super.initState();
     selectedDate = widget.selectedDate ?? DateTime.now();
     formattedDate = DateFormat('yyyy-MM-dd').format(selectedDate);
+    _loadSettings();
+    _pageController = PageController(initialPage: initialPage);
+  }
+
+  _loadSettings() async {
+    final prefs = await SharedPreferences.getInstance();
+    setState(() {
+      startTime = prefs.getInt('startTime') ?? 0;
+      endTime = prefs.getInt('endTime') ?? 23;
+    });
     _initScheduleList();
     _fetchEvents();
     _loadCheckboxStates();
-    _pageController = PageController(initialPage: initialPage);
   }
 
   void _initScheduleList() {
@@ -77,20 +87,24 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
   }
 
   Future<void> _loadCheckboxStates() async {
-    final states = await eventService.loadCheckboxStatesForDate(formattedDate);
+    final states = await eventService.loadTimeBasedCheckboxStatesForDate(formattedDate);
     setState(() {
       selectedStates = states;
     });
   }
 
-  void _handleCheckboxChange(int index) async {
-    if (!selectedStates[index]) { // 체크되어 있지 않은 상태에서만 실행
-      await eventService.copyEventToResult(formattedDate, index, startTime);
-      setState(() {
-        selectedStates[index] = true; // 체크박스 상태 변경
-        _fetchEvents(); // UI 업데이트
-      });
+  void _handleCheckboxChange(int hour) async {
+    setState(() {
+      selectedStates[hour] = !(selectedStates[hour] ?? false);
+    });
+    await eventService.saveTimeBasedCheckboxState(formattedDate, hour, selectedStates[hour]!);
+    if (selectedStates[hour]!) {
+      await eventService.copyEventToResult(formattedDate, hour - startTime, startTime);
+      await eventService.updateEventCompletedStatus(formattedDate, hour, 'Y');
+    } else {
+      await eventService.updateEventCompletedStatus(formattedDate, hour, 'N');
     }
+    _fetchEvents();
   }
 
 
@@ -254,6 +268,7 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
             setState(() {
               selectedDate = date;
               formattedDate = DateFormat('yyyy-MM-dd').format(selectedDate);
+              _initScheduleList();
               _fetchEvents();
               _loadCheckboxStates();
             });
@@ -289,8 +304,10 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
     );
   }
   Widget _buildTimeBlock(int index) {
+    final hour = startTime + index;
     return Card(
       margin: EdgeInsets.symmetric(vertical: 4, horizontal: 8),
+      color: Colors.white,
       child: Padding(
         padding: EdgeInsets.all(8),
         child: Row(
@@ -299,14 +316,15 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
               flex: 1,
               child: Column(
                 children: [
-                  Text('${(startTime + index).toString().padLeft(2, '0')}:00'),
+                  Text('${hour.toString().padLeft(2, '0')}:00'),
                   CheckboxComponent(
-                    isChecked: selectedStates[index],
+                    isChecked: selectedStates[hour] ?? false,
                     onChanged: (bool? value) {
                       if (value != null) {
-                        _handleCheckboxChange(index);
+                        _handleCheckboxChange(hour);
                       }
                     },
+                    activeColor:  Colors.lightBlue[900],
                   ),
                 ],
               ),
@@ -355,7 +373,7 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
     );
   }
 
-// ... 기존의 다른 메서드들 유지 ...
+
 }
 
 

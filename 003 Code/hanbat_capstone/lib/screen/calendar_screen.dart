@@ -372,218 +372,451 @@ class CalendarScreenState extends State<CalendarScreen> {
   }
 
   @override
+  // Widget build(BuildContext context) {
+  //
+  //
+  //   return Scaffold(body: LayoutBuilder(
+  //     builder: (context, constraints) {
+  //       final availableHeight =
+  //           constraints.maxHeight - (MediaQuery.of(context).viewInsets.bottom);
+  //       //inal calculatedRowHeight = (availableHeight - kToolbarHeight - MediaQuery.of(context).padding.top) / 6;
+  //       // 캘린더의 기본 rowHeight 계산
+  //       double rowHeight = availableHeight / 6;
+  //
+  //       // 조건: 캘린더의 이벤트가 많을 때 rowHeight를 줄이기
+  //       if (_selectedEvents.value.length > 5) {
+  //         rowHeight *= 0.8; // 줄이기 비율을 조정 가능
+  //       }
+  //
+  //       return Column(
+  //         children: [
+  //           Flexible(
+  //               child: TableCalendar<EventModel>(
+  //             locale: 'ko_KR',
+  //             firstDay: DateTime.utc(2010, 10, 16),
+  //             lastDay: DateTime.utc(2030, 3, 14),
+  //             focusedDay: _focusedDay,
+  //             calendarFormat: _calendarFormat,
+  //             availableGestures: AvailableGestures.verticalSwipe,
+  //             calendarStyle: CalendarStyle(
+  //               cellMargin: EdgeInsets.zero,
+  //               tableBorder: TableBorder.all(
+  //                 color: Colors.grey[300]!,
+  //                 width: 0.5,
+  //               ),
+  //             ),
+  //             rowHeight: rowHeight,
+  //             availableCalendarFormats: {
+  //               CalendarFormat.month: '월',
+  //               CalendarFormat.twoWeeks: '2주',
+  //               CalendarFormat.week: '주',
+  //             },
+  //             onFormatChanged: _onFormatChanged,
+  //             daysOfWeekHeight: 40,
+  //             eventLoader: _getEventsForDay,
+  //             selectedDayPredicate: (day) => isSameDay(_selectedDay, day),
+  //             onDaySelected: _onDaySelected,
+  //             calendarBuilders: CalendarBuilders(
+  //               dowBuilder: (context, day) {
+  //                 if (day.weekday == DateTime.sunday) {
+  //                   final text = DateFormat.E("ko_KR").format(day);
+  //                   return Center(
+  //                     child: Text(
+  //                       text,
+  //                       style: TextStyle(
+  //                         color: Colors.red,
+  //                         fontWeight: FontWeight.bold,
+  //                       ),
+  //                     ),
+  //                   );
+  //                 } else {
+  //                   final text = DateFormat.E("ko_KR").format(day);
+  //                   return Center(
+  //                     child: Text(
+  //                       text,
+  //                       style: TextStyle(
+  //                         fontWeight: FontWeight.bold,
+  //                       ),
+  //                     ),
+  //                   );
+  //                 }
+  //               },
+  //               markerBuilder: (context, day, events) {
+  //                 return SizedBox.shrink(); // 마커 빌더는 사용하지 않음
+  //               },
+  //               defaultBuilder: (context, day, focusedDay) {
+  //                 return Stack(
+  //                   children: [
+  //                     Positioned(
+  //                       right: 5,
+  //                       top: 5,
+  //                       child: Text(
+  //                         day.day.toString(),
+  //                         style: TextStyle(
+  //                           fontSize: 16,
+  //                           color: day.weekday == DateTime.sunday
+  //                               ? Colors.red
+  //                               : Colors.black,
+  //                         ),
+  //                       ),
+  //                     ),
+  //                     Positioned.fill(
+  //                       top: 25, // 날짜 아래에 위치하도록 조정
+  //                       child: _buildEventsMarker(day, _getEventsForDay(day)),
+  //                     ),
+  //                   ],
+  //                 );
+  //               },
+  //               selectedBuilder: (context, day, focusedDay) {
+  //                 return Stack(
+  //                   children: [
+  //                     Positioned.fill(
+  //                       child: Container(
+  //                         margin: const EdgeInsets.all(1),
+  //                         decoration: BoxDecoration(
+  //                           color: Colors.green.withOpacity(0.1),
+  //                           border: Border.all(color: Colors.green, width: 1),
+  //                           borderRadius: BorderRadius.circular(5),
+  //                         ),
+  //                       ),
+  //                     ),
+  //                     Positioned(
+  //                       right: 5,
+  //                       top: 5,
+  //                       child: Text(
+  //                         day.day.toString(),
+  //                         style: TextStyle(fontSize: 16, color: Colors.green),
+  //                       ),
+  //                     ),
+  //                     Positioned.fill(
+  //                       top: 25,
+  //                       child: _buildEventsMarker(day, _getEventsForDay(day)),
+  //                     ),
+  //                   ],
+  //                 );
+  //               },
+  //
+  //               todayBuilder: (context, day, focusedDay) {
+  //                 return Stack(
+  //                   children: [
+  //                     Positioned(
+  //                       right: 5,
+  //                       top: 5,
+  //                       child: Text(
+  //                         day.day.toString(),
+  //                         style: TextStyle(fontSize: 16, color: Colors.blue),
+  //                       ),
+  //                     ),
+  //                     Positioned.fill(
+  //                       top: 25,
+  //                       child: _buildEventsMarker(day, _getEventsForDay(day)),
+  //                     ),
+  //                   ],
+  //                 );
+  //               },
+  //               // outsideBuilder: (context, day, focusedDay) {
+  //               //   return Stack(
+  //               //     children: [
+  //               //       Positioned(
+  //               //         right: 5,
+  //               //         top: 5,
+  //               //         child: Text(
+  //               //           day.day.toString(),
+  //               //           style: TextStyle(fontSize: 16, color: day.weekday == DateTime.sunday ? Colors.red.withOpacity(0.5) : Colors.grey,),
+  //               //         ),
+  //               //       ),
+  //               //       Positioned.fill(
+  //               //         top: 25,
+  //               //         child: _buildEventsMarker(day, _getEventsForDay(day)),
+  //               //       ),
+  //               //     ],
+  //               //   );
+  //               // },
+  //               outsideBuilder: (context, day, focusedDay) {
+  //                 return Stack(
+  //                   children: [
+  //                     Positioned(
+  //                       right: 5,
+  //                       top: 5,
+  //                       child: Text(
+  //                         day.day.toString(),
+  //                         style: TextStyle(
+  //                           fontSize: 16,
+  //                           color: day.weekday == DateTime.sunday
+  //                               ? Colors.red.withOpacity(0.5)
+  //                               : Colors.grey,
+  //                         ),
+  //                       ),
+  //                     ),
+  //                     Positioned.fill(
+  //                       top: 25,
+  //                       child: _buildEventsMarker(day, _getEventsForDay(day)),
+  //                     ),
+  //                   ],
+  //                 );
+  //                 //   child: Text(
+  //                 //     day.day.toString(),
+  //                 //     style: TextStyle(color: Colors.grey),
+  //                 //   ),
+  //                 // );
+  //               },
+  //             ),
+  //             onHeaderTapped: (_) => _showMonthPicker(),
+  //             headerStyle: HeaderStyle(
+  //               titleTextStyle: TextStyle(
+  //                 fontSize: 24,
+  //                 fontWeight: FontWeight.bold,
+  //                 color: Colors.white,
+  //               ),
+  //               headerPadding: EdgeInsets.symmetric(vertical: 4), // 수직 패딩 줄이기
+  //               headerMargin: EdgeInsets.only(bottom: 8), // 하단 마진 줄이기
+  //               titleCentered: true,
+  //               formatButtonVisible: false,
+  //               titleTextFormatter: (date, locale) =>
+  //                   DateFormat.yMMM(locale).format(date),
+  //               decoration: BoxDecoration(
+  //                 color: Colors.lightBlue[900],
+  //               ),
+  //             ),
+  //           )),
+  //           if (_calendarFormat != CalendarFormat.month)
+  //             Expanded(child: _buildWeeklyEventList()),
+  //         ],
+  //       );
+  //     },
+  //   ));
+  // }
   Widget build(BuildContext context) {
 
 
-    return Scaffold(body: LayoutBuilder(
-      builder: (context, constraints) {
-        final availableHeight =
-            constraints.maxHeight - (MediaQuery.of(context).viewInsets.bottom);
-        //inal calculatedRowHeight = (availableHeight - kToolbarHeight - MediaQuery.of(context).padding.top) / 6;
-        // 캘린더의 기본 rowHeight 계산
-        double rowHeight = availableHeight / 6;
+    return Scaffold(
+      body: LayoutBuilder(
+        builder: (BuildContext context, BoxConstraints constraints) {
+          final availableHeight = constraints.maxHeight;
+          //inal calculatedRowHeight = (availableHeight - kToolbarHeight - MediaQuery.of(context).padding.top) / 6;
+          // 캘린더의 기본 rowHeight 계산
+          double rowHeight = (availableHeight-100) / 5;
 
-        // 조건: 캘린더의 이벤트가 많을 때 rowHeight를 줄이기
-        if (_selectedEvents.value.length > 5) {
-          rowHeight *= 0.8; // 줄이기 비율을 조정 가능
-        }
-
-        return Column(
-          children: [
-            Flexible(
-                child: TableCalendar<EventModel>(
-              locale: 'ko_KR',
-              firstDay: DateTime.utc(2010, 10, 16),
-              lastDay: DateTime.utc(2030, 3, 14),
-              focusedDay: _focusedDay,
-              calendarFormat: _calendarFormat,
-              availableGestures: AvailableGestures.verticalSwipe,
-              calendarStyle: CalendarStyle(
-                cellMargin: EdgeInsets.zero,
-                tableBorder: TableBorder.all(
-                  color: Colors.grey[300]!,
-                  width: 0.5,
-                ),
+          // 조건: 캘린더의 이벤트가 많을 때 rowHeight를 줄이기
+          if (_selectedEvents.value.length > 5) {
+            rowHeight *= 0.8; // 줄이기 비율을 조정 가능
+          }
+          return SingleChildScrollView(
+            child: ConstrainedBox(
+              constraints: BoxConstraints(
+                minHeight: constraints.maxHeight,
               ),
-              rowHeight: rowHeight,
-              availableCalendarFormats: {
-                CalendarFormat.month: '월',
-                CalendarFormat.twoWeeks: '2주',
-                CalendarFormat.week: '주',
-              },
-              onFormatChanged: _onFormatChanged,
-              daysOfWeekHeight: 40,
-              eventLoader: _getEventsForDay,
-              selectedDayPredicate: (day) => isSameDay(_selectedDay, day),
-              onDaySelected: _onDaySelected,
-              calendarBuilders: CalendarBuilders(
-                dowBuilder: (context, day) {
-                  if (day.weekday == DateTime.sunday) {
-                    final text = DateFormat.E("ko_KR").format(day);
-                    return Center(
-                      child: Text(
-                        text,
-                        style: TextStyle(
-                          color: Colors.red,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                    );
-                  } else {
-                    final text = DateFormat.E("ko_KR").format(day);
-                    return Center(
-                      child: Text(
-                        text,
-                        style: TextStyle(
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                    );
-                  }
-                },
-                markerBuilder: (context, day, events) {
-                  return SizedBox.shrink(); // 마커 빌더는 사용하지 않음
-                },
-                defaultBuilder: (context, day, focusedDay) {
-                  return Stack(
-                    children: [
-                      Positioned(
-                        right: 5,
-                        top: 5,
-                        child: Text(
-                          day.day.toString(),
-                          style: TextStyle(
-                            fontSize: 16,
-                            color: day.weekday == DateTime.sunday
-                                ? Colors.red
-                                : Colors.black,
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Flexible(
+                      child: TableCalendar<EventModel>(
+                        locale: 'ko_KR',
+                        firstDay: DateTime.utc(2010, 10, 16),
+                        lastDay: DateTime.utc(2030, 3, 14),
+                        focusedDay: _focusedDay,
+                        calendarFormat: _calendarFormat,
+                        availableGestures: AvailableGestures.verticalSwipe,
+                        calendarStyle: CalendarStyle(
+                          cellMargin: EdgeInsets.zero,
+                          tableBorder: TableBorder.all(
+                            color: Colors.grey[300]!,
+                            width: 0.5,
                           ),
                         ),
-                      ),
-                      Positioned.fill(
-                        top: 25, // 날짜 아래에 위치하도록 조정
-                        child: _buildEventsMarker(day, _getEventsForDay(day)),
-                      ),
-                    ],
-                  );
-                },
-                selectedBuilder: (context, day, focusedDay) {
-                  return Stack(
-                    children: [
-                      Positioned.fill(
-                        child: Container(
-                          margin: const EdgeInsets.all(1),
+                        availableCalendarFormats: {
+                          CalendarFormat.month: '월',
+                          CalendarFormat.twoWeeks: '2주',
+                          CalendarFormat.week: '주',
+                        },
+                        sixWeekMonthsEnforced: true,
+                        rowHeight: rowHeight,
+                        onFormatChanged: _onFormatChanged,
+                        daysOfWeekHeight: 40,
+                        eventLoader: _getEventsForDay,
+                        selectedDayPredicate: (day) =>
+                            isSameDay(_selectedDay, day),
+                        onDaySelected: _onDaySelected,
+                        calendarBuilders: CalendarBuilders(
+                          dowBuilder: (context, day) {
+                            if (day.weekday == DateTime.sunday) {
+                              final text = DateFormat.E("ko_KR").format(day);
+                              return Center(
+                                child: Text(
+                                  text,
+                                  style: TextStyle(
+                                    color: Colors.red,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                              );
+                            } else {
+                              final text = DateFormat.E("ko_KR").format(day);
+                              return Center(
+                                child: Text(
+                                  text,
+                                  style: TextStyle(
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                              );
+                            }
+                          },
+                          markerBuilder: (context, day, events) {
+                            return SizedBox.shrink(); // 마커 빌더는 사용하지 않음
+                          },
+                          defaultBuilder: (context, day, focusedDay) {
+                            return Stack(
+                              children: [
+                                Positioned(
+                                  right: 5,
+                                  top: 5,
+                                  child: Text(
+                                    day.day.toString(),
+                                    style: TextStyle(
+                                      fontSize: 16,
+                                      color: day.weekday == DateTime.sunday
+                                          ? Colors.red
+                                          : Colors.black,
+                                    ),
+                                  ),
+                                ),
+                                Positioned.fill(
+                                  top: 25, // 날짜 아래에 위치하도록 조정
+                                  child: _buildEventsMarker(
+                                      day, _getEventsForDay(day)),
+                                ),
+                              ],
+                            );
+                          },
+                          selectedBuilder: (context, day, focusedDay) {
+                            return Stack(
+                              children: [
+                                Positioned.fill(
+                                  child: Container(
+                                    margin: const EdgeInsets.all(1),
+                                    decoration: BoxDecoration(
+                                      color: Colors.green.withOpacity(0.1),
+                                      border: Border.all(
+                                          color: Colors.green, width: 1),
+                                      borderRadius: BorderRadius.circular(5),
+                                    ),
+                                  ),
+                                ),
+                                Positioned(
+                                  right: 5,
+                                  top: 5,
+                                  child: Text(
+                                    day.day.toString(),
+                                    style: TextStyle(
+                                        fontSize: 16, color: Colors.green),
+                                  ),
+                                ),
+                                Positioned.fill(
+                                  top: 25,
+                                  child: _buildEventsMarker(
+                                      day, _getEventsForDay(day)),
+                                ),
+                              ],
+                            );
+                          },
+
+                          todayBuilder: (context, day, focusedDay) {
+                            return Stack(
+                              children: [
+                                Positioned(
+                                  right: 5,
+                                  top: 5,
+                                  child: Text(
+                                    day.day.toString(),
+                                    style: TextStyle(
+                                        fontSize: 16, color: Colors.blue),
+                                  ),
+                                ),
+                                Positioned.fill(
+                                  top: 25,
+                                  child: _buildEventsMarker(
+                                      day, _getEventsForDay(day)),
+                                ),
+                              ],
+                            );
+                          },
+                          // outsideBuilder: (context, day, focusedDay) {
+                          //   return Stack(
+                          //     children: [
+                          //       Positioned(
+                          //         right: 5,
+                          //         top: 5,
+                          //         child: Text(
+                          //           day.day.toString(),
+                          //           style: TextStyle(fontSize: 16, color: day.weekday == DateTime.sunday ? Colors.red.withOpacity(0.5) : Colors.grey,),
+                          //         ),
+                          //       ),
+                          //       Positioned.fill(
+                          //         top: 25,
+                          //         child: _buildEventsMarker(day, _getEventsForDay(day)),
+                          //       ),
+                          //     ],
+                          //   );
+                          // },
+                          outsideBuilder: (context, day, focusedDay) {
+                            return Stack(
+                              children: [
+                                Positioned(
+                                  right: 5,
+                                  top: 5,
+                                  child: Text(
+                                    day.day.toString(),
+                                    style: TextStyle(
+                                      fontSize: 16,
+                                      color: day.weekday == DateTime.sunday
+                                          ? Colors.red.withOpacity(0.5)
+                                          : Colors.grey,
+                                    ),
+                                  ),
+                                ),
+                                Positioned.fill(
+                                  top: 25,
+                                  child: _buildEventsMarker(
+                                      day, _getEventsForDay(day)),
+                                ),
+                              ],
+                            );
+                            //   child: Text(
+                            //     day.day.toString(),
+                            //     style: TextStyle(color: Colors.grey),
+                            //   ),
+                            // );
+                          },
+                        ),
+                        onHeaderTapped: (_) => _showMonthPicker(),
+                        headerStyle: HeaderStyle(
+                          titleTextStyle: TextStyle(
+                            fontSize: 24,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.white,
+                          ),
+                          headerPadding: EdgeInsets.symmetric(vertical: 4),
+                          // 수직 패딩 줄이기
+                          headerMargin: EdgeInsets.only(bottom: 8),
+                          // 하단 마진 줄이기
+                          titleCentered: true,
+                          formatButtonVisible: false,
+                          titleTextFormatter: (date, locale) =>
+                              DateFormat.yMMM(locale).format(date),
                           decoration: BoxDecoration(
-                            color: Colors.green.withOpacity(0.1),
-                            border: Border.all(color: Colors.green, width: 1),
-                            borderRadius: BorderRadius.circular(5),
+                            color: Colors.lightBlue[900],
                           ),
                         ),
-                      ),
-                      Positioned(
-                        right: 5,
-                        top: 5,
-                        child: Text(
-                          day.day.toString(),
-                          style: TextStyle(fontSize: 16, color: Colors.green),
-                        ),
-                      ),
-                      Positioned.fill(
-                        top: 25,
-                        child: _buildEventsMarker(day, _getEventsForDay(day)),
-                      ),
-                    ],
-                  );
-                },
-
-                todayBuilder: (context, day, focusedDay) {
-                  return Stack(
-                    children: [
-                      Positioned(
-                        right: 5,
-                        top: 5,
-                        child: Text(
-                          day.day.toString(),
-                          style: TextStyle(fontSize: 16, color: Colors.blue),
-                        ),
-                      ),
-                      Positioned.fill(
-                        top: 25,
-                        child: _buildEventsMarker(day, _getEventsForDay(day)),
-                      ),
-                    ],
-                  );
-                },
-                // outsideBuilder: (context, day, focusedDay) {
-                //   return Stack(
-                //     children: [
-                //       Positioned(
-                //         right: 5,
-                //         top: 5,
-                //         child: Text(
-                //           day.day.toString(),
-                //           style: TextStyle(fontSize: 16, color: day.weekday == DateTime.sunday ? Colors.red.withOpacity(0.5) : Colors.grey,),
-                //         ),
-                //       ),
-                //       Positioned.fill(
-                //         top: 25,
-                //         child: _buildEventsMarker(day, _getEventsForDay(day)),
-                //       ),
-                //     ],
-                //   );
-                // },
-                outsideBuilder: (context, day, focusedDay) {
-                  return Stack(
-                    children: [
-                      Positioned(
-                        right: 5,
-                        top: 5,
-                        child: Text(
-                          day.day.toString(),
-                          style: TextStyle(
-                            fontSize: 16,
-                            color: day.weekday == DateTime.sunday
-                                ? Colors.red.withOpacity(0.5)
-                                : Colors.grey,
-                          ),
-                        ),
-                      ),
-                      Positioned.fill(
-                        top: 25,
-                        child: _buildEventsMarker(day, _getEventsForDay(day)),
-                      ),
-                    ],
-                  );
-                  //   child: Text(
-                  //     day.day.toString(),
-                  //     style: TextStyle(color: Colors.grey),
-                  //   ),
-                  // );
-                },
+                      )),
+                  if (_calendarFormat != CalendarFormat.month)
+                    _buildWeeklyEventList(),
+                ],
               ),
-              onHeaderTapped: (_) => _showMonthPicker(),
-              headerStyle: HeaderStyle(
-                titleTextStyle: TextStyle(
-                  fontSize: 24,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.white,
-                ),
-                headerPadding: EdgeInsets.symmetric(vertical: 4), // 수직 패딩 줄이기
-                headerMargin: EdgeInsets.only(bottom: 8), // 하단 마진 줄이기
-                titleCentered: true,
-                formatButtonVisible: false,
-                titleTextFormatter: (date, locale) =>
-                    DateFormat.yMMM(locale).format(date),
-                decoration: BoxDecoration(
-                  color: Colors.lightBlue[900],
-                ),
-              ),
-            )),
-            if (_calendarFormat != CalendarFormat.month)
-              Expanded(child: _buildWeeklyEventList()),
-          ],
-        );
-      },
-    ));
+            ),
+          );
+        },
+      ),
+    );
   }
 }

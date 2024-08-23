@@ -116,7 +116,7 @@ class ReviewService {
         eventSttTime: _toDate(data['eventSttTime']),
         eventEndTime: _toDate(data['eventEndTime']),
         isAllDay: data['isAllDay'] is bool ? data['isAllDay'] : false,
-        completeYn: data['completeYn'] ?? 'N',
+        completedYn: data['completedYn'] ?? 'N',
         isRecurring: data['isRecurring'] ?? false,
       );
     }).toList();

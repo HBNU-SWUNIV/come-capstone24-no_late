@@ -256,7 +256,7 @@ class ChatService {
             eventEndTime: DateTime(
                 date.year, date.month, date.day, endTime.hour, endTime.minute),
             isAllDay: false,
-            completeYn: 'N',
+            completedYn: 'N',
             isRecurring: false,
           );
 
@@ -364,7 +364,7 @@ class ChatService {
               eventEndTime: DateTime(newDate.year, newDate.month, newDate.day,
                   newEndTime.hour, newEndTime.minute),
               isAllDay: event.isAllDay,
-              completeYn: event.completeYn,
+              completedYn: event.completedYn,
               isRecurring: event.isRecurring,
             );
 
