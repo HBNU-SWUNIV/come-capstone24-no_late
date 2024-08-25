@@ -286,6 +286,7 @@ class _AddEventScreenState extends State<AddEventScreen> {
     return Scaffold(
       appBar: AppBar(
         title: Text(widget.isEditing ? '일정 수정' : '일정 추가'),
+        centerTitle: true,
       ),
       body: Container(
         child: SingleChildScrollView(
@@ -393,7 +394,7 @@ class _AddEventScreenState extends State<AddEventScreen> {
                   SizedBox(height: 24),
                   ElevatedButton(
                     onPressed: _saveEvent,
-                    child: Text('저장', style: TextStyle(fontSize: 18)),
+                    child: Text('저장', style: TextStyle(fontSize: 18,color: Colors.white)),
                     style: ElevatedButton.styleFrom(
                       backgroundColor: accentColor,
                       padding: EdgeInsets.symmetric(horizontal: 50, vertical: 15),
