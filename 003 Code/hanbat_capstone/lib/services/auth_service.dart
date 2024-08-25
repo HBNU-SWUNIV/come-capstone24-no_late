@@ -26,12 +26,13 @@ class AuthService {
         return newUser;
       }
     } catch (e) {
-      print("Error during sign up: $e");
+      print("Error during sign up in AuthService: $e");
       if (e is FirebaseAuthException) {
         print("Firebase Auth Error Code: ${e.code}");
         print("Firebase Auth Error Message: ${e.message}");
+        throw e;  // 오류를 상위로 전파
       }
-      return null;
+      throw e;  // FirebaseAuthException이 아닌 경우에도 오류 전파
     }
     return null;
   }
@@ -51,6 +52,17 @@ class AuthService {
       print("Error during sign in: $e");
     }
     return null;
+  }
+
+  //이메일 중복 체크 메서드
+  Future<bool> isEmailAlreadyInUse(String email) async {
+    try {
+      final result = await FirebaseAuth.instance.fetchSignInMethodsForEmail(email);
+      return result.isNotEmpty;
+    } catch (e) {
+      print("Error checking email existence: $e");
+      return false;
+    }
   }
 
   // 로그아웃

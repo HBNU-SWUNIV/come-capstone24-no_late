@@ -21,22 +21,38 @@ class _AuthScreenState extends State<AuthScreen> {
       final authProvider = Provider.of<AuthProvider>(context, listen: false);
 
       bool success;
-      if (_isLogin) {
-        success = await authProvider.signIn(_email, _password);
-      } else {
-        success = await authProvider.signUp(_email, _password, _name, _phoneNumber);
-      }
 
-      if (success) {
-        // 로그인/회원가입 성공 처리
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(_isLogin ? '로그인 성공' : '회원가입 성공')),
-        );
-      } else {
-        // 실패 처리
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(authProvider.errorMessage)),
-        );
+      try {
+          if (!_isLogin) {
+            // 회원가입 시 이메일 중복 확인
+            bool isEmailInUse = await authProvider.isEmailAlreadyInUse(_email);
+            if (isEmailInUse) {
+              _showErrorDialog('이미 사용 중인 이메일 입니다.');
+              return;
+            }
+          }
+
+          if (_isLogin) {
+            success = await authProvider.signIn(_email, _password);
+          } else {
+            success =
+            await authProvider.signUp(_email, _password, _name, _phoneNumber);
+          }
+
+          if (success) {
+            // 로그인/회원가입 성공 처리
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(content: Text(_isLogin ? '로그인 성공' : '회원가입 성공')),
+            );
+          } else {
+            // 실패 처리
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(content: Text(authProvider.errorMessage)),
+            );
+          }
+        } catch (e) {
+        print('Error in _submitForm: $e');
+        _showErrorDialog('오류가 발생했습니다: $e');
       }
     }
   }
@@ -93,4 +109,26 @@ class _AuthScreenState extends State<AuthScreen> {
       ),
     );
   }
+
+  //에러 다이얼로그
+  void _showErrorDialog(String message) {
+    print('Showing dialog with message: $message');  // 디버그 출력 추가
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Text('알림'),
+        content: Text(message),
+        actions: <Widget>[
+          TextButton(
+            child: Text('확인'),
+            onPressed: () {
+              Navigator.of(ctx).pop();
+            },
+          )
+        ],
+      ),
+    ).then((_) => print('Dialog closed'));  // 다이얼로그가 닫힐 때 디버그 출력
+  }
+
 }
+

@@ -29,8 +29,21 @@ class AuthProvider with ChangeNotifier {
         return true;
       }
     } catch (e) {
-      _errorMessage = e.toString();
-      print(e.toString());
+      if (e is FirebaseAuthException) {
+        switch (e.code) {
+          case 'email-already-in-use':
+            _errorMessage = '이미 사용 중인 이메일 주소입니다.';
+            break;
+          case 'weak-password':
+            _errorMessage = '비밀번호가 너무 약합니다.';
+            break;
+          default:
+            _errorMessage = '회원가입 중 오류가 발생했습니다: ${e.message}';
+        }
+      } else {
+        _errorMessage = '알 수 없는 오류가 발생했습니다: $e';
+      }
+      print('Error in AuthProvider signUp: $_errorMessage');
     }
 
     _isLoading = false;
@@ -51,11 +64,27 @@ class AuthProvider with ChangeNotifier {
         notifyListeners();
         return true;
       } else {
-        _errorMessage = 'Invalid email or password';
+        _errorMessage = '이메일이나 비밀번호가 올바르지 않습니다.';
       }
     } catch (e) {
-      _errorMessage = e.toString();
-      print(e.toString());
+      if (e is FirebaseAuthException) {
+        switch (e.code) {
+          case 'user-not-found':
+            _errorMessage = '등록되지 않은 이메일입니다.';
+            break;
+          case 'wrong-password':
+            _errorMessage = '비밀번호가 올바르지 않습니다.';
+            break;
+          case 'invalid-email':
+            _errorMessage = '유효하지 않은 이메일 형식입니다.';
+            break;
+          default:
+            _errorMessage = '로그인 중 오류가 발생했습니다: ${e.message}';
+        }
+      } else {
+        _errorMessage = '알 수 없는 오류가 발생했습니다.';
+      }
+      print('Error in AuthProvider signIn: $_errorMessage');
     }
 
     _isLoading = false;
@@ -63,7 +92,12 @@ class AuthProvider with ChangeNotifier {
     return false;
   }
 
-  Future<void> signOut() async {
+  //이메일 중복 체크
+  Future<bool> isEmailAlreadyInUse(String email) async {
+    return await _authService.isEmailAlreadyInUse(email);
+  }
+
+  Future<void> signOut() async { 
     await _authService.signOut();
     _user = null;
     notifyListeners();

@@ -512,6 +512,7 @@ class _EventDetailScreenState extends State<EventDetailScreen> {
       mainAxisAlignment: MainAxisAlignment.spaceEvenly,
       children: [
         ElevatedButton.icon(
+          icon: Icon(Icons.edit, color: Colors.black,),
           label: Text('수정', style: TextStyle(color: Colors.white),),
           style: ElevatedButton.styleFrom(
             backgroundColor:  Colors.lightBlue[900],
@@ -540,6 +541,7 @@ class _EventDetailScreenState extends State<EventDetailScreen> {
           },
         ),
         ElevatedButton.icon(
+          icon: Icon(Icons.delete, color: Colors.black,),
           label: Text('삭제', style: TextStyle(color: Colors.white),),
           style: ElevatedButton.styleFrom(backgroundColor:  Colors.lightBlue[900],),
           onPressed: () async {

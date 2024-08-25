@@ -2,8 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:hanbat_capstone/const/colors.dart';
 import 'package:hanbat_capstone/screen/category_screen.dart';
-
+import 'package:provider/provider.dart';
+import 'package:hanbat_capstone/providers/auth_provider.dart';
+import 'package:hanbat_capstone/services/auth_service.dart';
 import 'time_range_setting_screen.dart';
+import 'package:hanbat_capstone/model/user_model.dart';
+
 
 class SettingScreen extends StatefulWidget {
   const SettingScreen({Key? key}) : super(key: key);
@@ -22,9 +26,20 @@ class _SettingScreenState extends State<SettingScreen> {
     _contentController = TextEditingController();
   }
 
+
+  //로그아웃 메소드
+  void _handleLogout() async {
+    final authProvider = Provider.of<AuthProvider>(context, listen: false);
+    await authProvider.signOut();
+    // 로그아웃 후 로그인 화면으로 이동
+    Navigator.of(context).pushReplacementNamed('/login');  // 로그인 화면의 라우트 이름을 적절히 변경
+  }
+
   @override
   Widget build(BuildContext context) {
     final bottomInset = MediaQuery.of(context).viewInsets.bottom;
+    final authProvider = Provider.of<AuthProvider>(context);
+    final UserModel? currentUser = authProvider.user;  // 현재 사용자 정보 가져오기
 
     return Scaffold(
         appBar: AppBar(
@@ -41,9 +56,12 @@ class _SettingScreenState extends State<SettingScreen> {
                 child: Icon(Icons.person),
                 radius: 30,
               ),
-              title: Text('사용자 이름'), // TODO 세션처리 후 수정
+              title: Text(currentUser?.name ?? '사용자 이름'), // TODO 세션처리 후 수정
+              subtitle: Text(currentUser?.email ?? ''),  // 사용자 이메일 표시
               //subtitle: Text('개인정보 수정하기'),
-              trailing: IconButton(onPressed: (){}, icon:Icon(Icons.logout)), //TODO 로그아웃 기능 추가 필요
+              trailing: IconButton(
+                  onPressed: _handleLogout, //로그아웃 메소드
+                  icon:Icon(Icons.logout)), //TODO 로그아웃 기능 추가 필요
               onTap: (){},
             ),
             SizedBox(height: 5,),

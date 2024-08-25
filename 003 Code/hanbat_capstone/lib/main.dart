@@ -17,11 +17,15 @@ Future<void> main() async {
     options: DefaultFirebaseOptions.currentPlatform,
   );
 
+  // Firebase 오류 메시지 한국어 설정
+  FirebaseAuth.instance.setLanguageCode("ko");
+
   // 국제화 초기화
   await initializeDateFormatting('ko_KR', null);
 
   final notificationService = NotificationService();
   await notificationService.init();
+
   
   runApp(
     MultiProvider(
