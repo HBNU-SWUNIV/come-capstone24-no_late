@@ -1,3 +1,4 @@
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:intl/intl.dart';
@@ -138,6 +139,10 @@ class _AddEventScreenState extends State<AddEventScreen> {
   void _toggleAllDay(bool value) {
     setState(() {
       _isAllDay = value;
+      if (_isAllDay) {
+        _startTime = DateTime(_selectedDate!.year, _selectedDate!.month, _selectedDate!.day);
+        _endTime = DateTime(_selectedDate!.year, _selectedDate!.month, _selectedDate!.day, 23, 59);
+      }
     });
   }
 
@@ -278,6 +283,76 @@ class _AddEventScreenState extends State<AddEventScreen> {
           .set(recurringEvent.toMap());
     }
   }
+
+  Future<void> _selectDateTime(BuildContext context, bool isStartTime) async {
+    final DateTime? pickedDate = await showDatePicker(
+      context: context,
+      initialDate: isStartTime ? (_startTime ?? DateTime.now()) : (_endTime ?? DateTime.now()),
+      firstDate: DateTime(2000),
+      lastDate: DateTime(2100),
+    );
+
+    if (pickedDate != null) {
+      final TimeOfDay? pickedTime = await showDialog(
+        context: context,
+        builder: (BuildContext context) {
+          return CustomTimePicker(
+            initialTime: TimeOfDay.fromDateTime(isStartTime ? (_startTime ?? DateTime.now()) : (_endTime ?? DateTime.now())),
+          );
+        },
+      );
+
+      if (pickedTime != null) {
+        setState(() {
+          if (isStartTime) {
+            _startTime = DateTime(
+              pickedDate.year,
+              pickedDate.month,
+              pickedDate.day,
+              pickedTime.hour,
+              0,
+            );
+          } else {
+            _endTime = DateTime(
+              pickedDate.year,
+              pickedDate.month,
+              pickedDate.day,
+              pickedTime.hour,
+             0,
+            );
+          }
+        });
+      }
+    }
+  }
+
+
+
+  Widget _buildDateTimeSelector() {
+    return _buildCard(
+      child: Column(
+        children: [
+          ListTile(
+            leading: Icon(Icons.access_time, color: accentColor),
+            title: Text('시작 시간'),
+            subtitle: Text(_startTime != null
+                ? DateFormat('yyyy-MM-dd HH:mm').format(_startTime!)
+                : '시작 시간을 선택하세요'),
+            onTap: () => _selectDateTime(context, true),
+          ),
+          Divider(),
+          ListTile(
+            leading: Icon(Icons.access_time_filled, color: accentColor),
+            title: Text('종료 시간'),
+            subtitle: Text(_endTime != null
+                ? DateFormat('yyyy-MM-dd HH:mm').format(_endTime!)
+                : '종료 시간을 선택하세요'),
+            onTap: () => _selectDateTime(context, false),
+          ),
+        ],
+      ),
+    );
+  }
   final Color mainColor = Colors.lightBlueAccent.withOpacity(0.1); // 스케줄러의 계획 항목 바탕색
   final Color accentColor =  Colors.lightBlue[900]!; // 강조색
 
@@ -321,28 +396,29 @@ class _AddEventScreenState extends State<AddEventScreen> {
                     ),
                   ),
                   SizedBox(height: 16),
-                  _buildCard(
-                    child: Column(
-                      children: [
-                        ListTile(
-                          leading: Icon(Icons.calendar_today, color: accentColor),
-                          title: Text('날짜 및 시간'),
-                          subtitle: Text(
-                            _selectedDate != null
-                                ? '${DateFormat.yMd().format(_selectedDate!)} ${_startTime != null ? DateFormat('HH:mm').format(_startTime!) : ''} - ${_endTime != null ? DateFormat('HH:mm').format(_endTime!) : ''}'
-                                : '날짜와 시간을 선택하세요',
-                          ),
-                          onTap: () async {
-                            await _selectDate(context);
-                            if (_selectedDate != null) {
-                              await _selectTime(context, true);
-                              await _selectTime(context, false);
-                            }
-                          },
-                        ),
-                      ],
-                    ),
-                  ),
+                  // _buildCard(
+                  //   child: Column(
+                  //     children: [
+                  //       ListTile(
+                  //         leading: Icon(Icons.calendar_today, color: accentColor),
+                  //         title: Text('날짜 및 시간'),
+                  //         subtitle: Text(
+                  //           _selectedDate != null
+                  //               ? '${DateFormat.yMd().format(_selectedDate!)} ${_startTime != null ? DateFormat('HH:mm').format(_startTime!) : ''} - ${_endTime != null ? DateFormat('HH:mm').format(_endTime!) : ''}'
+                  //               : '날짜와 시간을 선택하세요',
+                  //         ),
+                  //         onTap: () async {
+                  //           await _selectDate(context);
+                  //           if (_selectedDate != null) {
+                  //             await _selectTime(context, true);
+                  //             await _selectTime(context, false);
+                  //           }
+                  //         },
+                  //       ),
+                  //     ],
+                  //   ),
+                  // ),
+                  _buildDateTimeSelector(),
                   SizedBox(height: 16),
                   _buildCard(
                     child: DropdownButtonFormField<String>(
@@ -426,6 +502,99 @@ class _AddEventScreenState extends State<AddEventScreen> {
       value: value,
       onChanged: onChanged,
       activeColor: accentColor,
+    );
+  }
+}
+class CustomTimePicker extends StatefulWidget {
+  final TimeOfDay initialTime;
+
+  CustomTimePicker({required this.initialTime});
+
+  @override
+  _CustomTimePickerState createState() => _CustomTimePickerState();
+}
+
+class _CustomTimePickerState extends State<CustomTimePicker> {
+  late int _hour;
+  late int _minute;
+
+  @override
+  void initState() {
+    super.initState();
+    _hour = widget.initialTime.hour;
+    _minute = widget.initialTime.minute;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Dialog(
+      child: Container(
+        padding: EdgeInsets.all(16),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              '시간 선택',
+              style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+            ),
+            SizedBox(height: 20),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                _buildNumberPicker(
+                  context,
+                  _hour,
+                  0,
+                  23,
+                      (value) => setState(() => _hour = value),
+                ),
+                Text(':', style: TextStyle(fontSize: 20)),
+                _buildNumberPicker(
+                  context,
+                  _minute,
+                  0,
+                  59,
+                      (value) => setState(() => _minute = value),
+                ),
+              ],
+            ),
+            SizedBox(height: 20),
+            ElevatedButton(
+              child: Text('확인'),
+              onPressed: () {
+                Navigator.of(context).pop(TimeOfDay(hour: _hour, minute: _minute));
+              },
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildNumberPicker(
+      BuildContext context,
+      int value,
+      int minValue,
+      int maxValue,
+      ValueChanged<int> onChanged,
+      ) {
+    return Container(
+      height: 100,
+      width: 70,
+      child: CupertinoPicker(
+        scrollController: FixedExtentScrollController(initialItem: value),
+        itemExtent: 30,
+        onSelectedItemChanged: onChanged,
+        children: List<Widget>.generate(
+          maxValue - minValue + 1,
+              (index) => Center(
+            child: Text(
+              (minValue + index).toString().padLeft(2, '0'),
+              style: TextStyle(fontSize: 20),
+            ),
+          ),
+        ),
+      ),
     );
   }
 }

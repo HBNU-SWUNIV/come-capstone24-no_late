@@ -1,12 +1,12 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import '../MODEL/event_model.dart';
-import '../MODEL/event_result_model.dart';
+import '../model/event_model.dart';
+import '../model/event_result_model.dart';
 
 class EventService {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
 
-  Future<List<EventModel>> getEventsForDate(DateTime date) async {
+  Future<List<EventModel>> getEventsForDate(DateTime date, {bool forCalendar = false}) async {
     try {
       final startOfDay = DateTime(date.year, date.month, date.day);
       final endOfDay = DateTime(date.year, date.month, date.day, 23, 59, 59);
@@ -14,16 +14,50 @@ class EventService {
       final startOfDayStr = startOfDay.toIso8601String();
       final endOfDayStr = endOfDay.toIso8601String();
 
-      final QuerySnapshot snapshot = await _firestore
+      QuerySnapshot snapshot = await _firestore
           .collection('events')
           .where('eventDate', isGreaterThanOrEqualTo: startOfDayStr)
           .where('eventDate', isLessThanOrEqualTo: endOfDayStr)
-          .where('isAllDay', isEqualTo: false) // 종일 이벤트 제외
+
           .get();
 
-      final List<EventModel> events = snapshot.docs
+      List<EventModel> events = snapshot.docs
           .map((doc) => EventModel.fromMap(doc.data() as Map<String, dynamic>))
+          .where((event) => !forCalendar || event.showOnCalendar)
           .toList();
+
+      final recurringSnapshot = await _firestore
+          .collection('events')
+          .where('isRecurring', isEqualTo: true)
+          .get();
+
+      for (var doc in recurringSnapshot.docs) {
+        final recurringEvent = EventModel.fromMap(doc.data() as Map<String, dynamic>);
+        if (recurringEvent.eventDate != null) {
+          final daysDifference = date.difference(recurringEvent.eventDate!).inDays;
+          if (daysDifference >= 0 && daysDifference % 7 == 0 && daysDifference < 28) {
+            // 반복 이벤트의 복사본을 만들고 날짜를 현재 날짜로 조정
+            final adjustedEvent = recurringEvent.copyWith(
+              eventDate: date,
+              eventSttTime: DateTime(
+                date.year,
+                date.month,
+                date.day,
+                recurringEvent.eventSttTime!.hour,
+                recurringEvent.eventSttTime!.minute,
+              ),
+              eventEndTime: DateTime(
+                date.year,
+                date.month,
+                date.day,
+                recurringEvent.eventEndTime!.hour,
+                recurringEvent.eventEndTime!.minute,
+              ),
+            );
+            events.add(adjustedEvent);
+          }
+        }
+      }
       return events;
     } catch (e) {
       print('Error fetching events: $e');

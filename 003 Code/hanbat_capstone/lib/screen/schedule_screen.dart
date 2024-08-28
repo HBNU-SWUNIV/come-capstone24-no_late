@@ -34,6 +34,8 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
   final EventService eventService = EventService();
   late PageController _pageController;
   int initialPage = 5000;
+  List<EventModel> allDayEvents = [];
+  List<EventModel> regularEvents = [];
 
   @override
   void initState() {
@@ -42,6 +44,7 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
     formattedDate = DateFormat('yyyy-MM-dd').format(selectedDate);
     _loadSettings();
     _pageController = PageController(initialPage: initialPage);
+    _fetchEvents();
   }
 
   _loadSettings() async {
@@ -71,8 +74,12 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
         selectedDate);
 
     setState(() {
+      // scheduleData[formattedDate] = eventService.generateScheduleData(
+      //     selectedDate, startTime, endTime, events, resultEvents);
+      allDayEvents = events.where((event) => event.isAllDay).toList();
+      regularEvents = events.where((event) => !event.isAllDay).toList();
       scheduleData[formattedDate] = eventService.generateScheduleData(
-          selectedDate, startTime, endTime, events, resultEvents);
+          selectedDate, startTime, endTime, regularEvents, resultEvents);
     });
   }
 
@@ -288,14 +295,15 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
         itemBuilder: (context, index) {
           return Column(
             children: [
-
+              _buildAllDayEventsSection(),
               Expanded(
-                child: ListView.builder(
-                  itemCount: endTime - startTime + 1,
-                  itemBuilder: (context, index) {
-                    return _buildTimeBlock(index);
-                  },
-                ),
+          child: _buildRegularEventsSection(),
+                // child: ListView.builder(
+                //   itemCount: endTime - startTime + 1,
+                //   itemBuilder: (context, index) {
+                //     return _buildTimeBlock(index);
+        // }
+
               ),
             ],
           );
@@ -372,6 +380,46 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
       ),
     );
   }
+  Widget _buildAllDayEventsSection() {
+    return Container(
+      color: Colors.grey[200],
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Padding(
+            padding: const EdgeInsets.all(8.0),
+            child: Text(
+              '종일 일정',
+              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+            ),
+          ),
+          ListView.builder(
+            shrinkWrap: true,
+            physics: NeverScrollableScrollPhysics(),
+            itemCount: allDayEvents.length,
+            itemBuilder: (context, index) {
+              final event = allDayEvents[index];
+              return ListTile(
+                title: Text(event.eventTitle),
+                subtitle: Text('종일'),
+                onTap: () => _openEventDetail(event.eventTitle, index, isplan: true),
+              );
+            },
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildRegularEventsSection() {
+    return ListView.builder(
+      itemCount: endTime - startTime + 1,
+      itemBuilder: (context, index) {
+        return _buildTimeBlock(index);
+      },
+    );
+  }
+
 
 
 }
