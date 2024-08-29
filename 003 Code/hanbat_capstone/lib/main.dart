@@ -11,6 +11,7 @@ import 'package:provider/provider.dart';
 import 'package:hanbat_capstone/providers/auth_provider.dart';
 import 'package:dart_openai/dart_openai.dart';
 
+
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await Firebase.initializeApp(
@@ -26,6 +27,9 @@ Future<void> main() async {
   final notificationService = NotificationService();
   await notificationService.init();
 
+
+  final authProvider = AuthProvider();
+  await authProvider.loadUser();  // 사용자 정보 로드
   
   runApp(
     MultiProvider(
@@ -56,6 +60,7 @@ Future<void> main() async {
     ),
   );
 }
+
 
 class MyApp extends StatelessWidget {
   final NotificationService notificationService;
@@ -91,6 +96,7 @@ class _AuthWrapperState extends State<AuthWrapper> {
     return StreamBuilder<User?>(
       stream: FirebaseAuth.instance.authStateChanges(),
       builder: (context, snapshot) {
+
         if (snapshot.connectionState == ConnectionState.active) {
           User? user = snapshot.data;
           if (user == null) {

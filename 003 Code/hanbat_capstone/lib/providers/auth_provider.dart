@@ -1,3 +1,4 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/foundation.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import '../services/auth_service.dart';
@@ -102,5 +103,24 @@ class AuthProvider with ChangeNotifier {
     await _authService.signOut();
     _user = null;
     notifyListeners();
+  }
+
+  //사용자 정보 로드 메서드
+  Future<void> loadUser() async {
+    final currentUser = FirebaseAuth.instance.currentUser;
+    if (currentUser != null) {
+      try {
+        final userDoc = await FirebaseFirestore.instance
+            .collection('user')
+            .doc(currentUser.uid)
+            .get();
+        if (userDoc.exists) {
+          _user = UserModel.fromMap(userDoc.data()!);
+          notifyListeners();
+        }
+      } catch (e) {
+        print('Error loading user data: $e');
+      }
+    }
   }
 }

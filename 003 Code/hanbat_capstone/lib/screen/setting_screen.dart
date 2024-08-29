@@ -24,6 +24,18 @@ class _SettingScreenState extends State<SettingScreen> {
   void initState() {
     super.initState();
     _contentController = TextEditingController();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _loadUserInfo();
+    });
+  }
+
+
+  //유저 정보 로드 메서드
+  // 사용자 정보 로드
+  void _loadUserInfo() async {
+    final authProvider = Provider.of<AuthProvider>(context, listen: false);
+    await authProvider.loadUser();
+    setState(() {}); // UI 업데이트
   }
 
 
