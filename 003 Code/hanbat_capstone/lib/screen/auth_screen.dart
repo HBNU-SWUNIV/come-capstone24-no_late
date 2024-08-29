@@ -1,4 +1,6 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:hanbat_capstone/services/category_service.dart';
 import 'package:provider/provider.dart';
 import '../providers/auth_provider.dart';
 
@@ -14,6 +16,13 @@ class _AuthScreenState extends State<AuthScreen> {
   String _name = '';
   String _phoneNumber = '';
   bool _isLogin = true;
+  late CategoryService categoryService;
+
+  @override
+  void initState() {
+    super.initState();
+    categoryService = CategoryService();
+  }
 
   void _submitForm() async {
     if (_formKey.currentState!.validate()) {
@@ -23,36 +32,43 @@ class _AuthScreenState extends State<AuthScreen> {
       bool success;
 
       try {
-          if (!_isLogin) {
-            // 회원가입 시 이메일 중복 확인
-            bool isEmailInUse = await authProvider.isEmailAlreadyInUse(_email);
-            if (isEmailInUse) {
+        if (!_isLogin) {
+          // 회원가입 시 이메일 중복 확인
+          bool isEmailInUse = await authProvider.isEmailAlreadyInUse(_email);
+          if (isEmailInUse) {
+            if(mounted) {
               _showErrorDialog('이미 사용 중인 이메일 입니다.');
-              return;
             }
+            return;
           }
+        }
 
-          if (_isLogin) {
-            success = await authProvider.signIn(_email, _password);
-          } else {
-            success =
-            await authProvider.signUp(_email, _password, _name, _phoneNumber);
-          }
+        if (_isLogin) {
+          success = await authProvider.signIn(_email, _password);
+        } else {
+          success = await authProvider.signUp(_email, _password, _name, _phoneNumber);
+        }
 
-          if (success) {
+        if (success) {
+          if(mounted){
             // 로그인/회원가입 성공 처리
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(content: Text(_isLogin ? '로그인 성공' : '회원가입 성공')),
             );
-          } else {
+          }
+        } else {
+          if(mounted){
             // 실패 처리
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(content: Text(authProvider.errorMessage)),
             );
           }
-        } catch (e) {
+        }
+      } catch (e) {
         print('Error in _submitForm: $e');
-        _showErrorDialog('오류가 발생했습니다: $e');
+        if(mounted){
+          _showErrorDialog('오류가 발생했습니다: $e');
+        }
       }
     }
   }
@@ -112,6 +128,7 @@ class _AuthScreenState extends State<AuthScreen> {
 
   //에러 다이얼로그
   void _showErrorDialog(String message) {
+    if(!mounted) return;  // mounted상태확인 (화면 활성화 여부 확인)
     print('Showing dialog with message: $message');  // 디버그 출력 추가
     showDialog(
       context: context,

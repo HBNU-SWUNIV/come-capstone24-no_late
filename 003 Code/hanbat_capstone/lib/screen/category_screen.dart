@@ -1,7 +1,9 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/rendering.dart';
 import 'package:hanbat_capstone/model/category_model.dart';
+import 'package:hanbat_capstone/providers/auth_provider.dart';
+import 'package:hanbat_capstone/services/category_service.dart';
+import 'package:provider/provider.dart';
 import 'package:uuid/uuid.dart';
 import 'package:flutter_colorpicker/flutter_colorpicker.dart';
 import 'package:hanbat_capstone/const/colors.dart';
@@ -20,16 +22,21 @@ class CategoryScreen extends StatefulWidget {
 class _CategoryScreenState extends State<CategoryScreen> {
   late TextEditingController _contentController;
   Color _pickerColor = CATEGORY_DEF_PICKER_COLOR; // default
+  late CategoryService categoryService;
 
   @override
   void initState() {
     super.initState();
     _contentController = TextEditingController();
+    categoryService = CategoryService();  // 초기화
   }
 
   @override
   Widget build(BuildContext context) {
     final bottomInset = MediaQuery.of(context).viewInsets.bottom;
+    // 로그인한 사용자 정보 가져오기
+    final authProvider = Provider.of<AuthProvider>(context, listen: false);
+    final String userId = authProvider.userId ?? '';
 
     return Scaffold(
         appBar: AppBar(
@@ -85,7 +92,7 @@ class _CategoryScreenState extends State<CategoryScreen> {
                             foregroundColor: COLOR_WHITE,
                           ),
                           onPressed: () async {
-                            await addCategory();
+                            await addCategory(userId);
                             Navigator.of(context).pop();
                           },
                           child: Text('저장'))
@@ -103,7 +110,7 @@ class _CategoryScreenState extends State<CategoryScreen> {
                 child: StreamBuilder<QuerySnapshot>(
               stream: FirebaseFirestore.instance
                   .collection('category')
-                  //.where('userId', isEqualTo: 'yjkoo') //TODO 추가해야함
+                  .where('userId', isEqualTo: userId)
                   .orderBy('categoryId', descending: true)
                   .snapshots(),
               builder: (context, snapshot) {
@@ -129,27 +136,22 @@ class _CategoryScreenState extends State<CategoryScreen> {
                   return ListView.builder(
                     padding: EdgeInsets.all(5),
                     itemCount: categories.length,
-                    itemBuilder: (context, index) {
+                    itemBuilder: (context, index){
                       final category = categories[index];
 
                       return Dismissible(
                           key: ObjectKey(category.categoryId),
                           direction: DismissDirection.startToEnd,
-                          onDismissed: (DismissDirection direction) {
-                            // 카테고리 삭제
-                            // 카테고리 아이디가 plan인 경우, 삭제안되게 함.
-                            // TODO 앱 실행 시 카테고리 컬렉션에 일정카테고리가 있는지 체크 후 없으면 default 로 추가해야함.
-                            if (category.categoryName != '일정') {
-                              FirebaseFirestore.instance
-                                  .collection('category')
-                                  .doc(category.categoryId)
-                                  .delete();
+                          onDismissed: (DismissDirection direction) async {
+                            if (category.defaultYn != 'Y') {
+                              // 카테고리 삭제
+                              await categoryService.deleteCategory(category.categoryId);
                             } else {
                               setState(() {});
                             }
                           },
                           confirmDismiss: (direction) async {
-                            if (category.categoryName == '일정') {
+                            if (category.defaultYn == 'Y') {
                               ScaffoldMessenger.of(context)
                                   .showSnackBar(SnackBar(
                                 content: Text('일정 카테고리는 삭제할 수 없습니다.'),
@@ -208,22 +210,19 @@ class _CategoryScreenState extends State<CategoryScreen> {
   /**
    * 카테고리 추가
    */
-  Future<void> addCategory() async {
+  Future<void> addCategory(String userId) async {
     final categoryName = _contentController.text;
     if (categoryName.isEmpty) return ;
 
     final categoryModel = CategoryModel(
         categoryId: Uuid().v4(),
-        userId: 'yjkoo', // TODO 하드코딩 수정필요
+        userId: userId,
         categoryName: categoryName,
-        colorCode: '0xFF000000');
+        colorCode: '0xFF000000',
+        defaultYn : 'N'
+    );
 
-    final firestore = FirebaseFirestore.instance;
-
-    await firestore
-        .collection('category')
-        .doc(categoryModel.categoryId)
-        .set(categoryModel.toJson());
+    await categoryService.addCategory(categoryModel);
 
     _contentController.clear();
   }
@@ -231,13 +230,8 @@ class _CategoryScreenState extends State<CategoryScreen> {
   /**
    * 카테고리 색상 변경
    */
-  Future<void> updateCategoryColor(
-      CategoryModel categoryModel, Color color) async {
-    final firestore = FirebaseFirestore.instance;
-    await firestore
-        .collection('category')
-        .doc(categoryModel.categoryId)
-        .update({'colorCode': color.value.toString()});
+  Future<void> updateCategoryColor(CategoryModel categoryModel, Color color) async {
+    await categoryService.updateCategoryColor(categoryModel, color);
   }
 
   /**

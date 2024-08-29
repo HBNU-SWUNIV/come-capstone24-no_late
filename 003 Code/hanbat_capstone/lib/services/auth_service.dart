@@ -1,10 +1,14 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:hanbat_capstone/services/category_service.dart';
+import 'package:uuid/uuid.dart';
+import '../model/category_model.dart';
 import '../model/user_model.dart';
 
 class AuthService {
   final FirebaseAuth _auth = FirebaseAuth.instance;
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
+  late CategoryService categoryService = CategoryService();
 
   // 추가: authStateChanges getter
   Stream<User?> get authStateChanges => _auth.authStateChanges();
@@ -20,9 +24,18 @@ class AuthService {
         UserModel newUser = UserModel(
             email: email,
             name: name,
-            phoneNumber: phoneNumber
+            phoneNumber: phoneNumber,
+            userId: user.uid
         );
         await _firestore.collection('user').doc(user.uid).set(newUser.toMap());
+
+        // 카테고리 신규 생성
+        try {
+          await categoryService.addNewCategory(user.uid);
+        } catch (e) {
+          print('카테리고 신규 생성 시 오류가 발생 : $e');
+        }
+
         return newUser;
       }
     } catch (e) {
