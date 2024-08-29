@@ -1,6 +1,11 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:flutter/cupertino.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:hanbat_capstone/model/event_model.dart';
+import 'package:hanbat_capstone/providers/auth_provider.dart';
+import 'package:intl/intl.dart';
+import 'package:provider/provider.dart';
 import 'package:timezone/data/latest.dart' as tz;
 import 'package:timezone/timezone.dart' as tz;
 
@@ -9,7 +14,8 @@ import 'package:timezone/timezone.dart' as tz;
  */
 class NotificationService {
   final FlutterLocalNotificationsPlugin _notificationsPlugin = FlutterLocalNotificationsPlugin();
-
+  final FirebaseFirestore firestore = FirebaseFirestore.instance;
+  
   /**
    * 초기화 메소드
    */
@@ -41,9 +47,14 @@ class NotificationService {
    * firestore에서 이벤트 데이터를 가져와 알림을 설정하는 메소드
    */
   Future<void> eventNotificationFromFirestore() async {
-    FirebaseFirestore firestore = FirebaseFirestore.instance;
+    DateTime now = DateTime.now();
+    String fmtNowDate = DateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS").format(now);
+    String? userId = FirebaseAuth.instance.currentUser?.uid;
 
-    QuerySnapshot snapshot = await firestore.collection('events').get();
+    QuerySnapshot snapshot = await firestore.collection('events')
+        .where('userId', isEqualTo: userId)
+        .where('eventSttTime', isGreaterThan: fmtNowDate)
+        .get();
 
     for(var doc in snapshot.docs) {
       EventModel event = EventModel.fromMap(doc.data() as Map<String, dynamic>);
