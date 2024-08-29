@@ -14,13 +14,13 @@ class ReviewService {
     OpenAI.requestsTimeOut = const Duration(seconds: 60);
   }
 
-  Future<String> summarizeRetrospective(DateTime _currentDay) async {
+  Future<String> summarizeRetrospective(DateTime _currentDay, String userId) async {
     // 1. 현재 날짜 가져오기
     final formattedCurDay = DateFormat('yyyyMMdd').format(_currentDay);
 
     // 2. events와 eventResults 정보 파이어베이스에서 조회하기
-    final events = await getEvents(formattedCurDay); // 파이어베이스에서 yyyyMMdd로 events 조회
-    final eventResults = await getEventResults(formattedCurDay); // 파이어베이스에서 yyyyMMdd로 eventResults 조회
+    final events = await getEvents(formattedCurDay, userId); // 파이어베이스에서 yyyyMMdd로 events 조회
+    final eventResults = await getEventResults(formattedCurDay, userId); // 파이어베이스에서 yyyyMMdd로 eventResults 조회
 
     // 3. 조회된 events와 eventResults 정보 비교하기
     int matchedCount = 0;
@@ -90,7 +90,7 @@ class ReviewService {
   /**
    * 이벤트정보 조회
    */
-  Future<List<EventModel>> getEvents(String formattedCurDay) async {
+  Future<List<EventModel>> getEvents(String formattedCurDay, String userId) async {
     // events의 eventDate필드는 string으로 '2024-08-12T00:00:00.000' 형식으로 저장됨을 확인함 (파이어베이스)
     // 그래서 날짜 비교가 아니라 문자열 비교해야함.
     //DateTime sttDate = DateTime.parse(_formattedCurDay);
@@ -99,6 +99,7 @@ class ReviewService {
 
     QuerySnapshot snapshot = await _firestore
         .collection('events')
+        .where('userId', isEqualTo: userId)
         .where('eventDate', isGreaterThanOrEqualTo: "${fmtDate}T00:00:00.000")
         .where('eventDate', isLessThanOrEqualTo: "${fmtDate}T23:59:59.999")
         .get();
@@ -126,13 +127,14 @@ class ReviewService {
   /**
    * 이벤트 결과 조회
    */
-  Future<List<EventResultModel>> getEventResults(String formattedCurDay) async {
+  Future<List<EventResultModel>> getEventResults(String formattedCurDay, String userId) async {
     //DateTime sttDate = DateTime.parse(_formattedCurDay);
     //DateTime endDate = DateTime(sttDate.year, sttDate.month, sttDate.day, 23, 59, 59);
     String fmtDate = "${formattedCurDay.substring(0, 4)}-${formattedCurDay.substring(4, 6)}-${formattedCurDay.substring(6, 8)}";
 
     QuerySnapshot snapshot = await _firestore
         .collection('result_events')
+        .where('userId', isEqualTo: userId)
         .where('eventResultDate', isGreaterThanOrEqualTo: "${fmtDate}T00:00:00.000")
         .where('eventResultDate', isLessThanOrEqualTo: "${fmtDate}T23:59:59.999")
         .get();

@@ -1,4 +1,5 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:hanbat_capstone/model/category_model.dart';
 import 'package:hanbat_capstone/providers/auth_provider.dart';
@@ -24,6 +25,8 @@ class _CategoryScreenState extends State<CategoryScreen> {
   Color _pickerColor = CATEGORY_DEF_PICKER_COLOR; // default
   late CategoryService categoryService;
 
+  String? _userId;
+
   @override
   void initState() {
     super.initState();
@@ -35,8 +38,7 @@ class _CategoryScreenState extends State<CategoryScreen> {
   Widget build(BuildContext context) {
     final bottomInset = MediaQuery.of(context).viewInsets.bottom;
     // 로그인한 사용자 정보 가져오기
-    final authProvider = Provider.of<AuthProvider>(context, listen: false);
-    final String userId = authProvider.userId ?? '';
+    _userId = FirebaseAuth.instance.currentUser?.uid;
 
     return Scaffold(
         appBar: AppBar(
@@ -92,7 +94,7 @@ class _CategoryScreenState extends State<CategoryScreen> {
                             foregroundColor: COLOR_WHITE,
                           ),
                           onPressed: () async {
-                            await addCategory(userId);
+                            await addCategory(_userId!);
                             Navigator.of(context).pop();
                           },
                           child: Text('저장'))
@@ -110,7 +112,7 @@ class _CategoryScreenState extends State<CategoryScreen> {
                 child: StreamBuilder<QuerySnapshot>(
               stream: FirebaseFirestore.instance
                   .collection('category')
-                  .where('userId', isEqualTo: userId)
+                  .where('userId', isEqualTo: _userId!)
                   .orderBy('categoryId', descending: true)
                   .snapshots(),
               builder: (context, snapshot) {

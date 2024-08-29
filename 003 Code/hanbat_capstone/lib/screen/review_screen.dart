@@ -1,6 +1,8 @@
 import 'dart:developer';
 
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/cupertino.dart';
+import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter/widgets.dart';
@@ -50,6 +52,7 @@ class _ReviewScreenState extends State<ReviewScreen> {
   @override
   void initState() {
     super.initState();
+    userId = FirebaseAuth.instance.currentUser?.uid;
     fetchAiReviewText();
     reviewData = reviewList();
   }
@@ -59,14 +62,18 @@ class _ReviewScreenState extends State<ReviewScreen> {
    */
   Future<void> fetchAiReviewText() async {
     try {
-      final result = await await _reviewService.summarizeRetrospective(currentDay);
-      setState(() {
-        aiReviewText = result;
-      });
+      final result = await await _reviewService.summarizeRetrospective(currentDay, userId!);
+      if(mounted) {
+        setState(() {
+          aiReviewText = result;
+        });
+      }
     } catch(e) {
-      setState(() {
-        aiErrorMessage = '오류가 발생했습니다. \n오류내용 : $e';
-      });
+      if(mounted) {
+        setState(() {
+          aiErrorMessage = '오류가 발생했습니다. \n오류내용 : $e';
+        });
+      }
     }
   }
 
@@ -78,6 +85,10 @@ class _ReviewScreenState extends State<ReviewScreen> {
     var currentDate = DateFormat('yyyyMMdd').format(currentDay);
     DateTime now = DateTime.now();
     DateTime today = DateTime(now.year, now.month, now.day);
+
+    if(userId == null){
+      return joinData;  // userId가 없는경우 빈 리스트 반환
+    }
 
     try {
       // 리뷰 타이틀 목록
@@ -92,7 +103,7 @@ class _ReviewScreenState extends State<ReviewScreen> {
       // 선택된 날짜의 리뷰 목록
       QuerySnapshot reviewSnapshot = await firestore
           .collection('review')
-          .where('userId', isEqualTo: 'yjkoo') // TODO 하드코딩 수정필요
+          .where('userId', isEqualTo: userId)
           .where('reviewDate', isEqualTo: currentDate)
           .get();
 
@@ -137,7 +148,7 @@ class _ReviewScreenState extends State<ReviewScreen> {
 
           // 매칭되지 않는 경우 (= 리뷰가 저장되지 않은 경우) && 리뷰타이틀 사용여부가 Y인 경우 데이터 추가
           if(!matchingYn && reviewTitle.useYn == "Y"){
-            joinData.add({'type': 'review', 'review': ReviewModel(reviewId: '', userId: 'yjkoo', reviewDate: today, reviewTitle: reviewTitle.titleNm, reviewContent: reviewTitle.hintText)});
+            joinData.add({'type': 'review', 'review': ReviewModel(reviewId: '', userId: userId!, reviewDate: today, reviewTitle: reviewTitle.titleNm, reviewContent: reviewTitle.hintText)});
           }
         }
       }
@@ -226,7 +237,7 @@ class _ReviewScreenState extends State<ReviewScreen> {
                                           title: titleModel.titleNm,
                                           content: titleModel.hintText,
                                           reviewId: '',
-                                          userId: 'yjkoo',  // TODO 하드코딩 변경해야함
+                                          userId: userId!,
                                           reviewContent: '',
                                           reviewDate: currentDay,
                                           callback: callback,
@@ -242,7 +253,7 @@ class _ReviewScreenState extends State<ReviewScreen> {
                                           title: reviewModel.reviewTitle,
                                           content: reviewModel.reviewContent,
                                           reviewId: reviewModel.reviewId,
-                                          userId: 'yjkoo',  // TODO 하드코딩 변경해야함
+                                          userId: userId!,
                                           reviewContent: reviewModel.reviewContent,
                                           reviewDate: reviewModel.reviewDate,
                                           callback: callback,
