@@ -1,9 +1,11 @@
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/widgets.dart';
 import 'package:table_calendar/table_calendar.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../model/event_model.dart';
+import '../services/event_service.dart';
 import 'add_event_screen.dart';
 import 'package:intl/intl.dart';
 
@@ -52,6 +54,10 @@ class CalendarScreenState extends State<CalendarScreen> {
   @override
   void initState() {
     super.initState(); // 위젯 처음 생성시 호출
+    final user = FirebaseAuth.instance.currentUser;
+    if (user != null) {
+      EventService().setUserId(user.uid);
+    }
     _selectedDay = _focusedDay; //// _selectedDay 초기화
     _selectedEvents = ValueNotifier<List<EventModel>>([]); // 빈목록으로 초기화 해 일정 가져옴
     _loadCategories().then((_) {
@@ -78,11 +84,17 @@ class CalendarScreenState extends State<CalendarScreen> {
   }
 
   Future<void> _fetchEvents() async {
+    if (!mounted) return;
     try {
+      final user = FirebaseAuth.instance.currentUser;
       final snapshot = await FirebaseFirestore.instance
           .collection('events')
+          .where('userId', isEqualTo: user!.uid)
           .where('showOnCalendar', isEqualTo: true)
           .get();
+
+      if (!mounted) return;  // 추가: 비동기 작업 후 다시 한 번 확인
+
       final events = snapshot.docs.map((doc) {
         final data = doc.data();
         final categoryId = data['categoryId'] as String?;
@@ -92,14 +104,24 @@ class CalendarScreenState extends State<CalendarScreen> {
         return EventModel.fromMap({...data, 'categoryColor': colorCode});
       }).toList();
 
-      setState(() {
-        kEvents = _groupEvents(events);
+      if (mounted) {
+        setState(() {
+          kEvents = _groupEvents(events);
 
-        _selectedEvents.value =
-            _getEventsForDay(_selectedDay ?? DateTime.now());
-      });
-    } catch (error) {
+          _selectedEvents.value =
+              _getEventsForDay(_selectedDay ?? DateTime.now());
+        });
+      }
+    }catch (error) {
       print('Error fetching events: $error');
+
+      if(mounted) {
+        setState(() {
+
+        });
+      }
+
+
       setState(() {});
     }
   }

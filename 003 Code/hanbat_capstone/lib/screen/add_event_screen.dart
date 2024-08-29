@@ -1,3 +1,4 @@
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
@@ -19,6 +20,7 @@ class AddEventScreen extends StatefulWidget {
   final DateTime? startTime;
   final DateTime? endTime;
   final Function? onEventAdded;
+
 
   AddEventScreen({
     this.selectedDate,
@@ -179,6 +181,11 @@ class _AddEventScreenState extends State<AddEventScreen> {
   Future<void> _saveEvent() async {
     if (_formKey.currentState?.validate() ?? false) {
       try {
+        final user = FirebaseAuth.instance.currentUser;
+        if (user == null) {
+          ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('로그인이 필요합니다.')));
+          return;
+        }
         if (widget.isFinalEvent) {
           await _saveFinalEvent();
         } else {
@@ -190,7 +197,10 @@ class _AddEventScreenState extends State<AddEventScreen> {
         Navigator.of(context).pop(true);
       } catch (e) {
         print('Error saving event: $e');
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('일정 처리에 실패했습니다.')));
+        String errorMessage = e.toString().contains("User is not logged in")
+            ? '로그인이 필요합니다.'
+            : '일정 처리에 실패했습니다.';
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(errorMessage)));
       }
     }
   }
@@ -202,11 +212,13 @@ class _AddEventScreenState extends State<AddEventScreen> {
     }
     print('eventRetId: $eventRetId');
 
+    String userId = getCurrentUserId();
+
     final eventResultData = EventResultModel(
       eventResultId: eventRetId,
       eventId: widget.actualevent?.eventId ?? '',
       categoryId: selectedCategoryId ?? '',
-      userId: '', // 사용자 ID 설정
+      userId: userId, // 사용자 ID 설정
       eventResultDate: _selectedDate,
       eventResultSttTime: _startTime ?? DateTime.now(),
       eventResultEndTime: _endTime ?? DateTime.now().add(Duration(hours: 1)),
@@ -230,6 +242,14 @@ class _AddEventScreenState extends State<AddEventScreen> {
       // 추가적인 오류 처리 로직
     }
   }
+  String getCurrentUserId() {
+    User? user = FirebaseAuth.instance.currentUser;
+    if (user != null) {
+      return user.uid;
+    } else {
+      throw Exception("User is not logged in");
+    }
+  }
 
   Future<void> _saveRegularEvent() async {
     String eventId = widget.event?.eventId ?? '';
@@ -238,13 +258,15 @@ class _AddEventScreenState extends State<AddEventScreen> {
     }
     print('eventId: $eventId');
 
+    String userId = getCurrentUserId();
+
     final eventData = EventModel(
       eventId: eventId,
       eventTitle: _titleController.text,
       eventDate: _selectedDate,
       eventContent: _contentController.text,
       categoryId: selectedCategoryId ?? categories.first['categoryId'],
-      userId: '',
+      userId: userId,
       eventSttTime: _startTime,
       eventEndTime: _endTime,
       isAllDay: _isAllDay,

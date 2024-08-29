@@ -1,12 +1,43 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../model/event_model.dart';
 import '../model/event_result_model.dart';
 
 class EventService {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
+  String? _userId;
+  final FirebaseAuth _auth = FirebaseAuth.instance;
+
+
+  void setUserId(String userId) {
+    _userId = userId;
+  }
+
+
+
+  String get userId {
+    final user = _auth.currentUser;
+    if (user == null) {
+      throw Exception('User is not logged in');
+    }
+    return user.uid;
+  }
+
+  Future<void> ensureUserLoggedIn() async {
+    if (_auth.currentUser == null) {
+      throw Exception('User is not logged in');
+    }
+    final user = FirebaseAuth.instance.currentUser;
+    if (user != null) {
+      EventService().setUserId(user.uid);
+    }
+  }
+
+
 
   Future<List<EventModel>> getEventsForDate(DateTime date, {bool forCalendar = false}) async {
+    await ensureUserLoggedIn();
     try {
       final startOfDay = DateTime(date.year, date.month, date.day);
       final endOfDay = DateTime(date.year, date.month, date.day, 23, 59, 59);
@@ -16,6 +47,7 @@ class EventService {
 
       QuerySnapshot snapshot = await _firestore
           .collection('events')
+          .where('userId', isEqualTo: userId)  // 사용자 ID로 필터링
           .where('eventDate', isGreaterThanOrEqualTo: startOfDayStr)
           .where('eventDate', isLessThanOrEqualTo: endOfDayStr)
 
@@ -28,6 +60,7 @@ class EventService {
 
       final recurringSnapshot = await _firestore
           .collection('events')
+          .where('userId', isEqualTo: userId)  // 사용자 ID로 필터링
           .where('isRecurring', isEqualTo: true)
           .get();
 
@@ -61,16 +94,18 @@ class EventService {
       return events;
     } catch (e) {
       print('Error fetching events: $e');
-      return [];
+      rethrow;
     }
   }
   Future<void> updateEventCompletedStatus(String formattedDate, int hour, String status) async {
+    await ensureUserLoggedIn();
     final eventDate = DateTime.parse(formattedDate);
     final eventStartTime = DateTime(eventDate.year, eventDate.month, eventDate.day, hour);
     final eventEndTime = eventStartTime.add(Duration(hours: 1));
 
     final snapshot = await _firestore
         .collection('events')
+        .where('userId', isEqualTo: userId)  // 사용자 ID로 필터링
         .where('eventDate', isEqualTo: eventDate.toIso8601String())
 
         .get();
@@ -86,18 +121,22 @@ class EventService {
     }
   }
   Future<void> toggleEventCompletedStatus(String eventId) async {
+    await ensureUserLoggedIn();
     final docSnapshot = await _firestore.collection('events').doc(eventId).get();
 
     if (docSnapshot.exists) {
       final event = EventModel.fromMap(docSnapshot.data()!);
-      final newStatus = event.completedYn == 'Y' ? 'N' : 'Y';
+      if(event.userId == userId) {
+        final newStatus = event.completedYn == 'Y' ? 'N' : 'Y';
+        await docSnapshot.reference.update({'completedYn': newStatus});
+      }
 
-      await docSnapshot.reference.update({'completedYn': newStatus});
     }
   }
 
 
   Future<List<EventResultModel>> getResultEventsForDate(DateTime date) async {
+    await ensureUserLoggedIn();
     try {
       final startOfDay = DateTime(date.year, date.month, date.day);
       final endOfDay = DateTime(date.year, date.month, date.day, 23, 59, 59);
@@ -107,6 +146,7 @@ class EventService {
 
       final QuerySnapshot snapshot = await _firestore
           .collection('result_events')
+          .where('userId', isEqualTo: userId)  // 사용자 ID로 필터링
           .where('eventResultDate', isGreaterThanOrEqualTo: startOfDayStr)
           .where('eventResultDate', isLessThanOrEqualTo: endOfDayStr)
           .get();
@@ -178,6 +218,7 @@ class EventService {
   }
 
   Future<List<bool>> loadCheckboxStatesForDate(String formattedDate) async {
+    await ensureUserLoggedIn();
     final resultEvents = await getResultEventsForDate(DateTime.parse(formattedDate));
     List<bool> checkboxStates = List.generate(24, (_) => false);
 
@@ -200,6 +241,7 @@ class EventService {
 
 
   Future<void> copyEventToResult(String formattedDate, int index, int startTime) async {
+    await ensureUserLoggedIn();
     final scheduleData = generateScheduleData(
         DateTime.parse(formattedDate),
         startTime,
@@ -217,6 +259,7 @@ class EventService {
       // 기존에 저장된 동일한 계획 이벤트가 있는지 확인
       final existingResultSnapshot = await FirebaseFirestore.instance
           .collection('result_events')
+          .where('userId', isEqualTo: userId)  // 사용자 ID로 필터링
           .where('eventResultDate', isEqualTo: eventDate.toIso8601String())
           .where('eventResultTitle', isEqualTo: planTitle)
           .get();
@@ -228,7 +271,7 @@ class EventService {
         final newEndTime = existingResult.eventResultEndTime!.add(Duration(hours: 1));
 
         await FirebaseFirestore.instance
-            .collection('result_events')
+            .collection('result_events') // 사용자 ID로 필터링
             .doc(existingResult.eventResultId)
             .update({'eventResultEndTime': newEndTime.toIso8601String()});
 
@@ -236,6 +279,7 @@ class EventService {
         // 기존 이벤트가 없다면 새 이벤트 생성
         final eventSnapshot = await FirebaseFirestore.instance
             .collection('events')
+            .where('userId', isEqualTo: userId)  // 사용자 ID로 필터링
             .where('eventDate', isEqualTo: eventDate.toIso8601String())
             .where('eventTitle', isEqualTo: planTitle)
             .get();
@@ -273,6 +317,7 @@ class EventService {
   }
 
   Future<List<bool>> loadCheckboxStates() async {
+    await ensureUserLoggedIn();
     final prefs = await SharedPreferences.getInstance();
     return List.generate(24, (index) => prefs.getBool('checkbox_$index') ?? false);
   }
@@ -280,6 +325,7 @@ class EventService {
   // lib/services/event_service.dart 파일에 추가
 
   Future<void> deleteEvent(String collectionName, String eventId) async {
+    await ensureUserLoggedIn();
     try {
       await FirebaseFirestore.instance
           .collection(collectionName)

@@ -125,6 +125,7 @@
 // }
 
 
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
@@ -166,7 +167,14 @@ class _DayEventsScreenState extends State<DayEventsScreen> {
 
 
   void _fetchEvents() async {
-    final snapshot = await FirebaseFirestore.instance.collection('events').get();
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) {
+      print('No user logged in');
+      return;
+    }
+    
+    final snapshot = await FirebaseFirestore.instance
+        .collection('events').where('userId', isEqualTo: user.uid).get();
     final events = snapshot.docs.map((doc) => EventModel.fromMap(doc.data())).toList();
     setState(() {
       widget.events
@@ -203,6 +211,11 @@ class _DayEventsScreenState extends State<DayEventsScreen> {
   }
 
   Future<void> _deleteEvent(EventModel event) async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null || user.uid != event.userId) {
+      print('Unauthorized delete attempt');
+      return;
+    }
     await FirebaseFirestore.instance.collection('events').doc(event.eventId).delete();
     _fetchEvents();
   }
@@ -314,11 +327,17 @@ class _DayEventsScreenState extends State<DayEventsScreen> {
         builder: (context) => EventDetailScreen(
           event: event,
           onEventDeleted: (deleteAllRecurrences) async {
+            final user = FirebaseAuth.instance.currentUser;
+            if (user == null || user.uid != event.userId) {
+              print('Unauthorized delete attempt');
+              return;
+            }
             if (deleteAllRecurrences) {
               final snapshot = await FirebaseFirestore.instance
                   .collection('events')
                   .where('eventId', isEqualTo: event.eventId)
                   .where('isRecurring', isEqualTo: true)
+                  .where('userId', isEqualTo: user.uid)
                   .get();
               final batch = FirebaseFirestore.instance.batch();
               for (final doc in snapshot.docs) {
@@ -331,6 +350,12 @@ class _DayEventsScreenState extends State<DayEventsScreen> {
             _fetchEvents();
           },
           onEventEdited: (editedEvent) async {
+            final user = FirebaseAuth.instance.currentUser;
+            if (user == null || user.uid != event.userId) {
+              print('Unauthorized edit attempt');
+              return;
+            }
+
             await FirebaseFirestore.instance
                 .collection('events')
                 .doc(event.eventId)

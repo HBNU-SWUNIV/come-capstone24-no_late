@@ -14,6 +14,7 @@ import '../component/checkbox_component.dart';
 import '../services/event_service.dart';
 import 'add_event_screen.dart';
 import 'event_detail_screen.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 
 class ScheduleScreen extends StatefulWidget {
   final DateTime? selectedDate;
@@ -36,26 +37,51 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
   int initialPage = 5000;
   List<EventModel> allDayEvents = [];
   List<EventModel> regularEvents = [];
+  bool _isLoading = true;
 
   @override
   void initState() {
     super.initState();
+    final user = FirebaseAuth.instance.currentUser;
+    if (user != null) {
+      EventService().setUserId(user.uid);
+    }
     selectedDate = widget.selectedDate ?? DateTime.now();
     formattedDate = DateFormat('yyyy-MM-dd').format(selectedDate);
     _loadSettings();
     _pageController = PageController(initialPage: initialPage);
-    _fetchEvents();
+    _ensureUserLoggedIn();
   }
 
-  _loadSettings() async {
-    final prefs = await SharedPreferences.getInstance();
-    setState(() {
-      startTime = prefs.getInt('startTime') ?? 0;
-      endTime = prefs.getInt('endTime') ?? 23;
-    });
-    _initScheduleList();
-    _fetchEvents();
-    _loadCheckboxStates();
+  Future<void> _ensureUserLoggedIn() async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) {
+      // 로그인 화면으로 이동
+      Navigator.of(context).pushReplacementNamed('/login');
+    } else {
+      eventService.setUserId(user.uid);
+    }
+  }
+
+  Future<void>_loadSettings() async {
+    setState(() => _isLoading = true);
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      setState(() {
+        startTime = prefs.getInt('startTime') ?? 0;
+        endTime = prefs.getInt('endTime') ?? 23;
+      });
+      _initScheduleList();
+      await _fetchEvents();
+      await _loadCheckboxStates();
+  } catch (e) {
+      print('Error loading settings: $e');
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('설정을 불러오는 중 오류가 발생했습니다.')),
+      );
+    } finally {
+      setState(() => _isLoading = false);
+    }
   }
 
   void _initScheduleList() {
@@ -66,21 +92,38 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
       );
     }
   }
+  Future<void> _checkAuthentication() async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) {
+      // 사용자가 로그인하지 않은 경우 로그인 화면으로 이동
+      Navigator.of(context).pushReplacementNamed('/login');
+    }
+  }
 
 
   Future<void> _fetchEvents() async {
-    final events = await eventService.getEventsForDate(selectedDate);
-    final resultEvents = await eventService.getResultEventsForDate(
-        selectedDate);
+    try {
+      final user = FirebaseAuth.instance.currentUser;
+      if (user == null) return;
 
-    setState(() {
-      // scheduleData[formattedDate] = eventService.generateScheduleData(
-      //     selectedDate, startTime, endTime, events, resultEvents);
-      allDayEvents = events.where((event) => event.isAllDay).toList();
-      regularEvents = events.where((event) => !event.isAllDay).toList();
-      scheduleData[formattedDate] = eventService.generateScheduleData(
-          selectedDate, startTime, endTime, regularEvents, resultEvents);
-    });
+      final events = await eventService.getEventsForDate(selectedDate);
+      final resultEvents = await eventService.getResultEventsForDate(
+          selectedDate);
+
+      setState(() {
+        // scheduleData[formattedDate] = eventService.generateScheduleData(
+        //     selectedDate, startTime, endTime, events, resultEvents);
+        allDayEvents = events.where((event) => event.isAllDay).toList();
+        regularEvents = events.where((event) => !event.isAllDay).toList();
+        scheduleData[formattedDate] = eventService.generateScheduleData(
+            selectedDate, startTime, endTime, regularEvents, resultEvents);
+      });
+    } catch (e) {
+      print('Error fetching events: $e');
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('일정을 불러오는 중 오류가 발생했습니다.')),
+      );
+    }
   }
 
   void _updateDate(int daysOffset) {
@@ -267,6 +310,11 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
 
   @override
   Widget build(BuildContext context) {
+    if (_isLoading) {
+      return Scaffold(
+        body: Center(child: CircularProgressIndicator()),
+      );
+    }
     return Scaffold(
       appBar: AppBar(
         title: DateSelector(

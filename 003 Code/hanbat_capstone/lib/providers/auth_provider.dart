@@ -11,6 +11,7 @@ class AuthProvider with ChangeNotifier {
   String _errorMessage = '';
 
   UserModel? get user => _user;
+  String? get userId => _user?.userId; // 사용자 id 변환
   bool get isLoading => _isLoading;
   String get errorMessage => _errorMessage;
   Stream<User?> get authStateChanges => _authService.authStateChanges;
