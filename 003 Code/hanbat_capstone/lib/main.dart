@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:hanbat_capstone/providers/category_provider.dart';
-import 'package:hanbat_capstone/screen/setting_screen.dart';
 import 'package:intl/date_symbol_data_local.dart';
 import 'firebase_options.dart';
 import 'package:hanbat_capstone/services/notification_service.dart';
@@ -12,13 +11,12 @@ import 'package:provider/provider.dart';
 import 'package:hanbat_capstone/providers/auth_provider.dart';
 import 'package:dart_openai/dart_openai.dart';
 
+
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await Firebase.initializeApp(
     options: DefaultFirebaseOptions.currentPlatform,
   );
-
-
 
   // Firebase 오류 메시지 한국어 설정
   FirebaseAuth.instance.setLanguageCode("ko");
@@ -29,8 +27,9 @@ Future<void> main() async {
   final notificationService = NotificationService();
   await notificationService.init();
 
+
   final authProvider = AuthProvider();
-  await authProvider.loadUser(); // 사용자 정보 로드
+  await authProvider.loadUser();  // 사용자 정보 로드
 
   runApp(
     MultiProvider(
@@ -38,8 +37,7 @@ Future<void> main() async {
         ChangeNotifierProvider(create: (_) => AuthProvider()),
         ChangeNotifierProvider(create: (_) => CategoryProvider()),
       ],
-      child: MyApp(
-        notificationService: notificationService,
+      child: MyApp(notificationService: notificationService,
         theme: ThemeData(
           scaffoldBackgroundColor: Colors.white,
           appBarTheme: AppBarTheme(
@@ -49,7 +47,8 @@ Future<void> main() async {
                 color: Colors.white,
                 fontSize: 24,
                 fontWeight: FontWeight.bold,
-              )),
+              )
+          ),
           pageTransitionsTheme: PageTransitionsTheme(
             builders: {
               TargetPlatform.android: FadeUpwardsPageTransitionsBuilder(),
@@ -62,6 +61,7 @@ Future<void> main() async {
   );
 }
 
+
 class MyApp extends StatelessWidget {
   final NotificationService notificationService;
   final ThemeData theme;
@@ -71,15 +71,11 @@ class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-        title: 'Hanbat Capstone',
-        theme: theme,
-        debugShowCheckedModeBanner: false,
-        // home: AuthWrapper(notificationService: notificationService),
-        routes: {
-          '/': (context) => RootScreen(notificationService: notificationService,),
-          '/login': (context) => AuthScreen(),
-          '/settings': (context) => SettingScreen(),
-        });
+      title: 'Hanbat Capstone',
+      theme: theme,
+      debugShowCheckedModeBanner: false,
+      home: AuthWrapper(notificationService: notificationService),
+    );
   }
 }
 
@@ -100,6 +96,7 @@ class _AuthWrapperState extends State<AuthWrapper> {
     return StreamBuilder<User?>(
       stream: FirebaseAuth.instance.authStateChanges(),
       builder: (context, snapshot) {
+
         if (snapshot.connectionState == ConnectionState.active) {
           User? user = snapshot.data;
           if (user == null) {
@@ -124,3 +121,4 @@ class _AuthWrapperState extends State<AuthWrapper> {
     );
   }
 }
+
