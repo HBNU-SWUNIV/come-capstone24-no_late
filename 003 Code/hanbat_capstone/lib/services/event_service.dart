@@ -40,25 +40,33 @@ class EventService {
     await ensureUserLoggedIn();
     try {
       final startOfDay = DateTime(date.year, date.month, date.day);
-      final endOfDay = DateTime(date.year, date.month, date.day, 23, 59, 59);
+      final endOfDay = startOfDay.add(Duration(days: 1));
 
-      final startOfDayStr = startOfDay.toIso8601String();
-      final endOfDayStr = endOfDay.toIso8601String();
+      print("Querying events from ${startOfDay.toIso8601String()} to ${endOfDay.toIso8601String()}");
 
       QuerySnapshot snapshot = await _firestore
           .collection('events')
-          .where('userId', isEqualTo: userId)  // 사용자 ID로 필터링
-          .where('eventDate', isGreaterThanOrEqualTo: startOfDayStr)
-          .where('eventDate', isLessThanOrEqualTo: endOfDayStr)
-
+          .where('userId', isEqualTo: userId)
+          .where('eventDate', isGreaterThanOrEqualTo: startOfDay.toUtc().toIso8601String())
+          .where('eventDate', isLessThan: endOfDay.toUtc().toIso8601String())
           .get();
 
+      print("Found ${snapshot.docs.length} events in Firestore");
+
       List<EventModel> events = snapshot.docs
-          .map((doc) => EventModel.fromMap(doc.data() as Map<String, dynamic>))
-          .where((event) => !forCalendar || event.showOnCalendar)
+          .map((doc) {
+        final data = doc.data() as Map<String, dynamic>;
+        print("Event data: $data");
+        return EventModel.fromMap(data);
+      })
           .toList();
 
-      final recurringSnapshot = await _firestore
+
+
+
+
+
+      QuerySnapshot recurringSnapshot = await _firestore
           .collection('events')
           .where('userId', isEqualTo: userId)  // 사용자 ID로 필터링
           .where('isRecurring', isEqualTo: true)
@@ -97,29 +105,7 @@ class EventService {
       rethrow;
     }
   }
-  Future<void> updateEventCompletedStatus(String formattedDate, int hour, String status) async {
-    await ensureUserLoggedIn();
-    final eventDate = DateTime.parse(formattedDate);
-    final eventStartTime = DateTime(eventDate.year, eventDate.month, eventDate.day, hour);
-    final eventEndTime = eventStartTime.add(Duration(hours: 1));
 
-    final snapshot = await _firestore
-        .collection('events')
-        .where('userId', isEqualTo: userId)  // 사용자 ID로 필터링
-        .where('eventDate', isEqualTo: eventDate.toIso8601String())
-
-        .get();
-
-    for (var doc in snapshot.docs) {
-      final event = EventModel.fromMap(doc.data());
-      if (event.eventSttTime != null &&
-          event.eventEndTime != null &&
-          event.eventSttTime!.isBefore(eventEndTime) &&
-          event.eventEndTime!.isAfter(eventStartTime)) {
-        await doc.reference.update({'completedYn': status});
-      }
-    }
-  }
   Future<void> toggleEventCompletedStatus(String eventId) async {
     await ensureUserLoggedIn();
     final docSnapshot = await _firestore.collection('events').doc(eventId).get();
@@ -134,21 +120,196 @@ class EventService {
     }
   }
 
+  Future<void> movePlanToActual(String formattedDate, int hour, EventModel event) async {
+    final eventDate = DateTime.parse(formattedDate);
+    final eventStartTime = DateTime(eventDate.year, eventDate.month, eventDate.day, event.eventSttTime!.hour);
+    final eventEndTime = DateTime(eventDate.year, eventDate.month, eventDate.day, hour + 1);
+
+    // result_events 컬렉션에서 해당 이벤트 찾기
+    final resultEventSnapshot = await FirebaseFirestore.instance
+        .collection('result_events')
+        .where('eventId', isEqualTo: event.eventId)
+        .where('eventResultDate', isEqualTo: eventDate.toIso8601String())
+        .get();
+
+    if (resultEventSnapshot.docs.isEmpty) {
+      // 새로운 result_event 생성
+      final resultEventData = EventResultModel(
+        eventResultId: FirebaseFirestore.instance.collection('result_events').doc().id,
+        eventId: event.eventId,
+        categoryId: event.categoryId,
+        userId: event.userId,
+        eventResultDate: eventDate,
+        eventResultSttTime: eventStartTime,
+        eventResultEndTime: eventEndTime,
+        eventResultTitle: event.eventTitle,
+        eventResultContent: event.eventContent,
+        isAllDay: false,
+        completeYn: 'Y',
+      );
+
+      await FirebaseFirestore.instance
+          .collection('result_events')
+          .doc(resultEventData.eventResultId)
+          .set(resultEventData.toMap());
+    } else {
+      // 기존 result_event 업데이트
+      final resultEventDoc = resultEventSnapshot.docs.first;
+      await resultEventDoc.reference.update({
+        'eventResultEndTime': eventEndTime.toIso8601String(),
+      });
+    }
+
+    // 원본 이벤트 업데이트
+    await FirebaseFirestore.instance
+        .collection('events')
+        .doc(event.eventId)
+        .update({
+      'completedYn': 'Y',
+      'lastCompletedHour': hour+1,
+    });
+  }
+
+  Future<void> removeResultEvent(String formattedDate, int hour, String eventId) async {
+    final eventDate = DateTime.parse(formattedDate);
+    final eventEndTime = DateTime(eventDate.year, eventDate.month, eventDate.day, hour);
+
+    // result_events 컬렉션에서 해당 이벤트 찾기
+    final resultEventSnapshot = await FirebaseFirestore.instance
+        .collection('result_events')
+        .where('eventId', isEqualTo: eventId)
+        .where('eventResultDate', isEqualTo: eventDate.toIso8601String())
+        .get();
+
+    if (resultEventSnapshot.docs.isNotEmpty) {
+      final resultEventDoc = resultEventSnapshot.docs.first;
+      final resultEventData = resultEventDoc.data();
+      final currentEndTime = DateTime.parse(resultEventData['eventResultEndTime'] as String);
+
+      if (currentEndTime.hour > hour) {
+        // 종료 시간 업데이트
+        await resultEventDoc.reference.update({
+          'eventResultEndTime': eventEndTime.toIso8601String(),
+        });
+      } else {
+        // result_event 삭제
+        await resultEventDoc.reference.delete();
+      }
+    }
+
+    // 원본 이벤트 업데이트
+    final eventDoc = await FirebaseFirestore.instance
+        .collection('events')
+        .doc(eventId)
+        .get();
+
+    if (eventDoc.exists) {
+      final eventData = eventDoc.data() as Map<String, dynamic>;
+      final lastCompletedHour = eventData['lastCompletedHour'] as int?;
+
+      if (lastCompletedHour == hour) {
+        await eventDoc.reference.update({
+          'completedYn': 'N',
+          'lastCompletedHour': FieldValue.delete(),
+        });
+      } else if (lastCompletedHour != null && lastCompletedHour > hour) {
+        await eventDoc.reference.update({
+          'lastCompletedHour': hour - 1,
+        });
+      }
+    }
+  }
+
+
+  Future<void> updateEventCompletedStatus(String eventId, String status) async {
+    await ensureUserLoggedIn();
+    await _firestore
+        .collection('events')
+        .doc(eventId)
+        .update({'completedYn': status});
+  }
+
+  Future<void> createOrUpdateResultEvent(String formattedDate, int hour, int startTime) async {
+    await ensureUserLoggedIn();
+    final eventDate = DateTime.parse(formattedDate);
+    final eventStartTime = DateTime(eventDate.year, eventDate.month, eventDate.day, hour);
+    final eventEndTime = eventStartTime.add(Duration(hours: 1));
+
+    // 해당 날짜의 모든 이벤트를 가져옵니다.
+    final eventSnapshot = await _firestore
+        .collection('events')
+        .where('userId', isEqualTo: userId)
+        .where('eventDate', isEqualTo: eventDate.toIso8601String())
+        .get();
+
+    // 가져온 이벤트 중 해당 시간대와 겹치는 이벤트를 찾습니다.
+    final matchingEvents = eventSnapshot.docs.where((doc) {
+      final event = EventModel.fromMap(doc.data());
+      return event.eventSttTime!.isBefore(eventEndTime) &&
+          event.eventEndTime!.isAfter(eventStartTime);
+    }).toList();
+
+    if (matchingEvents.isNotEmpty) {
+      // 겹치는 이벤트가 있다면, 첫 번째 이벤트를 사용합니다.
+      final eventDoc = matchingEvents.first;
+      final event = EventModel.fromMap(eventDoc.data());
+
+      // 원본 이벤트의 completedYn을 'Y'로 업데이트
+      await updateEventCompletedStatus(eventDoc.id, 'Y');
+
+      // 결과 이벤트 생성 또는 업데이트
+      final existingResultSnapshot = await _firestore
+          .collection('result_events')
+          .where('userId', isEqualTo: userId)
+          .where('eventResultDate', isEqualTo: eventDate.toIso8601String())
+          .where('eventResultSttTime', isEqualTo: eventStartTime.toIso8601String())
+          .get();
+
+      if (existingResultSnapshot.docs.isNotEmpty) {
+        // 기존 결과 이벤트 업데이트
+        final existingResultData = existingResultSnapshot.docs.first.data();
+        final existingResult = EventResultModel.fromMap(existingResultData);
+        await _firestore
+            .collection('result_events')
+            .doc(existingResult.eventResultId)
+            .update({'completeYn': 'Y'});
+      } else {
+        // 새 결과 이벤트 생성
+        final eventResult = EventResultModel(
+          eventResultId: _firestore.collection('result_events').doc().id,
+          eventId: event.eventId,
+          categoryId: event.categoryId,
+          userId: event.userId,
+          eventResultDate: eventDate,
+          eventResultSttTime: eventStartTime,
+          eventResultEndTime: eventEndTime,
+          eventResultTitle: event.eventTitle,
+          eventResultContent: event.eventContent,
+          isAllDay: false,
+          completeYn: 'Y',
+        );
+
+        await _firestore
+            .collection('result_events')
+            .doc(eventResult.eventResultId)
+            .set(eventResult.toMap());
+      }
+    }
+  }
+
+
 
   Future<List<EventResultModel>> getResultEventsForDate(DateTime date) async {
     await ensureUserLoggedIn();
     try {
       final startOfDay = DateTime(date.year, date.month, date.day);
-      final endOfDay = DateTime(date.year, date.month, date.day, 23, 59, 59);
-
-      final startOfDayStr = startOfDay.toIso8601String();
-      final endOfDayStr = endOfDay.toIso8601String();
+      final endOfDay = startOfDay.add(Duration(days: 1));
 
       final QuerySnapshot snapshot = await _firestore
           .collection('result_events')
           .where('userId', isEqualTo: userId)  // 사용자 ID로 필터링
-          .where('eventResultDate', isGreaterThanOrEqualTo: startOfDayStr)
-          .where('eventResultDate', isLessThanOrEqualTo: endOfDayStr)
+          .where('eventResultDate', isGreaterThanOrEqualTo: startOfDay.toUtc().toIso8601String())
+          .where('eventResultDate', isLessThan: endOfDay.toUtc().toIso8601String())
           .get();
 
       final List<EventResultModel> resultEvents = snapshot.docs
@@ -180,7 +341,8 @@ class EventService {
       final eventTimeEnd = eventTimeStart.add(Duration(hours: 1));
 
       final eventsForTime = events.where((event) =>
-      event.eventSttTime != null &&
+      !event.isAllDay &&
+          event.eventSttTime != null &&
           event.eventEndTime != null &&
           eventTimeStart.isBefore(event.eventEndTime!) &&
           eventTimeEnd.isAfter(event.eventSttTime!)).toList();
@@ -240,54 +402,62 @@ class EventService {
 
 
 
+
+
   Future<void> copyEventToResult(String formattedDate, int index, int startTime) async {
     await ensureUserLoggedIn();
-    final scheduleData = generateScheduleData(
-        DateTime.parse(formattedDate),
-        startTime,
-        startTime + 23,  // 하루의 끝을 나타내는 값으로 수정 필요할 수 있음
-        await getEventsForDate(DateTime.parse(formattedDate)),
-        await getResultEventsForDate(DateTime.parse(formattedDate))
-    );
+    final eventDate = DateTime.parse(formattedDate);
+    final eventStartTime = DateTime(eventDate.year, eventDate.month, eventDate.day, startTime + index);
+    final eventEndTime = eventStartTime.add(Duration(hours: 1));
 
-    final planTitle = scheduleData[index]['plan'];
-    if (planTitle != null && planTitle.isNotEmpty) {
-      final eventDate = DateTime.parse(formattedDate);
-      final eventStartTime = DateTime(
-          eventDate.year, eventDate.month, eventDate.day, startTime + index);
+    print("Searching for event on date: ${eventDate.toIso8601String()}, start time: $eventStartTime, end time: $eventEndTime");
 
-      // 기존에 저장된 동일한 계획 이벤트가 있는지 확인
-      final existingResultSnapshot = await FirebaseFirestore.instance
-          .collection('result_events')
-          .where('userId', isEqualTo: userId)  // 사용자 ID로 필터링
-          .where('eventResultDate', isEqualTo: eventDate.toIso8601String())
-          .where('eventResultTitle', isEqualTo: planTitle)
+    try {
+      // 해당 시간대의 이벤트 찾기
+      final eventSnapshot = await FirebaseFirestore.instance
+          .collection('events')
+          .where('userId', isEqualTo: userId)
+          .where('eventDate', isEqualTo: eventDate.toIso8601String())
+
           .get();
+      print("Found ${eventSnapshot.docs.length} events for the date");
+      final matchingEvents = eventSnapshot.docs.where((doc) {
+        final eventData = doc.data();
+        final eventSttTime = DateTime.parse(eventData['eventSttTime'] as String);
+        final eventEndTime = DateTime.parse(eventData['eventEndTime'] as String);
+        return (eventSttTime.isBefore(eventEndTime) || eventSttTime.isAtSameMomentAs(eventEndTime)) &&
+            (eventEndTime.isAfter(eventStartTime) || eventEndTime.isAtSameMomentAs(eventStartTime));
+      }).toList();
 
-      if (existingResultSnapshot.docs.isNotEmpty) {
-        // 기존 이벤트가 있다면 종료 시간을 1시간 늘림
-        final existingResultData = existingResultSnapshot.docs.first.data();
-        final existingResult = EventResultModel.fromMap(existingResultData);
-        final newEndTime = existingResult.eventResultEndTime!.add(Duration(hours: 1));
+      print("Found ${matchingEvents.length} matching events");
 
-        await FirebaseFirestore.instance
-            .collection('result_events') // 사용자 ID로 필터링
-            .doc(existingResult.eventResultId)
-            .update({'eventResultEndTime': newEndTime.toIso8601String()});
 
-      } else {
-        // 기존 이벤트가 없다면 새 이벤트 생성
-        final eventSnapshot = await FirebaseFirestore.instance
-            .collection('events')
-            .where('userId', isEqualTo: userId)  // 사용자 ID로 필터링
-            .where('eventDate', isEqualTo: eventDate.toIso8601String())
-            .where('eventTitle', isEqualTo: planTitle)
+      if (matchingEvents.isNotEmpty) {
+        final event = EventModel.fromMap(matchingEvents.first.data());
+        print("Found matching event: ${event.eventTitle}");
+
+        // 결과 이벤트 생성 또는 업데이트
+        final existingResultSnapshot = await FirebaseFirestore.instance
+            .collection('result_events')
+            .where('userId', isEqualTo: userId)
+            .where('eventResultDate', isEqualTo: eventDate.toIso8601String())
+            .where('eventResultTitle', isEqualTo: event.eventTitle)
             .get();
 
-        if (eventSnapshot.docs.isNotEmpty) {
-          final eventData = eventSnapshot.docs.first.data();
-          final event = EventModel.fromMap(eventData);
+        if (existingResultSnapshot.docs.isNotEmpty) {
+          // 기존 결과 이벤트 업데이트
+          final existingResultData = existingResultSnapshot.docs.first.data();
+          final existingResult = EventResultModel.fromMap(existingResultData);
+          final newEndTime = existingResult.eventResultEndTime!.add(Duration(hours: 1));
 
+          await FirebaseFirestore.instance
+              .collection('result_events')
+              .doc(existingResult.eventResultId)
+              .update({'eventResultEndTime': newEndTime.toIso8601String()});
+
+          print("Updated existing result event: ${existingResult.eventResultTitle}");
+        } else {
+          // 새 결과 이벤트 생성
           final eventResult = EventResultModel(
             eventResultId: FirebaseFirestore.instance.collection('result_events').doc().id,
             eventId: event.eventId,
@@ -295,7 +465,7 @@ class EventService {
             userId: event.userId,
             eventResultDate: eventDate,
             eventResultSttTime: eventStartTime,
-            eventResultEndTime: eventStartTime.add(Duration(hours: 1)),
+            eventResultEndTime: eventEndTime,
             eventResultTitle: event.eventTitle,
             eventResultContent: event.eventContent,
             isAllDay: event.isAllDay,
@@ -307,12 +477,21 @@ class EventService {
               .doc(eventResult.eventResultId)
               .set(eventResult.toMap());
 
-        } else {
-          print('No matching event found in Firestore.');
+          print("Created new result event: ${eventResult.eventResultTitle}");
         }
+
+        // 원본 이벤트의 완료 상태 업데이트
+        await FirebaseFirestore.instance
+            .collection('events')
+            .doc(event.eventId)
+            .update({'completedYn': 'Y'});
+
+        print("Updated original event completed status: ${event.eventTitle}");
+      } else {
+        print("No matching event found in Firestore for the given time range.");
       }
-    } else {
-      print('No planTitle found for index $index.');
+    } catch (e) {
+      print("Error in copyEventToResult: $e");
     }
   }
 
@@ -331,7 +510,22 @@ class EventService {
           .collection(collectionName)
           .doc(eventId)
           .delete();
+
+      final deletedEvent = await FirebaseFirestore.instance
+          .collection(collectionName)
+          .doc(eventId)
+          .get();
+
+      if (deletedEvent.exists) {
+        final eventDate = deletedEvent.data()?['eventDate'] as String?;
+        if (eventDate != null) {
+          await loadTimeBasedCheckboxStatesForDate(eventDate.split('T')[0]);
+        }
+      }
+
       print('Event deleted successfully');
+
+
     } catch (e) {
       print('Error deleting event: $e');
       throw e; // 에러를 상위로 전파하여 UI에서 처리할 수 있게 함
@@ -343,26 +537,43 @@ class EventService {
     await prefs.setBool(key, state);
   }
   Future<Map<int, bool>> loadTimeBasedCheckboxStatesForDate(String formattedDate) async {
-    final prefs = await SharedPreferences.getInstance();
+    await ensureUserLoggedIn();
     Map<int, bool> states = {};
 
+    // 파이어베이스에서 해당 날짜의 이벤트 및 결과 이벤트 로드
+    final events = await getEventsForDate(DateTime.parse(formattedDate));
+    final resultEvents = await getResultEventsForDate(DateTime.parse(formattedDate));
+
     for (int i = 0; i < 24; i++) {
-      final key = '${formattedDate}_checkbox_$i';
-      states[i] = prefs.getBool(key) ?? false;
+      states[i] = false; // 초기 상태를 모두 false로 설정
     }
 
-    final resultEvents = await getResultEventsForDate(DateTime.parse(formattedDate));
+    // 이벤트와 결과 이벤트를 기반으로 체크박스 상태 설정
+    for (var event in events) {
+      if (event.eventSttTime != null) {
+        int startHour = event.eventSttTime!.hour;
+        int endHour = event.eventEndTime?.hour ?? (startHour + 1);
+        for (int i = startHour; i < endHour && i < 24; i++) {
+          states[i] = event.completedYn == 'Y';
+        }
+      }
+    }
+
     for (var event in resultEvents) {
       if (event.eventResultSttTime != null) {
         int startHour = event.eventResultSttTime!.hour;
         int endHour = event.eventResultEndTime?.hour ?? (startHour + 1);
         for (int i = startHour; i < endHour && i < 24; i++) {
           states[i] = true;
-          await saveTimeBasedCheckboxState(formattedDate, i, true);
         }
       }
     }
 
+
+
+
+
     return states;
   }
 }
+

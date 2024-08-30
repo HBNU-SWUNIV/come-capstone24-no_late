@@ -53,6 +53,7 @@ class _AddEventScreenState extends State<AddEventScreen> {
   CategoryModel? selectedCategory;
   String? selectedCategoryId;
   List<Map<String, dynamic>> categories = [];
+  String? currentUserId;
 
   @override
   void initState() {
@@ -94,12 +95,20 @@ class _AddEventScreenState extends State<AddEventScreen> {
         : true;
     _isAllDay =
         widget.event?.isAllDay == true || widget.actualevent?.isAllDay == true;
-    _loadCategories();
+    _getCurrentUser().then((_) => _loadCategories());
   }
 
   Future<void> _loadCategories() async {
+    if (currentUserId == null) {
+      print('Error: User is not logged in');
+      return;
+    }
+
     try {
-      final snapshot = await FirebaseFirestore.instance.collection('category').get();
+      final snapshot = await FirebaseFirestore.instance
+          .collection('category')
+          .where('userId', isEqualTo: currentUserId)
+          .get();
       setState(() {
         categories = snapshot.docs.map((doc) => {
           'categoryId': doc.id,
@@ -118,6 +127,19 @@ class _AddEventScreenState extends State<AddEventScreen> {
       // 에러 처리 로직 추가 (예: 사용자에게 알림)
     }
   }
+  Future<void> _getCurrentUser() async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user != null) {
+      setState(() {
+        currentUserId = user.uid;
+      });
+    } else {
+      print('Error: User is not logged in');
+      // 여기에 로그인 페이지로 리디렉션하는 로직을 추가할 수 있습니다.
+    }
+  }
+
+
 
 
   Future<void> _selectDate(BuildContext context) async {
@@ -134,7 +156,38 @@ class _AddEventScreenState extends State<AddEventScreen> {
     }
   }
 
-  // 카테고리 선택을 위한 메서드 (이미 있다면 수정하세요)
+  Future<void> _selectTime(BuildContext context, bool isStartTime) async {
+    final DateTime initialDateTime = isStartTime ? (_startTime ?? DateTime.now()) : (_endTime ?? DateTime.now());
+
+    final TimeOfDay? selectedTime = await showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return CustomTimePicker(
+          initialTime: TimeOfDay.fromDateTime(initialDateTime),
+        );
+      },
+    );
+
+    if (selectedTime != null) {
+      setState(() {
+        final DateTime currentDate = _selectedDate ?? DateTime.now();
+        final DateTime newDateTime = DateTime(
+          currentDate.year,
+          currentDate.month,
+          currentDate.day,
+          selectedTime.hour,
+          0,
+        );
+
+        if (isStartTime) {
+          _startTime = newDateTime;
+        } else {
+          _endTime = newDateTime;
+        }
+      });
+    }
+  }
+
 
 
   // 종일 여부 토글을 위한 메서드
@@ -148,35 +201,7 @@ class _AddEventScreenState extends State<AddEventScreen> {
     });
   }
 
-  Future<void> _selectTime(BuildContext context, bool isStartTime) async {
-    final selectedTime = await showTimePicker(
-      context: context,
-      initialTime: TimeOfDay(
-          hour: isStartTime
-              ? _startTime?.hour ?? TimeOfDay.now().hour
-              : _endTime?.hour ?? (TimeOfDay.now().hour + 1) % 24,
-          minute: 0),
-      initialEntryMode: TimePickerEntryMode.dial,
-      builder: (BuildContext context, Widget? child) {
-        return MediaQuery(
-          data: MediaQuery.of(context).copyWith(alwaysUse24HourFormat: false),
-          child: child!,
-        );
-      },
-    );
-    if (selectedTime != null) {
-      setState(() {
-        final date = _selectedDate ?? DateTime.now();
-        if (isStartTime) {
-          _startTime =
-              DateTime(date.year, date.month, date.day, selectedTime.hour, 0);
-        } else {
-          _endTime =
-              DateTime(date.year, date.month, date.day, selectedTime.hour, 0);
-        }
-      });
-    }
-  }
+
 
   Future<void> _saveEvent() async {
     if (_formKey.currentState?.validate() ?? false) {
@@ -201,6 +226,8 @@ class _AddEventScreenState extends State<AddEventScreen> {
             ? '로그인이 필요합니다.'
             : '일정 처리에 실패했습니다.';
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(errorMessage)));
+
+
       }
     }
   }
@@ -306,61 +333,27 @@ class _AddEventScreenState extends State<AddEventScreen> {
     }
   }
 
-  Future<void> _selectDateTime(BuildContext context, bool isStartTime) async {
-    final DateTime? pickedDate = await showDatePicker(
-      context: context,
-      initialDate: isStartTime ? (_startTime ?? DateTime.now()) : (_endTime ?? DateTime.now()),
-      firstDate: DateTime(2000),
-      lastDate: DateTime(2100),
-    );
-
-    if (pickedDate != null) {
-      final TimeOfDay? pickedTime = await showDialog(
-        context: context,
-        builder: (BuildContext context) {
-          return CustomTimePicker(
-            initialTime: TimeOfDay.fromDateTime(isStartTime ? (_startTime ?? DateTime.now()) : (_endTime ?? DateTime.now())),
-          );
-        },
-      );
-
-      if (pickedTime != null) {
-        setState(() {
-          if (isStartTime) {
-            _startTime = DateTime(
-              pickedDate.year,
-              pickedDate.month,
-              pickedDate.day,
-              pickedTime.hour,
-              0,
-            );
-          } else {
-            _endTime = DateTime(
-              pickedDate.year,
-              pickedDate.month,
-              pickedDate.day,
-              pickedTime.hour,
-             0,
-            );
-          }
-        });
-      }
-    }
-  }
-
-
-
   Widget _buildDateTimeSelector() {
     return _buildCard(
       child: Column(
         children: [
+          ListTile(
+            leading: Icon(Icons.calendar_month, color: accentColor),
+            title: Text('날짜'),
+            subtitle: Text(_selectedDate != null
+                ? DateFormat('yyyy-MM-dd').format(_selectedDate!)
+                : '날짜를 선택하세요'),
+            onTap: () => _selectDate(context),
+          ),
+          Divider(),
+
           ListTile(
             leading: Icon(Icons.access_time, color: accentColor),
             title: Text('시작 시간'),
             subtitle: Text(_startTime != null
                 ? DateFormat('yyyy-MM-dd HH:mm').format(_startTime!)
                 : '시작 시간을 선택하세요'),
-            onTap: () => _selectDateTime(context, true),
+            onTap: () => _selectTime(context, true),
           ),
           Divider(),
           ListTile(
@@ -369,7 +362,7 @@ class _AddEventScreenState extends State<AddEventScreen> {
             subtitle: Text(_endTime != null
                 ? DateFormat('yyyy-MM-dd HH:mm').format(_endTime!)
                 : '종료 시간을 선택하세요'),
-            onTap: () => _selectDateTime(context, false),
+            onTap: () => _selectTime(context, false),
           ),
         ],
       ),
@@ -418,28 +411,6 @@ class _AddEventScreenState extends State<AddEventScreen> {
                     ),
                   ),
                   SizedBox(height: 16),
-                  // _buildCard(
-                  //   child: Column(
-                  //     children: [
-                  //       ListTile(
-                  //         leading: Icon(Icons.calendar_today, color: accentColor),
-                  //         title: Text('날짜 및 시간'),
-                  //         subtitle: Text(
-                  //           _selectedDate != null
-                  //               ? '${DateFormat.yMd().format(_selectedDate!)} ${_startTime != null ? DateFormat('HH:mm').format(_startTime!) : ''} - ${_endTime != null ? DateFormat('HH:mm').format(_endTime!) : ''}'
-                  //               : '날짜와 시간을 선택하세요',
-                  //         ),
-                  //         onTap: () async {
-                  //           await _selectDate(context);
-                  //           if (_selectedDate != null) {
-                  //             await _selectTime(context, true);
-                  //             await _selectTime(context, false);
-                  //           }
-                  //         },
-                  //       ),
-                  //     ],
-                  //   ),
-                  // ),
                   _buildDateTimeSelector(),
                   SizedBox(height: 16),
                   _buildCard(

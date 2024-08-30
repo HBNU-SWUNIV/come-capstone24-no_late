@@ -356,8 +356,43 @@ class EventDetailScreen extends StatefulWidget {
 }
 
 class _EventDetailScreenState extends State<EventDetailScreen> {
-  EventModel? get event => widget.event;
-  EventResultModel? get eventResult => widget.eventResult;
+  late EventModel _currentEvent;
+  late EventResultModel _currentEventResult;
+
+  @override
+  void initState() {
+    super.initState();
+    _currentEvent = widget.event ?? EventModel(
+      eventId: '',
+      eventTitle: '',
+      eventDate: DateTime.now(),
+      eventContent: '',
+      categoryId: '',
+      userId: '',
+      eventSttTime: DateTime.now(),
+      eventEndTime: DateTime.now(),
+      isAllDay: false,
+      completedYn: 'N',
+      isRecurring: false,
+      showOnCalendar: true,
+    );
+    _currentEventResult = widget.eventResult ?? EventResultModel(
+      eventResultId: '',
+      eventId: '',
+      categoryId: '',
+      userId: '',
+      eventResultDate: DateTime.now(),
+      eventResultSttTime: DateTime.now(),
+      eventResultEndTime: DateTime.now(),
+      eventResultTitle: '',
+      eventResultContent: '',
+      isAllDay: false,
+      completeYn: 'N',
+    );
+  }
+
+
+
 
   Future<void> _deleteEvent(bool deleteAllRecurrence) async {
     try {
@@ -365,7 +400,7 @@ class _EventDetailScreenState extends State<EventDetailScreen> {
         await FirebaseFirestore.instance
             .collection('events')
             .where('isRecurring', isEqualTo: true)
-            .where('eventTitle', isEqualTo: event!.eventTitle)
+            .where('eventTitle', isEqualTo: _currentEvent.eventTitle)
             .get()
             .then((querySnapshot) {
           for (var doc in querySnapshot.docs) {
@@ -375,7 +410,7 @@ class _EventDetailScreenState extends State<EventDetailScreen> {
       } else {
         await FirebaseFirestore.instance
             .collection('events')
-            .doc(event!.eventId)
+            .doc(_currentEvent.eventId)
             .delete();
       }
       widget.onEventDeleted(false);
@@ -393,7 +428,16 @@ class _EventDetailScreenState extends State<EventDetailScreen> {
             .doc(editedEvent.eventId)
             .update(editedEvent.toMap());
         widget.onEventEdited!(editedEvent);
-        setState(() {});
+        setState(() {
+          _currentEvent = editedEvent;
+
+          // 기타 필요한 필드 업데이트
+        });
+        widget.onEventEdited?.call(editedEvent);
+        widget.updateCalendar?.call();
+        ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('일정이 성공적으로 수정되었습니다.'))
+        );
       } catch (e) {
         _handleError('이벤트 수정 중 오류가 발생했습니다: $e');
       }
@@ -408,20 +452,24 @@ class _EventDetailScreenState extends State<EventDetailScreen> {
             .doc(editedEventResult.eventResultId);
         await docRef.set(editedEventResult.toMap(), SetOptions(merge: true));
         widget.onEventResultEdited!(editedEventResult);
-        setState(() {});
+        setState(() {
+          _currentEventResult = editedEventResult;
+        });
+        widget.onEventResultEdited?.call(editedEventResult);
+        widget.updateCalendar?.call();
       } catch (e) {
         _handleError('이벤트 결과 수정 중 오류가 발생했습니다: $e');
       }
     }
   }
 
-  Widget _buildEventDetails(EventModel? eventModel, EventResultModel? eventResultModel) {
-    if (eventModel != null) {
-      return _buildEventModelDetails(eventModel);
-    } else if (eventResultModel != null) {
-      return _buildEventResultModelDetails(eventResultModel);
+  Widget _buildEventDetails() {
+    if (widget.event != null) {
+      return _buildEventModelDetails(_currentEvent);
+    } else if (widget.eventResult != null) {
+      return _buildEventResultModelDetails(_currentEventResult);
     } else {
-      return Text('일정 정보가 없습니다.');
+      return Text('No event details available');
     }
   }
 
@@ -505,8 +553,8 @@ class _EventDetailScreenState extends State<EventDetailScreen> {
     );
   }
 
-  Widget _buildActions(BuildContext context, EventModel? eventModel, EventResultModel? eventResultModel) {
-    final isEventModel = eventModel != null;
+  Widget _buildActions(BuildContext context) {
+    final isEventModel = widget.event != null;
 
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceEvenly,
@@ -522,11 +570,11 @@ class _EventDetailScreenState extends State<EventDetailScreen> {
               context,
               MaterialPageRoute(
                 builder: (context) => AddEventScreen(
-                  selectedDate: isEventModel ? eventModel!.eventDate : eventResultModel!.eventResultDate,
-                  selectedTime: isEventModel ? (eventModel!.eventSttTime ?? DateTime.now()) : (eventResultModel!.eventResultSttTime ?? DateTime.now()),
-                  event: isEventModel ? eventModel : null,
-                  actualevent: !isEventModel ? eventResultModel : null,
-                  isFinalEvent: !isEventModel,
+                  selectedDate: widget.event != null ? _currentEvent.eventDate : _currentEventResult.eventResultDate,
+                  selectedTime: widget.event != null ? _currentEvent.eventSttTime : _currentEventResult.eventResultSttTime,
+                  event: widget.event != null ? _currentEvent : null,
+                  actualevent: widget.event == null ? _currentEventResult : null,
+                  isFinalEvent: widget.event == null,
                   isEditing: true,
                 ),
               ),
@@ -537,6 +585,9 @@ class _EventDetailScreenState extends State<EventDetailScreen> {
               } else if (result is EventModel) {
                 await _editEvent(result);
               }
+              setState(() {});
+
+              widget.updateCalendar?.call();
             }
           },
         ),
@@ -545,10 +596,10 @@ class _EventDetailScreenState extends State<EventDetailScreen> {
           label: Text('삭제', style: TextStyle(color: Colors.white),),
           style: ElevatedButton.styleFrom(backgroundColor:  Colors.lightBlue[900],),
           onPressed: () async {
-            if (isEventModel && (eventModel!.isRecurring ?? false)) {
-              _showDeleteRecurrenceDialog(context, eventModel);
+            if (isEventModel && (_currentEvent.isRecurring ?? false)) {
+              _showDeleteRecurrenceDialog(context);
             } else {
-              _showDeleteDialog(context, isEventModel, eventModel, eventResultModel);
+              _showDeleteDialog(context, isEventModel);
             }
           },
         ),
@@ -556,7 +607,7 @@ class _EventDetailScreenState extends State<EventDetailScreen> {
     );
   }
 
-  void _showDeleteRecurrenceDialog(BuildContext context, EventModel eventModel) {
+  void _showDeleteRecurrenceDialog(BuildContext context) {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
@@ -586,7 +637,7 @@ class _EventDetailScreenState extends State<EventDetailScreen> {
     );
   }
 
-  void _showDeleteDialog(BuildContext context, bool isEventModel, EventModel? eventModel, EventResultModel? eventResultModel) {
+  void _showDeleteDialog(BuildContext context, bool isEventModel) {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
@@ -604,7 +655,7 @@ class _EventDetailScreenState extends State<EventDetailScreen> {
               } else {
                 await FirebaseFirestore.instance
                     .collection('result_events')
-                    .doc(eventResultModel!.eventResultId)
+                    .doc(_currentEventResult!.eventResultId)
                     .delete();
                 widget.onEventDeleted(false);
                 Navigator.pop(context);
@@ -648,9 +699,9 @@ class _EventDetailScreenState extends State<EventDetailScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                _buildEventDetails(event, eventResult),
+                _buildEventDetails(),
                 SizedBox(height: 20),
-                _buildActions(context, event, eventResult),
+                _buildActions(context),
               ],
             ),
           ),

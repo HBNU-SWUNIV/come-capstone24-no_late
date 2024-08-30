@@ -42,7 +42,7 @@ class CalendarScreenState extends State<CalendarScreen> {
   Future<void> _loadCategories() async {
     try {
       final snapshot =
-          await FirebaseFirestore.instance.collection('category').get();
+      await FirebaseFirestore.instance.collection('category').get();
       categoryColors = Map.fromEntries(snapshot.docs
           .map((doc) => MapEntry(doc.id, doc.data()['colorCode'] as String)));
       print('Loaded categories: $categoryColors'); // 로그 추가
@@ -132,8 +132,8 @@ class CalendarScreenState extends State<CalendarScreen> {
 
     return kEvents.entries
         .where((entry) =>
-            entry.key.isAfter(weekStart.subtract(Duration(days: 1))) &&
-            entry.key.isBefore(weekEnd))
+    entry.key.isAfter(weekStart.subtract(Duration(days: 1))) &&
+        entry.key.isBefore(weekEnd))
         .expand((entry) => entry.value)
         .toList();
   }
@@ -148,7 +148,7 @@ class CalendarScreenState extends State<CalendarScreen> {
         return ListTile(
           title: Text(event.eventTitle),
           subtitle:
-              Text(DateFormat('yyyy-MM-dd HH:mm').format(event.eventDate!)),
+          Text(DateFormat('yyyy-MM-dd HH:mm').format(event.eventDate!)),
         );
       },
     );
@@ -157,7 +157,7 @@ class CalendarScreenState extends State<CalendarScreen> {
   Future<void> updateExistingEvents() async {
     try {
       final snapshot =
-          await FirebaseFirestore.instance.collection('events').get();
+      await FirebaseFirestore.instance.collection('events').get();
       final batch = FirebaseFirestore.instance.batch();
 
       for (var doc in snapshot.docs) {
@@ -272,12 +272,12 @@ class CalendarScreenState extends State<CalendarScreen> {
     if (selectedEvents.isEmpty) {
       // 일정이 없는 경우, 일정 추가 화면으로 이동
       final selectedDateWithoutZ =
-          selectedDay.toIso8601String().replaceAll('Z', '');
+      selectedDay.toIso8601String().replaceAll('Z', '');
       final result = await Navigator.push(
         context,
         MaterialPageRoute(
           builder: (context) => AddEventScreen(
-            selectedDate: DateTime.parse(selectedDateWithoutZ),
+            selectedDate: selectedDay,
           ),
         ),
       );
@@ -364,7 +364,7 @@ class CalendarScreenState extends State<CalendarScreen> {
                                 selectedMonth = month;
                               });
                               final selectedDate =
-                                  DateTime(selectedYear, selectedMonth);
+                              DateTime(selectedYear, selectedMonth);
                               this.setState(() {
                                 _focusedDay = selectedDate;
                               });

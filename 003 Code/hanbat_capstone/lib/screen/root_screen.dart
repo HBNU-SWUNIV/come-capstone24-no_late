@@ -27,7 +27,7 @@ class RootScreen extends StatefulWidget {
 class _RootScreenState extends State<RootScreen> {
   int _selectedIndex = 0;
   final GlobalKey<CalendarScreenState> _calendarKey =
-      GlobalKey<CalendarScreenState>();
+  GlobalKey<CalendarScreenState>();
 
   @override
   void initState() {
@@ -39,17 +39,23 @@ class _RootScreenState extends State<RootScreen> {
 
   void _onItemTapped(int index) {
     setState(() {
-      _selectedIndex = index;
+      if(index ==2) {
+        _onAddEvent();
+      } else {
+        _selectedIndex = index;
+      }
     });
+
+
   }
 
   List<Widget> renderChildren(DateTime? selectedDate) => <Widget>[
-        CalendarScreen(key: _calendarKey),
-        ScheduleScreen(selectedDate: selectedDate ?? DateTime.now()),
-        AddEventScreen(),
-        ReviewScreen(), // 회고관리 화면 연결
-        SettingScreen(), // 설정관리 화면 연결
-      ];
+    CalendarScreen(key: _calendarKey),
+    ScheduleScreen(selectedDate: selectedDate ?? DateTime.now()),
+    AddEventScreen(),
+    ReviewScreen(), // 회고관리 화면 연결
+    SettingScreen(), // 설정관리 화면 연결
+  ];
 
   void _onAddEvent() async {
     final result = await Navigator.push(
@@ -73,13 +79,13 @@ class _RootScreenState extends State<RootScreen> {
       //resizeToAvoidBottomInset: false,
       body: SafeArea(
           child: Column(
-        children: [
-          Expanded(
-            child:
+            children: [
+              Expanded(
+                child:
                 renderChildren(widget.selectedDate).elementAt(_selectedIndex),
-          )
-        ],
-      )),
+              )
+            ],
+          )),
       bottomNavigationBar: renderBottomNavigation(),
       floatingActionButton: FloatingActionButton(
         onPressed: () {

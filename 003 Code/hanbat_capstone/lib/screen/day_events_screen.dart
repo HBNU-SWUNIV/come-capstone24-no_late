@@ -172,7 +172,7 @@ class _DayEventsScreenState extends State<DayEventsScreen> {
       print('No user logged in');
       return;
     }
-    
+
     final snapshot = await FirebaseFirestore.instance
         .collection('events').where('userId', isEqualTo: user.uid).get();
     final events = snapshot.docs.map((doc) => EventModel.fromMap(doc.data())).toList();
@@ -245,6 +245,9 @@ class _DayEventsScreenState extends State<DayEventsScreen> {
           itemCount: widget.events.length,
           itemBuilder: (context, index) {
             final event = widget.events[index];
+            if (event == null) {
+              return SizedBox.shrink(); // 또는 다른 적절한 위젯 반환
+            }
             final timeDifference = _getTimeDifference(event.eventSttTime!);
             return Card(
               color: Colors.white,
@@ -263,19 +266,19 @@ class _DayEventsScreenState extends State<DayEventsScreen> {
                   style: TextStyle(fontWeight: FontWeight.bold),
                 ),
                 subtitle: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      '${DateFormat('HH:mm').format(event.eventSttTime ?? DateTime.now())} - ${DateFormat('HH:mm').format(event.eventEndTime ?? DateTime.now())}',
-                    ),
-                    Text(
-                      timeDifference,
-                      style: TextStyle(
-                        color: Colors.green,
-                        fontWeight: FontWeight.bold,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        '${DateFormat('HH:mm').format(event.eventSttTime ?? DateTime.now())} - ${DateFormat('HH:mm').format(event.eventEndTime ?? DateTime.now())}',
                       ),
-                    ),
-                  ]
+                      Text(
+                        timeDifference,
+                        style: TextStyle(
+                          color: Colors.green,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ]
                 ),
                 trailing: IconButton(
                   icon: Icon(Icons.delete, color:  Colors.lightBlue[900],),
