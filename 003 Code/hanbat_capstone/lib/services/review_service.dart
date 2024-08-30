@@ -45,7 +45,7 @@ class ReviewService {
       double completionPercentage = totalEvents > 0 ? (matchedCount / totalEvents) * 100 : 0;
       // 만약 계산이 잘못된 경우 소수점 처리를 강제하거나 반올림을 추가
       completionPercentage = completionPercentage.clamp(0, 100);
-      comparisonSummary = "오늘 계획된 이벤트 중 $completionPercentage%가 성공적으로 수행되었습니다.";
+      comparisonSummary = "오늘 계획된 이벤트가 있고, 계획된 이벤트 중 $completionPercentage%가 성공적으로 수행되었습니다.";
     }
 
     // 5. 요약 요청 메시지 준비
