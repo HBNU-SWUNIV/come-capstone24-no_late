@@ -14,6 +14,7 @@ class EventModel {
   final String? completedYn;
   final bool showOnCalendar; // 추가: 캘린더에 표시 여부를 나타내는 필드
   final String? categoryColor;
+  final String originalEventId;
 
   EventModel({
     required this.eventId,
@@ -29,6 +30,7 @@ class EventModel {
     this.completedYn = 'N',
     this.showOnCalendar = true, // 추가: 기본값은 true로 설정
     this.categoryColor,
+    required this.originalEventId,
   });
 
   Map<String, dynamic> toMap() {
@@ -45,6 +47,8 @@ class EventModel {
       'isRecurring': isRecurring,
       'showOnCalendar': showOnCalendar, // 추가: showOnCalendar 값을 맵에 추가
       'completedYn': completedYn,
+      'originalEventId': originalEventId,
+
     };
   }
 
@@ -69,6 +73,7 @@ class EventModel {
       // 추가: showOnCalendar 값을 가져옴 (기본값은 true)
       categoryColor: map['categoryColor'],
       completedYn: map['completedYn'] ?? 'N',
+      originalEventId: map['originalEventId'] ?? map['eventId'],
     );
     print(
         'Created EventModel: ${eventModel.eventTitle}, CategoryID: ${eventModel.categoryId}, CategoryColor: ${eventModel.categoryColor}');
@@ -90,6 +95,7 @@ class EventModel {
     bool? isRecurring,
     bool? showOnCalendar,
     String? categoryColor,
+    String? originalEventId,
   }) {
     return EventModel(
       eventId: eventId ?? this.eventId,
@@ -105,6 +111,7 @@ class EventModel {
       isRecurring: isRecurring ?? this.isRecurring,
       showOnCalendar: showOnCalendar ?? this.showOnCalendar,
       categoryColor: categoryColor ?? this.categoryColor,
+      originalEventId: originalEventId ?? this.originalEventId,
     );
   }
 

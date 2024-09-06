@@ -604,6 +604,7 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
                           completedYn: editedEvent.completedYn,
                           isRecurring: editedEvent.isRecurring,
                           showOnCalendar: editedEvent.showOnCalendar,
+                          originalEventId: editedEvent.originalEventId,
                         );
                         // 기존 이벤트를 새로운 이벤트로 교체
                         final eventIndex = regularEvents.indexWhere((e) => e.eventId == updatedEvent.eventId);

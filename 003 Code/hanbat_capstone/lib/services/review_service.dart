@@ -119,9 +119,10 @@ class ReviewService {
         isAllDay: data['isAllDay'] is bool ? data['isAllDay'] : false,
         completedYn: data['completedYn'] ?? 'N',
         isRecurring: data['isRecurring'] ?? false,
+        originalEventId: doc.id, // 문서 ID를 originalEventId로 사용
       );
     }).toList();
-    return events;
+    return snapshot.docs.map((doc) => EventModel.fromMap(doc.data() as Map<String, dynamic>)).toList();
   }
 
   /**

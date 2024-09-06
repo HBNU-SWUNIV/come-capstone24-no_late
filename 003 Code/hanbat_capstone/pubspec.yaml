@@ -42,7 +42,7 @@ dependencies:
   path: 1.9.0               # 경로 관련 기능 제공 플러그인
   get_it: 7.6.4             # 의존성 주입 관련 플러그인
   dio: 5.3.3                # 네트워크 요청 관련 플러그인
-  uuid: 4.1.0               # uuID 생성할 수 있게 하는 플러그인
+  uuid: ^4.4.2               # uuID 생성할 수 있게 하는 플러그인
   dart_openai: ^5.1.0
   shared_preferences: ^2.2.3
   provider: ^6.1.2
@@ -54,6 +54,7 @@ dependencies:
   timezone: ^0.9.0
   firebase_auth: ^4.6.0  #로그인을 위해 새로 추가한 패키지
   intl: ^0.18.0
+
 
 
 dev_dependencies:

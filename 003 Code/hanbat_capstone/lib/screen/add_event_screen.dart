@@ -333,63 +333,6 @@ class _AddEventScreenState extends State<AddEventScreen> {
     }
   }
 
-  Future<void> _saveRegularEvent(DateTime startDateTime, DateTime endDateTime) async {
-    String eventId = widget.event?.eventId ?? '';
-    if (eventId.isEmpty) {
-      eventId = FirebaseFirestore.instance.collection('events').doc().id;
-    }
-    print('eventId: $eventId');
-
-    String userId = getCurrentUserId();
-
-    final eventData = EventModel(
-      eventId: eventId,
-      eventTitle: _titleController.text,
-      eventDate: _selectedDate,
-      eventContent: _contentController.text,
-      categoryId: selectedCategoryId ?? categories.first['categoryId'],
-      userId: userId,
-      eventSttTime: combineDateTime(_selectedDate!, _startTime!),
-      eventEndTime: combineDateTime(
-          _endTime!.isBefore(_startTime!) ? _selectedDate!.add(Duration(days: 1)) : _selectedDate!,
-          _endTime!
-      ),
-      isAllDay: _isAllDay,
-      completedYn: 'N',
-      isRecurring: _isRecurring,
-      showOnCalendar: _showOnCalendar,
-    );
-
-    if (widget.event != null) {
-      await FirebaseFirestore.instance
-          .collection('events')
-          .doc(eventId)
-          .update(eventData.toMap());
-    } else {
-      final docRef = await FirebaseFirestore.instance
-          .collection('events')
-          .add(eventData.toMap());
-      await docRef.update({'eventId': docRef.id});
-    }
-
-    if (_isRecurring) {
-      await _createRecurringEvents(eventData);
-    }
-  }
-
-  Future<void> _createRecurringEvents(EventModel baseEvent) async {
-    for (int i = 1; i < 4; i++) {
-      final recurringDate = _selectedDate!.add(Duration(days: i * 7));
-      final recurringEvent = baseEvent.copyWith(
-        eventId: FirebaseFirestore.instance.collection('events').doc().id,
-        eventDate: recurringDate,
-      );
-      await FirebaseFirestore.instance
-          .collection('events')
-          .doc(recurringEvent.eventId)
-          .set(recurringEvent.toMap());
-    }
-  }
   void _adjustDateForMidnight(bool isStartTime) {
     if (isStartTime) {
       if (_startTime != null && _startTime!.hour == 0 && _startTime!.minute == 0) {
@@ -406,6 +349,126 @@ class _AddEventScreenState extends State<AddEventScreen> {
     }
   }
 
+  Future<void> _saveRegularEvent(DateTime startDateTime, DateTime endDateTime) async {
+    String eventId = widget.event?.eventId ?? '';
+    if (eventId.isEmpty) {
+      eventId = FirebaseFirestore.instance.collection('events').doc().id;
+    }
+
+    String userId = getCurrentUserId();
+
+    final eventData = EventModel(
+      eventId: eventId,
+      eventTitle: _titleController.text,
+      eventDate: _selectedDate,
+      eventContent: _contentController.text,
+      categoryId: selectedCategoryId ?? categories.first['categoryId'],
+      userId: userId,
+      eventSttTime: startDateTime,
+      eventEndTime: endDateTime,
+      isAllDay: _isAllDay,
+      completedYn: 'N',
+      isRecurring: _isRecurring,
+      showOnCalendar: _showOnCalendar,
+      originalEventId: eventId, // 여기에 originalEventId 추가
+
+    );
+
+    if (widget.isEditing) {
+      // 기존 이벤트 업데이트
+      await _updateRecurringEvents(eventData);
+    } else {
+      // 새 이벤트 생성
+      if (_isRecurring) {
+        await _createRecurringEvents(eventData);
+      } else {
+        await FirebaseFirestore.instance
+            .collection('events')
+            .doc(eventId)
+            .set(eventData.toMap());
+      }
+    }
+  }
+
+  Future<void> _updateRecurringEvents(EventModel baseEvent) async {
+    final batch = FirebaseFirestore.instance.batch();
+
+    // 기존의 모든 관련 반복 일정 찾기
+    final existingEvents = await FirebaseFirestore.instance
+        .collection('events')
+        .where('originalEventId', isEqualTo: baseEvent.originalEventId)
+        .get();
+
+    if (existingEvents.docs.isEmpty) {
+      // 기존 이벤트가 없으면 새로 생성
+      await _createRecurringEvents(baseEvent);
+      return;
+    }
+
+    // 모든 관련 반복 일정 업데이트
+    for (var doc in existingEvents.docs) {
+      final existingEvent = EventModel.fromMap(doc.data());
+      final updatedEvent = baseEvent.copyWith(
+        eventDate: existingEvent.eventDate,
+        eventSttTime: DateTime(
+          existingEvent.eventDate!.year,
+          existingEvent.eventDate!.month,
+          existingEvent.eventDate!.day,
+          baseEvent.eventSttTime!.hour,
+          0,
+        ),
+        eventEndTime: DateTime(
+          existingEvent.eventDate!.year,
+          existingEvent.eventDate!.month,
+          existingEvent.eventDate!.day,
+          baseEvent.eventEndTime!.hour,
+        0,
+        ),
+        originalEventId: baseEvent.originalEventId,
+      );
+      batch.update(doc.reference, updatedEvent.toMap());
+    }
+
+    // 반복 설정이 꺼진 경우, 첫 번째 이벤트만 남기고 나머지 삭제
+    if (baseEvent.isRecurring == false && existingEvents.docs.length > 1) {
+      for (int i = 1; i < existingEvents.docs.length; i++) {
+        batch.delete(existingEvents.docs[i].reference);
+      }
+    }
+
+    // 일괄 업데이트 실행
+    await batch.commit();
+  }
+
+
+  Future<void> _createRecurringEvents(EventModel baseEvent) async {
+    final batch = FirebaseFirestore.instance.batch();
+
+    for (int i = 0; i < 4; i++) {
+      final eventDate = baseEvent.eventDate!.add(Duration(days: 7 * i));
+      final event = baseEvent.copyWith(
+        eventId: i == 0 ? baseEvent.eventId : FirebaseFirestore.instance.collection('events').doc().id,
+        eventDate: eventDate,
+        eventSttTime: DateTime(
+          eventDate.year,
+          eventDate.month,
+          eventDate.day,
+          baseEvent.eventSttTime!.hour,
+          baseEvent.eventSttTime!.minute,
+        ),
+        eventEndTime: DateTime(
+          eventDate.year,
+          eventDate.month,
+          eventDate.day,
+          baseEvent.eventEndTime!.hour,
+          baseEvent.eventEndTime!.minute,
+        ),
+      );
+      batch.set(FirebaseFirestore.instance.collection('events').doc(event.eventId), event.toMap());
+    }
+
+    await batch.commit();
+  }
 
   Widget _buildDateTimeSelector() {
     return _buildCard(

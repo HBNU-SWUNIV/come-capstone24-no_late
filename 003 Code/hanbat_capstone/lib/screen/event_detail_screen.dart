@@ -376,6 +376,7 @@ class _EventDetailScreenState extends State<EventDetailScreen> {
           completedYn: 'N',
           isRecurring: false,
           showOnCalendar: true,
+          originalEventId: '',
         );
     _currentEventResult = widget.eventResult ??
         EventResultModel(

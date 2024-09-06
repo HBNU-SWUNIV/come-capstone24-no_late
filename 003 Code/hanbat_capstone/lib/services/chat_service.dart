@@ -258,6 +258,7 @@ class ChatService {
             isAllDay: false,
             completedYn: 'N',
             isRecurring: false,
+            originalEventId: FirebaseFirestore.instance.collection('events').doc().id, // 새 ID 생성
           );
 
           final eventRef =
@@ -366,6 +367,7 @@ class ChatService {
               isAllDay: event.isAllDay,
               completedYn: event.completedYn,
               isRecurring: event.isRecurring,
+              originalEventId: event.originalEventId
             );
 
             await _calendarService.updateEvent(event.eventId, updatedEvent);
