@@ -243,7 +243,7 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
       final prefs = await SharedPreferences.getInstance();
       setState(() {
         startTime = prefs.getInt('startTime') ?? 0;
-        endTime = prefs.getInt('endTime') ?? 23;
+        endTime = prefs.getInt('endTime') ?? 24;
       });
       _initScheduleList();
       await _fetchEvents();
@@ -259,12 +259,11 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
   }
 
   void _initScheduleList() {
-    if (scheduleData[formattedDate] == null) {
-      scheduleData[formattedDate] = List.generate(
-        endTime - startTime + 1,
-            (_) => {'plan': '', 'actual': ''},
-      );
-    }
+    scheduleData[formattedDate] = List.generate(
+      endTime - startTime + 1,
+          (_) => {'plan': '', 'actual': ''},
+    );
+
   }
 
 // 이 import 문을 파일 상단에 추가해주세요.
@@ -705,7 +704,7 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
 
   Widget _buildTimeBlock(int index, DateTime pageDate) {
     final hour = (index);  // 24시를 00시로 처리
-    final timeData = scheduleData[formattedDate]?[index];
+    final timeData = scheduleData[formattedDate]?[hour - startTime] ?? {'plan': '', 'actual': ''};;
 
 
     // final eventsForThisHour = regularEvents
@@ -755,7 +754,7 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
               child: _buildEventCell(
                 timeData?['plan'] ?? '',
                 timeData?['planCategoryId'] ?? '',
-                    () => _handlePlanCellTap(index),
+                    () => _handlePlanCellTap(hour - startTime),
                 Colors.blue.withOpacity(0.1),
               ),
             ),
@@ -764,7 +763,7 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
               child: _buildEventCell(
                 timeData?['actual'] ?? '',
                 timeData?['actualCategoryId'] ?? '',
-                    () => _handleActualCellTap(index),
+                    () => _handleActualCellTap(hour - startTime),
                 Colors.green.withOpacity(0.1),
               ),
             ),
@@ -830,9 +829,9 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
 
   Widget _buildRegularEventsSection(DateTime pageDate) {
     return ListView.builder(
-      itemCount: 25,  // 24시까지 표시하기 위해 25로 변경
+      itemCount: endTime - startTime + 1,  // 24시까지 표시하기 위해 25로 변경
       itemBuilder: (context, index) {
-        return _buildTimeBlock(index, pageDate);
+        return _buildTimeBlock(index + startTime, pageDate);
       },
     );
   }
