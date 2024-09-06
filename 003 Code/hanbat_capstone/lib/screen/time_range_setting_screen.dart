@@ -8,7 +8,7 @@ class TimeRangeSettingScreen extends StatefulWidget {
 
 class _TimeRangeSettingScreenState extends State<TimeRangeSettingScreen> {
   int _startTime = 0;
-  int _endTime = 23;
+  int _endTime = 24;
 
   @override
   void initState() {
@@ -20,7 +20,7 @@ class _TimeRangeSettingScreenState extends State<TimeRangeSettingScreen> {
     final prefs = await SharedPreferences.getInstance();
     setState(() {
       _startTime = prefs.getInt('startTime') ?? 0;
-      _endTime = prefs.getInt('endTime') ?? 23;
+      _endTime = prefs.getInt('endTime') ?? 24;
     });
   }
 
@@ -47,9 +47,10 @@ class _TimeRangeSettingScreenState extends State<TimeRangeSettingScreen> {
             Text('시작 시간', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
             DropdownButton<int>(
               value: _startTime,
-              items: List.generate(24, (index) => DropdownMenuItem(
+              items: List.generate(25, (index) => DropdownMenuItem(
                 value: index,
-                child: Text('${index.toString().padLeft(2, '0')}:00'),
+
+                child: Text(index == 24 ? '24:00' : '${index.toString().padLeft(2, '0')}:00'),
               )),
               onChanged: (value) {
                 setState(() {
@@ -64,9 +65,9 @@ class _TimeRangeSettingScreenState extends State<TimeRangeSettingScreen> {
             Text('종료 시간', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
             DropdownButton<int>(
               value: _endTime,
-              items: List.generate(24, (index) => DropdownMenuItem(
+              items: List.generate(25, (index) => DropdownMenuItem(
                 value: index,
-                child: Text('${index.toString().padLeft(2, '0')}:00'),
+                child: Text(index == 24 ? '24:00' : '${index.toString().padLeft(2, '0')}:00'),
               )),
               onChanged: (value) {
                 setState(() {

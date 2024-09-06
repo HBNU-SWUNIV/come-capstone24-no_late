@@ -32,13 +32,16 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
   int startTime = 0;
   int endTime = 23;
   Map<int, bool> selectedStates = {};
+  Map<String, bool> allDayEventStates = {};
   final EventService eventService = EventService();
   late DateTime _focusedDate;
   late PageController _pageController;
   int _currentPage = 5000;
   List<EventModel> allDayEvents = [];
   List<EventModel> regularEvents = [];
+  List<EventResultModel> regularResultEvents = [];
   bool _isLoading = true;
+  List<EventResultModel> resultEvents = [];
 
   @override
   void initState() {
@@ -48,6 +51,8 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
     _loadSettings();
     _pageController = PageController(initialPage: 1000);
     _ensureUserLoggedIn();
+    _loadAllDayEventStates();
+    _loadEvents();
   }
 
   @override
@@ -55,6 +60,172 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
     _pageController.dispose();
     super.dispose();
   }
+
+  Future<void> _loadEvents() async {
+    setState(() => _isLoading = true);
+    try {
+      final allEvents = await eventService.getEventsForDate(_focusedDate);
+      final regularResultEvents = await eventService.getResultEventsForDate(_focusedDate, excludeAllDay: true);
+
+      setState(() {
+        allDayEvents = allEvents.where((event) => event.isAllDay).toList();
+        regularEvents = allEvents.where((event) => !event.isAllDay).toList();
+        this.regularResultEvents = regularResultEvents;
+        _updateScheduleData();
+      });
+    } catch (e) {
+      print('Error loading events: $e');
+      // 에러 처리
+    } finally {
+      setState(() => _isLoading = false);
+    }
+  }
+
+
+  void _updateScheduleData() {
+    scheduleData[formattedDate] = eventService.generateScheduleData(
+      _focusedDate,
+      startTime,
+      endTime,
+      regularEvents,
+      regularResultEvents,
+    );
+  }
+
+  Future<void> _loadAllDayEventStates() async {
+    try {
+      final userId = FirebaseAuth.instance.currentUser?.uid;
+      if (userId == null) return;
+
+      final snapshot = await FirebaseFirestore.instance
+          .collection('allDayEventStates')
+          .where('userId', isEqualTo: userId)
+          .where('date', isEqualTo: formattedDate)
+          .get();
+
+      setState(() {
+        allDayEventStates = Map.fromEntries(
+            snapshot.docs.map((doc) => MapEntry(doc['eventId'] as String, doc['isCompleted'] as bool))
+        );
+      });
+    } catch (e) {
+      print('Error loading all-day event states: $e');
+    }
+  }
+
+  Future<void> _saveAllDayEventState(String eventId, bool isCompleted) async {
+    try {
+      final userId = FirebaseAuth.instance.currentUser?.uid;
+      if (userId == null) return;
+
+      await FirebaseFirestore.instance
+          .collection('allDayEventStates')
+          .doc('${userId}_${formattedDate}_$eventId')
+          .set({
+        'userId': userId,
+        'date': formattedDate,
+        'eventId': eventId,
+        'isCompleted': isCompleted,
+      });
+    } catch (e) {
+      print('Error saving all-day event state: $e');
+    }
+  }
+
+  Future<void> _handleAllDayEventCheckboxChange(String eventId, bool newValue) async {
+    try {
+      await eventService.updateAllDayEventState(formattedDate, eventId, newValue);
+      setState(() {
+        allDayEventStates[eventId] = newValue;
+      });
+
+
+
+      // 상태 변경 알림
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(newValue
+              ? '종일 일정이 완료되었습니다.'
+              : '종일 일정 완료가 취소되었습니다.'),
+        ),
+      );
+
+
+
+
+    } catch (e) {
+      print('Error handling all-day event checkbox change: $e');
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('종일 일정 상태 변경 중 오류가 발생했습니다.')),
+      );
+      setState(() {
+        allDayEventStates[eventId] = !newValue;
+      });
+    }
+  }
+
+  Widget _buildAllDayEventsSection() {
+    if (allDayEvents.isEmpty) {
+      return SizedBox.shrink();
+    }
+    return Container(
+      color: Colors.grey[200],
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Padding(
+            padding: const EdgeInsets.all(8.0),
+          ),
+          ListView.builder(
+            shrinkWrap: true,
+            physics: NeverScrollableScrollPhysics(),
+            itemCount: allDayEvents.length,
+            itemBuilder: (context, index) {
+              final event = allDayEvents[index];
+              final isCompleted = allDayEventStates[event.eventId] ?? false;
+              return GestureDetector(
+                onTap: () => _handleAllDayEventTap(event),
+                onDoubleTap: () => _openEventDetail(event.eventTitle, index, isplan: true),
+                child: Container(
+                  padding: EdgeInsets.symmetric(vertical: 8, horizontal: 16),
+                  decoration: BoxDecoration(
+                    border: Border(bottom: BorderSide(color: Colors.grey[300]!)),
+                  ),
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: Text(
+                          event.eventTitle,
+                          style: TextStyle(
+                            // 변경: 완료된 일정에 취소선 추가
+                            decoration: isCompleted ? TextDecoration.lineThrough : null,
+                          ),
+                        ),
+                      ),
+                      // 추가: 완료된 일정에 체크 아이콘 표시
+                      if (isCompleted)
+                        Icon(Icons.check, color: Colors.green),
+                    ],
+                  ),
+                ),
+              );
+            },
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _handleAllDayEventTap(EventModel event) async {
+    final newState = !(allDayEventStates[event.eventId] ?? false);
+    setState(() {
+      allDayEventStates[event.eventId] = newState;
+    });
+    await _saveAllDayEventState(event.eventId, newState);
+    await _handleAllDayEventCheckboxChange(event.eventId, newState);
+  }
+
+
 
   Future<void> _ensureUserLoggedIn() async {
     final user = FirebaseAuth.instance.currentUser;
@@ -97,28 +268,96 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
   }
 
 // 이 import 문을 파일 상단에 추가해주세요.
-
+//
+//   Future<void> _fetchEvents() async {
+//     setState(() => _isLoading = true);
+//     try {
+//       print("Fetching events for date: ${_focusedDate.toIso8601String()}");
+//       final events = await eventService.getEventsForDate(_focusedDate);
+//       var resultEvents = await eventService.getResultEventsForDate(_focusedDate);
+//       final fetchedResultEvents = await eventService.getResultEventsForDate(_focusedDate);
+//       print("Fetched ${events.length} events and ${resultEvents.length} result events");
+//
+//       setState(() {
+//         allDayEvents = events.where((event) => event.isAllDay).toList();
+//         regularEvents = events.where((event) => !event.isAllDay).toList();
+//         resultEvents = fetchedResultEvents;
+//         scheduleData[formattedDate] = List.generate(
+//           endTime - startTime + 1,
+//               (index) {
+//             final hour = startTime + index;
+//             final planEvents = regularEvents.where((event) {
+//               return event.eventSttTime!.hour <= hour && event.eventEndTime!.hour > hour;
+//             }).toList();
+//             final actualEvents = resultEvents.where((event) {
+//               return event.eventResultSttTime!.hour <= hour && event.eventResultEndTime!.hour > hour;
+//             }).toList();
+//
+//             return {
+//               'plan': planEvents.isNotEmpty ? planEvents.first.eventTitle : '',
+//               'planCategoryId': planEvents.isNotEmpty ? planEvents.first.categoryId : '',
+//               'actual': actualEvents.isNotEmpty ? actualEvents.first.eventResultTitle : '',
+//               'actualCategoryId': actualEvents.isNotEmpty ? actualEvents.first.categoryId : '',
+//               'completedYn': planEvents.isNotEmpty ? planEvents.first.completedYn ?? 'N' : 'N',
+//               'eventId': planEvents.isNotEmpty ? planEvents.first.eventId : '',
+//             };
+//           },
+//         );
+//
+//         // 체크박스 상태 업데이트
+//         for (int i = startTime; i <= endTime; i++) {
+//           selectedStates[i] = resultEvents.any((event) =>
+//           event.eventResultSttTime!.hour <= i && event.eventResultEndTime!.hour > i
+//           );
+//         }
+//       });
+//     } catch (e) {
+//       print('Error fetching events: $e');
+//       ScaffoldMessenger.of(context).showSnackBar(
+//         SnackBar(content: Text('일정을 불러오는 중 오류가 발생했습니다.')),
+//       );
+//     } finally {
+//       setState(() => _isLoading = false);
+//     }
+//   }
   Future<void> _fetchEvents() async {
     setState(() => _isLoading = true);
     try {
-      print("Fetching events for date: ${_focusedDate.toIso8601String()}");
-      final events = await eventService.getEventsForDate(_focusedDate);
-      final resultEvents = await eventService.getResultEventsForDate(_focusedDate);
-      print("Fetched ${events.length} events and ${resultEvents.length} result events");
+      final startOfDay = DateTime(_focusedDate.year, _focusedDate.month, _focusedDate.day);
+      final endOfDay = startOfDay.add(Duration(days: 1));
+
+      print("Fetching events for date: ${startOfDay.toIso8601String()} to ${endOfDay.toIso8601String()}");
+
+      final events = await eventService.getEventsForDate(startOfDay);
+      final fetchedResultEvents = await eventService.getResultEventsForDate(startOfDay);
+
+      print("Fetched ${events.length} events and ${fetchedResultEvents.length} result events");
 
       setState(() {
-        allDayEvents = events.where((event) => event.isAllDay).toList();
-        regularEvents = events.where((event) => !event.isAllDay).toList();
+        allDayEvents = events.where((event) => event.isAllDay ?? false).toList();
+        regularEvents = events.where((event) => !(event.isAllDay ?? false)).toList();
+        resultEvents = fetchedResultEvents;
+
+        allDayEventStates = {
+          for (var event in allDayEvents)
+            event.eventId: event.completedYn == 'Y'
+        };
 
         scheduleData[formattedDate] = List.generate(
-          endTime - startTime + 1,
-              (index) {
-            final hour = startTime + index;
+          25,  // 0시부터 24시까지 (25개의 시간대)
+              (hour) {
             final planEvents = regularEvents.where((event) {
-              return event.eventSttTime!.hour <= hour && event.eventEndTime!.hour > hour;
+              if (event.isAllDay ?? false) return false;
+              final eventStartHour = event.eventSttTime!.hour;
+              final eventEndHour = event.eventEndTime!.hour == 0 ? 24 : event.eventEndTime!.hour;
+              return eventStartHour <= hour && hour < eventEndHour;
             }).toList();
+
             final actualEvents = resultEvents.where((event) {
-              return event.eventResultSttTime!.hour <= hour && event.eventResultEndTime!.hour > hour;
+              if (event.isAllDay ?? false) return false;
+              final eventStartHour = event.eventResultSttTime!.hour;
+              final eventEndHour = event.eventResultEndTime!.hour == 0 ? 24 : event.eventResultEndTime!.hour;
+              return eventStartHour <= hour && hour < eventEndHour;
             }).toList();
 
             return {
@@ -132,13 +371,17 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
           },
         );
 
-        // 체크박스 상태 업데이트
-        for (int i = startTime; i <= endTime; i++) {
-          selectedStates[i] = resultEvents.any((event) =>
-          event.eventResultSttTime!.hour <= i && event.eventResultEndTime!.hour > i
-          );
+        for (int hour = 0; hour <= 24; hour++) {
+          selectedStates[hour] = resultEvents.any((event) {
+            if (event.isAllDay ?? false) return false;
+            final eventStartHour = event.eventResultSttTime!.hour;
+            final eventEndHour = event.eventResultEndTime!.hour == 0 ? 24 : event.eventResultEndTime!.hour;
+            return eventStartHour <= hour && hour < eventEndHour;
+          });
         }
       });
+
+      await _loadAllDayEventStates();
     } catch (e) {
       print('Error fetching events: $e');
       ScaffoldMessenger.of(context).showSnackBar(
@@ -148,6 +391,7 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
       setState(() => _isLoading = false);
     }
   }
+
   void _onPageChanged(int page) {
     final newDate = DateTime(_focusedDate.year, _focusedDate.month,
         _focusedDate.day + (page - 1000));
@@ -183,14 +427,18 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
   void _handleCheckboxChange(int hour) async {
     print("Checkbox changed for hour: $hour");
     try {
-      final eventForHour = regularEvents.firstWhereOrNull((event) =>
-      event.eventSttTime!.hour <= hour && event.eventEndTime!.hour > hour
-      );
+      final eventForHour = regularEvents.firstWhereOrNull((event) {
+        final eventEndHour = event.eventEndTime!.hour == 0 ? 24 : event.eventEndTime!.hour;
+        return event.eventSttTime!.hour <= hour && eventEndHour > hour;
+      });
 
       if (eventForHour != null) {
         final newState = !(selectedStates[hour] ?? false);
         setState(() {
           selectedStates[hour] = newState;
+          if (hour == 23 && eventForHour.eventEndTime!.hour == 0) {
+            selectedStates[0] = newState;
+          }
         });
 
         if (newState) {
@@ -425,14 +673,20 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
         ),
         elevation: 0,
       ),
-      body: PageView.builder(
-        controller: _pageController,
-        onPageChanged: _onPageChanged,
-        itemBuilder: (context, index) {
-          final pageDate =
-          _focusedDate.add(Duration(days: index - _currentPage));
-          return _buildPageContent(pageDate);
-        },
+      body: Column(
+        children: [
+
+          Expanded(
+            child: PageView.builder(
+              controller: _pageController,
+              onPageChanged: _onPageChanged,
+              itemBuilder: (context, index) {
+                final pageDate = _focusedDate.add(Duration(days: index - _currentPage));
+                return _buildPageContent(pageDate);
+              },
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -449,15 +703,27 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
   }
 
   Widget _buildTimeBlock(int index, DateTime pageDate) {
-    final hour = startTime + index;
-    final currentDate = DateFormat('yyyy-MM-dd').format(pageDate);
+    final hour = (index);  // 24시를 00시로 처리
+    final timeData = scheduleData[formattedDate]?[index];
 
-    final eventsForThisHour = regularEvents
-        .where((event) =>
-    !event.isAllDay &&
-        event.eventSttTime?.hour == hour &&
-        DateFormat('yyyy-MM-dd').format(event.eventDate!) == currentDate)
-        .toList();
+
+    // final eventsForThisHour = regularEvents
+    //     .where((event) =>
+    // !event.isAllDay &&
+    //     ((event.eventSttTime?.hour == hour &&
+    //         DateFormat('yyyy-MM-dd').format(event.eventDate!) == currentDate) ||
+    //         (event.eventEndTime?.hour == hour &&
+    //             DateFormat('yyyy-MM-dd').format(event.eventEndTime!) ==
+    //                 (hour == 0 ? nextDate : currentDate)))
+    // )
+    //     .toList();
+    // final planEvent = eventsForThisHour.isNotEmpty ? eventsForThisHour.first : null;
+    // final actualEvent = resultEvents
+    //     .where((event) =>
+    // event.eventResultSttTime?.hour == hour &&
+    //     DateFormat('yyyy-MM-dd').format(event.eventResultDate!) == currentDate)
+    //     .firstOrNull;
+    //
 
     return Card(
       margin: EdgeInsets.symmetric(vertical: 4, horizontal: 8),
@@ -470,7 +736,7 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
               flex: 1,
               child: Column(
                 children: [
-                  Text('${hour.toString().padLeft(2, '0')}:00'),
+                  Text(hour == 24 ? '24:00' : '${hour.toString().padLeft(2, '0')}:00'),
                   CheckboxComponent(
                     isChecked: selectedStates[hour] ?? false,
                     onChanged: (bool? value) {
@@ -486,8 +752,8 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
             Expanded(
               flex: 2,
               child: _buildEventCell(
-                scheduleData[formattedDate]?[index]['plan'] ?? '',
-                scheduleData[formattedDate]?[index]['planCategoryId'] ?? '',
+                timeData?['plan'] ?? '',
+                timeData?['planCategoryId'] ?? '',
                     () => _handlePlanCellTap(index),
                 Colors.blue.withOpacity(0.1),
               ),
@@ -495,8 +761,8 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
             Expanded(
               flex: 2,
               child: _buildEventCell(
-                scheduleData[formattedDate]?[index]['actual'] ?? '',
-                scheduleData[formattedDate]?[index]['actualCategoryId'] ?? '',
+                timeData?['actual'] ?? '',
+                timeData?['actualCategoryId'] ?? '',
                     () => _handleActualCellTap(index),
                 Colors.green.withOpacity(0.1),
               ),
@@ -526,44 +792,44 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
     );
   }
 
-  Widget _buildAllDayEventsSection() {
-    if (allDayEvents.isEmpty) {
-      return SizedBox.shrink(); // 종일 일정이 없으면 이 섹션을 표시하지 않음
-    }
-    return Container(
-      color: Colors.grey[200],
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Padding(
-            padding: const EdgeInsets.all(8.0),
-            child: Text(
-              '종일 일정',
-              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
-            ),
-          ),
-          ListView.builder(
-            shrinkWrap: true,
-            physics: NeverScrollableScrollPhysics(),
-            itemCount: allDayEvents.length,
-            itemBuilder: (context, index) {
-              final event = allDayEvents[index];
-              return ListTile(
-                title: Text(event.eventTitle),
-                subtitle: Text('종일'),
-                onTap: () =>
-                    _openEventDetail(event.eventTitle, index, isplan: true),
-              );
-            },
-          ),
-        ],
-      ),
-    );
-  }
+  // Widget _buildAllDayEventsSection() {
+  //   if (allDayEvents.isEmpty) {
+  //     return SizedBox.shrink(); // 종일 일정이 없으면 이 섹션을 표시하지 않음
+  //   }
+  //   return Container(
+  //     color: Colors.grey[200],
+  //     child: Column(
+  //       crossAxisAlignment: CrossAxisAlignment.start,
+  //       children: [
+  //         Padding(
+  //           padding: const EdgeInsets.all(8.0),
+  //           child: Text(
+  //             '종일 일정',
+  //             style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+  //           ),
+  //         ),
+  //         ListView.builder(
+  //           shrinkWrap: true,
+  //           physics: NeverScrollableScrollPhysics(),
+  //           itemCount: allDayEvents.length,
+  //           itemBuilder: (context, index) {
+  //             final event = allDayEvents[index];
+  //             return ListTile(
+  //               title: Text(event.eventTitle),
+  //               subtitle: Text('종일'),
+  //               onTap: () =>
+  //                   _openEventDetail(event.eventTitle, index, isplan: true),
+  //             );
+  //           },
+  //         ),
+  //       ],
+  //     ),
+  //   );
+  // }
 
   Widget _buildRegularEventsSection(DateTime pageDate) {
     return ListView.builder(
-      itemCount: endTime - startTime + 1,
+      itemCount: 25,  // 24시까지 표시하기 위해 25로 변경
       itemBuilder: (context, index) {
         return _buildTimeBlock(index, pageDate);
       },

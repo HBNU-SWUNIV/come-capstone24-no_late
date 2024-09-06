@@ -1,6 +1,5 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 
-
 class EventModel {
   final String eventId; // 이벤트 ID
   final String categoryId; // 카테고리 ID
@@ -30,8 +29,6 @@ class EventModel {
     this.completedYn = 'N',
     this.showOnCalendar = true, // 추가: 기본값은 true로 설정
     this.categoryColor,
-
-
   });
 
   Map<String, dynamic> toMap() {
@@ -45,7 +42,7 @@ class EventModel {
       'eventTitle': eventTitle,
       'eventContent': eventContent,
       'isAllDay': isAllDay,
-      'isRecurring':isRecurring,
+      'isRecurring': isRecurring,
       'showOnCalendar': showOnCalendar, // 추가: showOnCalendar 값을 맵에 추가
       'completedYn': completedYn,
     };
@@ -56,10 +53,9 @@ class EventModel {
       eventId: map['eventId'] ?? '',
       categoryId: map['categoryId'] ?? '',
       userId: map['userId'] ?? '',
-      eventDate:map['eventDate'] != null
-          ? DateTime.parse(map['eventDate'])
-          : null,
-      eventSttTime:  map['eventSttTime'] != null
+      eventDate:
+          map['eventDate'] != null ? DateTime.parse(map['eventDate']) : null,
+      eventSttTime: map['eventSttTime'] != null
           ? DateTime.parse(map['eventSttTime'])
           : null,
       eventEndTime: map['eventEndTime'] != null
@@ -69,15 +65,17 @@ class EventModel {
       eventContent: map['eventContent'] ?? '',
       isAllDay: map['isAllDay'] ?? false,
       isRecurring: map['isRecurring'],
-      showOnCalendar: map['showOnCalendar'] ?? true, // 추가: showOnCalendar 값을 가져옴 (기본값은 true)
+      showOnCalendar: map['showOnCalendar'] ?? true,
+      // 추가: showOnCalendar 값을 가져옴 (기본값은 true)
       categoryColor: map['categoryColor'],
       completedYn: map['completedYn'] ?? 'N',
-
     );
-    print('Created EventModel: ${eventModel.eventTitle}, CategoryID: ${eventModel.categoryId}, CategoryColor: ${eventModel.categoryColor}');
+    print(
+        'Created EventModel: ${eventModel.eventTitle}, CategoryID: ${eventModel.categoryId}, CategoryColor: ${eventModel.categoryColor}');
     return eventModel;
     return eventModel;
   }
+
   EventModel copyWith({
     String? eventId,
     String? eventTitle,
@@ -110,8 +108,9 @@ class EventModel {
     );
   }
 
-
   bool isSameDay(DateTime date1, DateTime date2) {
-    return date1.year == date2.year && date1.month == date2.month && date1.day == date2.day;
+    return date1.year == date2.year &&
+        date1.month == date2.month &&
+        date1.day == date2.day;
   }
 }

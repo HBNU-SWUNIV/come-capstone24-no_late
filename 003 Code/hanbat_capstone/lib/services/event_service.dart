@@ -9,6 +9,11 @@ class EventService {
   String? _userId;
   final FirebaseAuth _auth = FirebaseAuth.instance;
 
+  List<EventModel> allDayEvents = [];
+  List<EventModel> regularEvents = [];
+  List<EventResultModel> allDayResultEvents = [];
+  List<EventResultModel> regularResultEvents = [];
+
 
   void setUserId(String userId) {
     _userId = userId;
@@ -24,6 +29,10 @@ class EventService {
     return user.uid;
   }
 
+  DateTime _normalizeDate(DateTime date) {
+    return DateTime(date.year, date.month, date.day);
+  }
+
   Future<void> ensureUserLoggedIn() async {
     if (_auth.currentUser == null) {
       throw Exception('User is not logged in');
@@ -34,35 +43,137 @@ class EventService {
     }
   }
 
+  Future<Map<String, bool>> loadAllDayEventStatesForDate(String formattedDate) async {
+    await ensureUserLoggedIn();
+    final eventDate = DateTime.parse(formattedDate);
+    Map<String, bool> states = {};
 
+    try {
+      final snapshot = await _firestore
+          .collection('events')
+          .where('userId', isEqualTo: userId)
+          .where('eventDate', isEqualTo: eventDate.toIso8601String())
+          .where('isAllDay', isEqualTo: true)
+          .get();
 
-  Future<List<EventModel>> getEventsForDate(DateTime date, {bool forCalendar = false}) async {
+      for (var doc in snapshot.docs) {
+        final event = EventModel.fromMap(doc.data());
+        states[event.eventId] = event.completedYn == 'Y';
+      }
+    } catch (e) {
+      print('Error loading all-day event states: $e');
+    }
+
+    return states;
+  }
+
+  Future<void> updateAllDayEventState(String formattedDate, String eventId, bool isCompleted) async {
     await ensureUserLoggedIn();
     try {
-      final startOfDay = DateTime(date.year, date.month, date.day);
-      final endOfDay = startOfDay.add(Duration(days: 1));
+      await _firestore
+          .collection('events')
+          .doc(eventId)
+          .update({'completedYn': isCompleted ? 'Y' : 'N'});
+
+      // 결과 이벤트 업데이트 또는 생성
+      final eventDate = _normalizeDate(DateTime.parse(formattedDate));
+
+      if (isCompleted) {
+        // 완료된 경우에만 result_events에 추가 또는 업데이트
+        final eventSnapshot = await _firestore.collection('events').doc(eventId).get();
+        final event = EventModel.fromMap(eventSnapshot.data()!);
+
+        final resultEventSnapshot = await _firestore
+            .collection('result_events')
+            .where('eventId', isEqualTo: eventId)
+            .where('eventResultDate', isEqualTo: eventDate.toUtc().toIso8601String())
+            .get();
+
+        if (resultEventSnapshot.docs.isEmpty) {
+          // 새 결과 이벤트 생성
+          final resultEvent = EventResultModel(
+            eventResultId: _firestore.collection('result_events').doc().id,
+            eventId: event.eventId,
+            categoryId: event.categoryId,
+            userId: event.userId,
+            eventResultDate: eventDate,
+            eventResultSttTime: DateTime(eventDate.year, eventDate.month, eventDate.day),
+            eventResultEndTime: DateTime(eventDate.year, eventDate.month, eventDate.day, 23, 59, 59),
+            eventResultTitle: event.eventTitle,
+            eventResultContent: event.eventContent,
+            isAllDay: true,
+            completeYn: 'Y',
+          );
+
+          await _firestore
+              .collection('result_events')
+              .doc(resultEvent.eventResultId)
+              .set(resultEvent.toMap());
+        } else {
+          // 기존 결과 이벤트 업데이트
+          await _firestore
+              .collection('result_events')
+              .doc(resultEventSnapshot.docs.first.id)
+              .update({'completeYn': 'Y'});
+        }
+      } else {
+        // 완료 취소 시 result_events에서 제거
+        final resultEventSnapshot = await _firestore
+            .collection('result_events')
+            .where('eventId', isEqualTo: eventId)
+            .where('eventResultDate', isEqualTo: eventDate.toIso8601String())
+            .get();
+
+        if (resultEventSnapshot.docs.isNotEmpty) {
+          await _firestore
+              .collection('result_events')
+              .doc(resultEventSnapshot.docs.first.id)
+              .delete();
+        }
+      }
+    } catch (e) {
+      print('Error updating all-day event state: $e');
+      throw e;
+    }
+  }
+
+
+
+  Future<List<EventModel>> getEventsForDate(DateTime date, {bool forCalendar = false, bool excludeAllDay = false}) async {
+    await ensureUserLoggedIn();
+    try {
+      final normalizedDate = _normalizeDate(date);
+      final startOfDay = normalizedDate.toUtc();
+      final endOfDay = normalizedDate.add(Duration(days: 1));
 
       print("Querying events from ${startOfDay.toIso8601String()} to ${endOfDay.toIso8601String()}");
 
       QuerySnapshot snapshot = await _firestore
           .collection('events')
           .where('userId', isEqualTo: userId)
+
+
           .where('eventDate', isGreaterThanOrEqualTo: startOfDay.toUtc().toIso8601String())
-          .where('eventDate', isLessThan: endOfDay.toUtc().toIso8601String())
+          .where('eventDate', isLessThan: endOfDay.toUtc().toIso8601String())  // 다음 날까지 포함
           .get();
 
       print("Found ${snapshot.docs.length} events in Firestore");
 
       List<EventModel> events = snapshot.docs
-          .map((doc) {
-        final data = doc.data() as Map<String, dynamic>;
-        print("Event data: $data");
-        return EventModel.fromMap(data);
-      })
+          .map((doc) => EventModel.fromMap(doc.data() as Map<String, dynamic>))
+          .where((event) => !excludeAllDay || !event.isAllDay != true)
           .toList();
 
+      events = events.where((event) {
+        if (event.isAllDay) {
+          final eventDate = _normalizeDate(event.eventDate!);
+          return eventDate.isAtSameMomentAs(normalizedDate);
+        }
+        return true;
+      }).toList();
 
-
+      allDayEvents = events.where((event) => event.isAllDay).toList();
+      regularEvents = events.where((event) => !event.isAllDay).toList();
 
 
 
@@ -119,11 +230,221 @@ class EventService {
 
     }
   }
+  // Future<void> movePlanToActual(String formattedDate, int hour, EventModel event) async {
+  //   final eventDate = DateTime.parse(formattedDate);
+  //   final eventStartTime = DateTime(eventDate.year, eventDate.month, eventDate.day, event.eventSttTime!.hour);
+  //   final eventEndTime = DateTime(eventDate.year, eventDate.month, eventDate.day, hour + 1);
+  //
+  //   // result_events 컬렉션에 새로운 이벤트 생성
+  //   final resultEventData = EventResultModel(
+  //     eventResultId: _firestore.collection('result_events').doc().id,
+  //     eventId: event.eventId,
+  //     categoryId: event.categoryId,
+  //     userId: event.userId,
+  //     eventResultDate: eventDate,
+  //     eventResultSttTime: eventStartTime,
+  //     eventResultEndTime: eventEndTime,
+  //     eventResultTitle: event.eventTitle,
+  //     eventResultContent: event.eventContent,
+  //     isAllDay: false,
+  //     completeYn: 'Y',
+  //   );
+  //
+  //   await _firestore
+  //       .collection('result_events')
+  //       .doc(resultEventData.eventResultId)
+  //       .set(resultEventData.toMap());
+  //
+  //   // 원본 이벤트 업데이트
+  //   await _firestore
+  //       .collection('events')
+  //       .doc(event.eventId)
+  //       .update({
+  //     'completedYn': 'Y',
+  //     'lastCompletedHour': hour + 1,
+  //   });
+  // }
+
+  Future<List<EventModel>> getAllDayEventsForDate(DateTime date) async {
+    await ensureUserLoggedIn();
+    try {
+      final startOfDay = DateTime(date.year, date.month, date.day).toUtc();
+      final endOfDay = startOfDay.add(Duration(days: 1));
+
+      QuerySnapshot snapshot = await _firestore
+          .collection('events')
+          .where('userId', isEqualTo: userId)
+          .where('eventDate', isGreaterThanOrEqualTo: startOfDay.toIso8601String())
+          .where('eventDate', isLessThan: endOfDay.toIso8601String())
+          .where('isAllDay', isEqualTo: true)
+          .get();
+
+      return snapshot.docs
+          .map((doc) => EventModel.fromMap(doc.data() as Map<String, dynamic>))
+          .toList();
+    } catch (e) {
+      print('Error fetching all-day events: $e');
+      rethrow;
+    }
+  }
+
+  Future<List<EventModel>> getTimeBasedEventsForDate(DateTime date) async {
+    await ensureUserLoggedIn();
+    try {
+      final startOfDay = DateTime(date.year, date.month, date.day).toUtc();
+      final endOfDay = startOfDay.add(Duration(days: 1));
+
+      QuerySnapshot snapshot = await _firestore
+          .collection('events')
+          .where('userId', isEqualTo: userId)
+          .where('eventDate', isGreaterThanOrEqualTo: startOfDay.toIso8601String())
+          .where('eventDate', isLessThan: endOfDay.toIso8601String())
+          .where('isAllDay', isEqualTo: false)
+          .get();
+
+      return snapshot.docs
+          .map((doc) => EventModel.fromMap(doc.data() as Map<String, dynamic>))
+          .toList();
+    } catch (e) {
+      print('Error fetching time-based events: $e');
+      rethrow;
+    }
+  }
+
+  // 종일 일정에 대한 체크박스 상태 로드
+  Future<Map<String, bool>> loadAllDayEventStates(DateTime date) async {
+    await ensureUserLoggedIn();
+    final allDayEvents = await getAllDayEventsForDate(date);
+    return {for (var event in allDayEvents) event.eventId: event.completedYn == 'Y'};
+  }
+
+  // 시간별 일정에 대한 체크박스 상태 로드
+  Future<Map<int, bool>> loadTimeBasedCheckboxStatesForDate(String formattedDate) async {
+    await ensureUserLoggedIn();
+    Map<int, bool> states = {};
+
+    final eventDate = DateTime.parse(formattedDate);
+    final nextDate = eventDate.add(Duration(days: 1));
+
+    // 파이어베이스에서 해당 날짜의 시간 기반 이벤트 및 결과 이벤트 로드
+    final events = await getTimeBasedEventsForDate(eventDate);
+    final nextDayEvents = await getTimeBasedEventsForDate(nextDate);
+    final resultEvents = await getResultEventsForDate(eventDate);
+    final nextDayResultEvents = await getResultEventsForDate(nextDate);
+
+    for (int i = 0; i <= 24; i++) {
+      states[i] = false; // 초기 상태를 모두 false로 설정
+    }
+
+    // 이벤트와 결과 이벤트를 기반으로 체크박스 상태 설정
+    void processEvents(List<EventModel> eventList, bool isNextDay) {
+      for (var event in eventList) {
+        if (event.eventSttTime != null && !event.isAllDay) {
+          int startHour = event.eventSttTime!.hour;
+          int endHour = event.eventEndTime!.hour == 0 ? 24 : event.eventEndTime!.hour;
+
+          if (isNextDay && startHour == 0) {
+            states[24] = event.completedYn == 'Y';
+          } else if (!isNextDay) {
+            for (int i = startHour; i < endHour && i <= 24; i++) {
+              states[i] = event.completedYn == 'Y';
+            }
+          }
+        }
+      }
+    }
+
+    void processResultEvents(List<EventResultModel> eventList, bool isNextDay) {
+      for (var event in eventList) {
+        if (event.eventResultSttTime != null && event.isAllDay != true) {
+          int startHour = event.eventResultSttTime!.hour;
+          int endHour = event.eventResultEndTime!.hour == 0 ? 24 : event.eventResultEndTime!.hour;
+
+          if (isNextDay && startHour == 0) {
+            states[24] = true;
+          } else if (!isNextDay) {
+            for (int i = startHour; i < endHour && i <= 24; i++) {
+              states[i] = true;
+            }
+          }
+        }
+      }
+    }
+
+    processEvents(events, false);
+    processEvents(nextDayEvents, true);
+    processResultEvents(resultEvents, false);
+    processResultEvents(nextDayResultEvents, true);
+
+    return states;
+  }
+
+  List<Map<String, String>> generateScheduleData(
+      DateTime selectedDate,
+      int startTime,
+      int endTime,
+      List<EventModel> events,
+      List<EventResultModel> resultEvents) {
+    return List.generate(endTime - startTime + 1, (index) {
+      final eventTimeStart = DateTime(
+        selectedDate.year,
+        selectedDate.month,
+        selectedDate.day,
+        startTime + index,
+      );
+      final eventTimeEnd = eventTimeStart.add(Duration(hours: 1));
+
+      final eventsForTime = events.where((event) =>
+      !event.isAllDay &&
+          event.eventSttTime != null &&
+          event.eventEndTime != null &&
+          eventTimeStart.isBefore(event.eventEndTime!) &&
+          eventTimeEnd.isAfter(event.eventSttTime!)).toList();
+
+      final resultEventsForTime = resultEvents.where((resultEvent) {
+        try {
+          final retSttTime = resultEvent.eventResultSttTime;
+          final retEndTime = resultEvent.eventResultEndTime;
+
+          if (retSttTime != null && retEndTime != null) {
+            return (eventTimeStart.isBefore(retEndTime) ||
+                eventTimeStart.isAtSameMomentAs(retSttTime)) &&
+                (eventTimeEnd.isAfter(retSttTime) ||
+                    eventTimeEnd.isAtSameMomentAs(retEndTime));
+          }
+          return false;
+        } catch (e) {
+          print('Invalid date format in result event: $e');
+          return false;
+        }
+      }).toList();
+
+      final eventForTime = eventsForTime.isNotEmpty ? eventsForTime.first : null;
+      final resultEventForTime = resultEventsForTime.isNotEmpty ? resultEventsForTime.first : null;
+
+      return {
+        'plan': eventForTime?.eventTitle ?? '',
+        'planCategoryId': eventForTime?.categoryId ?? '',
+        'actual': resultEventForTime?.eventResultTitle ?? '',
+        'actualCategoryId': resultEventForTime?.categoryId ?? '',
+        'completedYn': eventForTime?.completedYn ?? 'N', //
+        'eventId': eventForTime?.eventId ?? '',
+      };
+    });
+  }
+
 
   Future<void> movePlanToActual(String formattedDate, int hour, EventModel event) async {
     final eventDate = DateTime.parse(formattedDate);
     final eventStartTime = DateTime(eventDate.year, eventDate.month, eventDate.day, event.eventSttTime!.hour);
-    final eventEndTime = DateTime(eventDate.year, eventDate.month, eventDate.day, hour + 1);
+    DateTime eventEndTime;
+
+    if (hour == 23 && event.eventEndTime!.hour == 0) {
+      // 자정을 넘어가는 경우
+      eventEndTime = eventDate.add(Duration(days: 1));
+    } else {
+      eventEndTime = DateTime(eventDate.year, eventDate.month, eventDate.day, hour + 1);
+    }
 
     // result_events 컬렉션에서 해당 이벤트 찾기
     final resultEventSnapshot = await FirebaseFirestore.instance
@@ -299,7 +620,7 @@ class EventService {
 
 
 
-  Future<List<EventResultModel>> getResultEventsForDate(DateTime date) async {
+  Future<List<EventResultModel>> getResultEventsForDate(DateTime date,{bool excludeAllDay = false}) async {
     await ensureUserLoggedIn();
     try {
       final startOfDay = DateTime(date.year, date.month, date.day);
@@ -308,13 +629,17 @@ class EventService {
       final QuerySnapshot snapshot = await _firestore
           .collection('result_events')
           .where('userId', isEqualTo: userId)  // 사용자 ID로 필터링
+          .where('isAllDay', isEqualTo: false)
           .where('eventResultDate', isGreaterThanOrEqualTo: startOfDay.toUtc().toIso8601String())
           .where('eventResultDate', isLessThan: endOfDay.toUtc().toIso8601String())
           .get();
 
       final List<EventResultModel> resultEvents = snapshot.docs
           .map((doc) => EventResultModel.fromMap(doc.data() as Map<String, dynamic>))
+          .where((event) => !excludeAllDay || event.isAllDay != true)
           .toList();
+
+
       return resultEvents;
     } catch (e) {
       print('Error fetching result events: $e');
@@ -325,70 +650,18 @@ class EventService {
 
 
 
-  List<Map<String, String>> generateScheduleData(
-      DateTime selectedDate,
-      int startTime,
-      int endTime,
-      List<EventModel> events,
-      List<EventResultModel> resultEvents) {
-    return List.generate(endTime - startTime + 1, (index) {
-      final eventTimeStart = DateTime(
-        selectedDate.year,
-        selectedDate.month,
-        selectedDate.day,
-        startTime + index,
-      );
-      final eventTimeEnd = eventTimeStart.add(Duration(hours: 1));
 
-      final eventsForTime = events.where((event) =>
-      !event.isAllDay &&
-          event.eventSttTime != null &&
-          event.eventEndTime != null &&
-          eventTimeStart.isBefore(event.eventEndTime!) &&
-          eventTimeEnd.isAfter(event.eventSttTime!)).toList();
-
-      final resultEventsForTime = resultEvents.where((resultEvent) {
-        try {
-          final retSttTime = resultEvent.eventResultSttTime;
-          final retEndTime = resultEvent.eventResultEndTime;
-
-          if (retSttTime != null && retEndTime != null) {
-            return (eventTimeStart.isBefore(retEndTime) ||
-                eventTimeStart.isAtSameMomentAs(retSttTime)) &&
-                (eventTimeEnd.isAfter(retSttTime) ||
-                    eventTimeEnd.isAtSameMomentAs(retEndTime));
-          }
-          return false;
-        } catch (e) {
-          print('Invalid date format in result event: $e');
-          return false;
-        }
-      }).toList();
-
-      final eventForTime = eventsForTime.isNotEmpty ? eventsForTime.first : null;
-      final resultEventForTime = resultEventsForTime.isNotEmpty ? resultEventsForTime.first : null;
-
-      return {
-        'plan': eventForTime?.eventTitle ?? '',
-        'planCategoryId': eventForTime?.categoryId ?? '',
-        'actual': resultEventForTime?.eventResultTitle ?? '',
-        'actualCategoryId': resultEventForTime?.categoryId ?? '',
-        'completedYn': eventForTime?.completedYn ?? 'N', //
-        'eventId': eventForTime?.eventId ?? '',
-      };
-    });
-  }
 
   Future<List<bool>> loadCheckboxStatesForDate(String formattedDate) async {
     await ensureUserLoggedIn();
     final resultEvents = await getResultEventsForDate(DateTime.parse(formattedDate));
-    List<bool> checkboxStates = List.generate(24, (_) => false);
+    List<bool> checkboxStates = List.generate(25, (_) => false);
 
     for (var event in resultEvents) {
       if (event.eventResultSttTime != null) {
         int startHour = event.eventResultSttTime!.hour;
         int endHour = event.eventResultEndTime?.hour ?? (startHour + 1);
-        for (int i = startHour; i < endHour && i < 24; i++) {
+        for (int i = startHour; i < endHour && i <= 24; i++) {
           checkboxStates[i] = true;
         }
       }
@@ -535,45 +808,6 @@ class EventService {
     final prefs = await SharedPreferences.getInstance();
     final key = '${date}_checkbox_$hour';
     await prefs.setBool(key, state);
-  }
-  Future<Map<int, bool>> loadTimeBasedCheckboxStatesForDate(String formattedDate) async {
-    await ensureUserLoggedIn();
-    Map<int, bool> states = {};
-
-    // 파이어베이스에서 해당 날짜의 이벤트 및 결과 이벤트 로드
-    final events = await getEventsForDate(DateTime.parse(formattedDate));
-    final resultEvents = await getResultEventsForDate(DateTime.parse(formattedDate));
-
-    for (int i = 0; i < 24; i++) {
-      states[i] = false; // 초기 상태를 모두 false로 설정
-    }
-
-    // 이벤트와 결과 이벤트를 기반으로 체크박스 상태 설정
-    for (var event in events) {
-      if (event.eventSttTime != null) {
-        int startHour = event.eventSttTime!.hour;
-        int endHour = event.eventEndTime?.hour ?? (startHour + 1);
-        for (int i = startHour; i < endHour && i < 24; i++) {
-          states[i] = event.completedYn == 'Y';
-        }
-      }
-    }
-
-    for (var event in resultEvents) {
-      if (event.eventResultSttTime != null) {
-        int startHour = event.eventResultSttTime!.hour;
-        int endHour = event.eventResultEndTime?.hour ?? (startHour + 1);
-        for (int i = startHour; i < endHour && i < 24; i++) {
-          states[i] = true;
-        }
-      }
-    }
-
-
-
-
-
-    return states;
   }
 }
 

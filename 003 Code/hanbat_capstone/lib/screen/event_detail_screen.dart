@@ -324,7 +324,6 @@
 //   }
 // }
 
-
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:intl/intl.dart';
@@ -358,39 +357,81 @@ class EventDetailScreen extends StatefulWidget {
 class _EventDetailScreenState extends State<EventDetailScreen> {
   late EventModel _currentEvent;
   late EventResultModel _currentEventResult;
+  bool _isLoading = false;
 
   @override
   void initState() {
     super.initState();
-    _currentEvent = widget.event ?? EventModel(
-      eventId: '',
-      eventTitle: '',
-      eventDate: DateTime.now(),
-      eventContent: '',
-      categoryId: '',
-      userId: '',
-      eventSttTime: DateTime.now(),
-      eventEndTime: DateTime.now(),
-      isAllDay: false,
-      completedYn: 'N',
-      isRecurring: false,
-      showOnCalendar: true,
-    );
-    _currentEventResult = widget.eventResult ?? EventResultModel(
-      eventResultId: '',
-      eventId: '',
-      categoryId: '',
-      userId: '',
-      eventResultDate: DateTime.now(),
-      eventResultSttTime: DateTime.now(),
-      eventResultEndTime: DateTime.now(),
-      eventResultTitle: '',
-      eventResultContent: '',
-      isAllDay: false,
-      completeYn: 'N',
-    );
+    _currentEvent = widget.event ??
+        EventModel(
+          eventId: '',
+          eventTitle: '',
+          eventDate: DateTime.now(),
+          eventContent: '',
+          categoryId: '',
+          userId: '',
+          eventSttTime: DateTime.now(),
+          eventEndTime: DateTime.now(),
+          isAllDay: false,
+          completedYn: 'N',
+          isRecurring: false,
+          showOnCalendar: true,
+        );
+    _currentEventResult = widget.eventResult ??
+        EventResultModel(
+          eventResultId: '',
+          eventId: '',
+          categoryId: '',
+          userId: '',
+          eventResultDate: DateTime.now(),
+          eventResultSttTime: DateTime.now(),
+          eventResultEndTime: DateTime.now(),
+          eventResultTitle: '',
+          eventResultContent: '',
+          isAllDay: false,
+          completeYn: 'N',
+        );
   }
+  Future<void> _reloadEvent() async {
+    setState(() {
+      _isLoading = true;
+    });
 
+    try {
+      if (widget.event != null) {
+        // 일반 이벤트 리로드
+        final updatedEvent = await FirebaseFirestore.instance
+            .collection('events')
+            .doc(_currentEvent.eventId)
+            .get();
+        if (updatedEvent.exists) {
+          setState(() {
+            _currentEvent = EventModel.fromMap(updatedEvent.data()!);
+          });
+        }
+      } else if (widget.eventResult != null) {
+        // 결과 이벤트 리로드
+        final updatedEventResult = await FirebaseFirestore.instance
+            .collection('result_events')
+            .doc(_currentEventResult.eventResultId)
+            .get();
+        if (updatedEventResult.exists) {
+          setState(() {
+            _currentEventResult = EventResultModel.fromMap(updatedEventResult.data()!);
+          });
+        }
+      }
+    } catch (e) {
+      print('Error reloading event: $e');
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('일정을 새로 불러오는 데 실패했습니다.')),
+      );
+    } finally {
+      setState(() {
+        _isLoading = false;
+      });
+    }
+  }
 
 
 
@@ -420,46 +461,40 @@ class _EventDetailScreenState extends State<EventDetailScreen> {
     }
   }
 
-  Future<void> _editEvent(EventModel? editedEvent) async {
-    if (editedEvent != null) {
-      try {
-        await FirebaseFirestore.instance
-            .collection('events')
-            .doc(editedEvent.eventId)
-            .update(editedEvent.toMap());
-        widget.onEventEdited!(editedEvent);
-        setState(() {
-          _currentEvent = editedEvent;
-
-          // 기타 필요한 필드 업데이트
-        });
-        widget.onEventEdited?.call(editedEvent);
-        widget.updateCalendar?.call();
-        ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('일정이 성공적으로 수정되었습니다.'))
-        );
-      } catch (e) {
-        _handleError('이벤트 수정 중 오류가 발생했습니다: $e');
-      }
+  Future<void> _editEvent(EventModel editedEvent) async {
+    try {
+      await FirebaseFirestore.instance
+          .collection('events')
+          .doc(editedEvent.eventId)
+          .update(editedEvent.toMap());
+      widget.onEventEdited!(editedEvent);
+      setState(() {
+        _currentEvent = editedEvent;
+      });
+      widget.updateCalendar?.call();
+      ScaffoldMessenger.of(context)
+          .showSnackBar(SnackBar(content: Text('일정이 성공적으로 수정되었습니다.')));
+    } catch (e) {
+      _handleError('이벤트 수정 중 오류가 발생했습니다: $e');
     }
   }
 
-  Future<void> _editEventResult(EventResultModel? editedEventResult) async {
-    if (editedEventResult != null) {
-      try {
-        final docRef = FirebaseFirestore.instance
-            .collection('result_events')
-            .doc(editedEventResult.eventResultId);
-        await docRef.set(editedEventResult.toMap(), SetOptions(merge: true));
-        widget.onEventResultEdited!(editedEventResult);
-        setState(() {
-          _currentEventResult = editedEventResult;
-        });
-        widget.onEventResultEdited?.call(editedEventResult);
-        widget.updateCalendar?.call();
-      } catch (e) {
-        _handleError('이벤트 결과 수정 중 오류가 발생했습니다: $e');
-      }
+  Future<void> _editEventResult(EventResultModel editedEventResult) async {
+    try {
+      final docRef = FirebaseFirestore.instance
+          .collection('result_events')
+          .doc(editedEventResult.eventResultId);
+      await docRef.set(editedEventResult.toMap(), SetOptions(merge: true));
+      widget.onEventResultEdited!(editedEventResult);
+      setState(() {
+        _currentEventResult = editedEventResult;
+      });
+      widget.updateCalendar?.call();
+      ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('일정 결과가 성공적으로 수정되었습니다.'))
+      );
+    } catch (e) {
+      _handleError('이벤트 결과 수정 중 오류가 발생했습니다: $e');
     }
   }
 
@@ -487,9 +522,18 @@ class _EventDetailScreenState extends State<EventDetailScreen> {
               style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
             ),
             SizedBox(height: 20),
-            _buildInfoRow(Icons.calendar_today, '날짜', eventModel.eventDate?.toString().split(' ')[0] ?? 'Unknown'),
-            _buildInfoRow(Icons.access_time, '시작 시간', DateFormat('HH:mm').format(eventModel.eventSttTime ?? DateTime.now())),
-            _buildInfoRow(Icons.access_time, '종료 시간', DateFormat('HH:mm').format(eventModel.eventEndTime ?? DateTime.now())),
+            _buildInfoRow(Icons.calendar_today, '날짜',
+                eventModel.eventDate?.toString().split(' ')[0] ?? 'Unknown'),
+            _buildInfoRow(
+                Icons.access_time,
+                '시작 시간',
+                DateFormat('HH:mm')
+                    .format(eventModel.eventSttTime ?? DateTime.now())),
+            _buildInfoRow(
+                Icons.access_time,
+                '종료 시간',
+                DateFormat('HH:mm')
+                    .format(eventModel.eventEndTime ?? DateTime.now())),
             SizedBox(height: 20),
             Text(
               '세부사항',
@@ -520,9 +564,21 @@ class _EventDetailScreenState extends State<EventDetailScreen> {
               style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
             ),
             SizedBox(height: 20),
-            _buildInfoRow(Icons.calendar_today, '날짜', eventResultModel.eventResultDate?.toString().split(' ')[0] ?? 'Unknown'),
-            _buildInfoRow(Icons.access_time, '시작 시간', DateFormat('HH:mm').format(eventResultModel.eventResultSttTime ?? DateTime.now())),
-            _buildInfoRow(Icons.access_time, '종료 시간', DateFormat('HH:mm').format(eventResultModel.eventResultEndTime ?? DateTime.now())),
+            _buildInfoRow(
+                Icons.calendar_today,
+                '날짜',
+                eventResultModel.eventResultDate?.toString().split(' ')[0] ??
+                    'Unknown'),
+            _buildInfoRow(
+                Icons.access_time,
+                '시작 시간',
+                DateFormat('HH:mm').format(
+                    eventResultModel.eventResultSttTime ?? DateTime.now())),
+            _buildInfoRow(
+                Icons.access_time,
+                '종료 시간',
+                DateFormat('HH:mm').format(
+                    eventResultModel.eventResultEndTime ?? DateTime.now())),
             SizedBox(height: 20),
             Text(
               '세부사항',
@@ -560,41 +616,67 @@ class _EventDetailScreenState extends State<EventDetailScreen> {
       mainAxisAlignment: MainAxisAlignment.spaceEvenly,
       children: [
         ElevatedButton.icon(
-          icon: Icon(Icons.edit, color: Colors.black,),
-          label: Text('수정', style: TextStyle(color: Colors.white),),
+          icon: Icon(
+            Icons.edit,
+            color: Colors.black,
+          ),
+          label: Text(
+            '수정',
+            style: TextStyle(color: Colors.white),
+          ),
           style: ElevatedButton.styleFrom(
-            backgroundColor:  Colors.lightBlue[900],
+            backgroundColor: Colors.lightBlue[900],
           ),
           onPressed: () async {
             final result = await Navigator.push(
               context,
               MaterialPageRoute(
                 builder: (context) => AddEventScreen(
-                  selectedDate: widget.event != null ? _currentEvent.eventDate : _currentEventResult.eventResultDate,
-                  selectedTime: widget.event != null ? _currentEvent.eventSttTime : _currentEventResult.eventResultSttTime,
+                  selectedDate: widget.event != null
+                      ? _currentEvent.eventDate
+                      : _currentEventResult.eventResultDate,
+                  selectedTime: widget.event != null
+                      ? _currentEvent.eventSttTime
+                      : _currentEventResult.eventResultSttTime,
                   event: widget.event != null ? _currentEvent : null,
-                  actualevent: widget.event == null ? _currentEventResult : null,
+                  actualevent:
+                      widget.event == null ? _currentEventResult : null,
                   isFinalEvent: widget.event == null,
                   isEditing: true,
                 ),
               ),
             );
             if (result != null) {
-              if (result is EventResultModel) {
-                await _editEventResult(result);
-              } else if (result is EventModel) {
-                await _editEvent(result);
-              }
-              setState(() {});
+              // if (result is EventResultModel) {
+              //   await _editEventResult(result);
+              // } else if (result is EventModel) {
+              //   await _editEvent(result);
+              // }
+              // setState(() {
+              //   if (result is EventResultModel) {
+              //     _currentEventResult = result;
+              //   } else if (result is EventModel) {
+              //     _currentEvent = result;
+              //   }
+              // });
+              await _reloadEvent();  // 여기서 이벤트를 리로드합니다.
 
               widget.updateCalendar?.call();
             }
           },
         ),
         ElevatedButton.icon(
-          icon: Icon(Icons.delete, color: Colors.black,),
-          label: Text('삭제', style: TextStyle(color: Colors.white),),
-          style: ElevatedButton.styleFrom(backgroundColor:  Colors.lightBlue[900],),
+          icon: Icon(
+            Icons.delete,
+            color: Colors.black,
+          ),
+          label: Text(
+            '삭제',
+            style: TextStyle(color: Colors.white),
+          ),
+          style: ElevatedButton.styleFrom(
+            backgroundColor: Colors.lightBlue[900],
+          ),
           onPressed: () async {
             if (isEventModel && (_currentEvent.isRecurring ?? false)) {
               _showDeleteRecurrenceDialog(context);
@@ -693,20 +775,22 @@ class _EventDetailScreenState extends State<EventDetailScreen> {
           title: Text('일정 세부사항'),
           centerTitle: true,
         ),
-        body: SingleChildScrollView(
-          child: Padding(
-            padding: EdgeInsets.all(16.0),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                _buildEventDetails(),
-                SizedBox(height: 20),
-                _buildActions(context),
-              ],
+        body: _isLoading
+          ? Center(child:  CircularProgressIndicator())
+          : SingleChildScrollView(
+            child: Padding(
+              padding: EdgeInsets.all(16.0),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  _buildEventDetails(),
+                  SizedBox(height: 20),
+                  _buildActions(context),
+                ],
+              ),
             ),
           ),
-        ),
-      );
+        );
     } catch (e, stackTrace) {
       print('Error in build method: $e');
       print('Stack trace: $stackTrace');

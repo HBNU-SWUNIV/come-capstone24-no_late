@@ -95,6 +95,13 @@ class _AddEventScreenState extends State<AddEventScreen> {
         : true;
     _isAllDay =
         widget.event?.isAllDay == true || widget.actualevent?.isAllDay == true;
+
+    // 카테고리 초기화 추가
+    selectedCategoryId = widget.isEditing
+        ? (widget.isFinalEvent
+        ? widget.actualevent?.categoryId
+        : widget.event?.categoryId)
+        : null;
     _getCurrentUser().then((_) => _loadCategories());
   }
 
@@ -118,9 +125,9 @@ class _AddEventScreenState extends State<AddEventScreen> {
           // 필요한 다른 필드들을 여기에 추가하세요
         }).toList();
 
-        if (categories.isNotEmpty) {
-          selectedCategoryId = categories.first['categoryId'] as String;
-        }
+        // 카테고리가 선택되지 않은 경우에만 첫 번째 카테고리를 선택
+        if (selectedCategoryId == null && categories.isNotEmpty) {
+          selectedCategoryId = categories.first['categoryId'] as String;}
       });
     } catch (e) {
       print('Error loading categories: $e');
@@ -185,6 +192,7 @@ class _AddEventScreenState extends State<AddEventScreen> {
           _endTime = newDateTime;
         }
       });
+      _adjustDateForMidnight(isStartTime);
     }
   }
 
@@ -201,6 +209,10 @@ class _AddEventScreenState extends State<AddEventScreen> {
     });
   }
 
+  DateTime combineDateTime(DateTime date, DateTime time) {
+    return DateTime(date.year, date.month, date.day, time.hour, time.minute);
+  }
+
 
 
   Future<void> _saveEvent() async {
@@ -209,12 +221,24 @@ class _AddEventScreenState extends State<AddEventScreen> {
         final user = FirebaseAuth.instance.currentUser;
         if (user == null) {
           ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('로그인이 필요합니다.')));
-          return;
+
         }
+
+        // 날짜와 시간 처리
+        final eventDate = widget.selectedDate ?? DateTime.now();
+        final startTimeOfDay = _timeOfDayFromDateTime(_startTime!) ?? TimeOfDay.now();
+        final endTimeOfDay = _endTime != null ? _timeOfDayFromDateTime(_endTime!) : null;
+
+        final startDateTime = _combineDateAndTime(eventDate, startTimeOfDay);
+        final endDateTime = _calculateEndDateTime(eventDate, startTimeOfDay, endTimeOfDay);
+
+
+
+
         if (widget.isFinalEvent) {
-          await _saveFinalEvent();
+          await _saveFinalEvent(startDateTime, endDateTime);
         } else {
-          await _saveRegularEvent();
+          await _saveRegularEvent(startDateTime, endDateTime);
         }
 
         String message = widget.isEditing ? '일정이 수정되었습니다.' : '일정이 추가되었습니다.';
@@ -232,7 +256,35 @@ class _AddEventScreenState extends State<AddEventScreen> {
     }
   }
 
-  Future<void> _saveFinalEvent() async {
+  TimeOfDay? _timeOfDayFromDateTime(DateTime dateTime) {
+    return TimeOfDay(hour: dateTime.hour, minute: dateTime.minute);
+  }
+
+  DateTime _combineDateAndTime(DateTime date, TimeOfDay time) {
+    return DateTime(
+      date.year,
+      date.month,
+      date.day,
+      time.hour,
+      time.minute,
+    );
+  }
+
+  DateTime _calculateEndDateTime(DateTime date, TimeOfDay startTime, TimeOfDay? endTime) {
+    if (endTime == null) {
+      // 종료 시간이 지정되지 않은 경우, 시작 시간으로부터 1시간 후로 설정
+      return _combineDateAndTime(date, startTime).add(Duration(hours: 1));
+    }
+
+    DateTime endDateTime = _combineDateAndTime(date, endTime);
+    if (endDateTime.isBefore(_combineDateAndTime(date, startTime))) {
+      // 종료 시간이 시작 시간보다 이전인 경우 다음 날로 설정
+      endDateTime = endDateTime.add(Duration(days: 1));
+    }
+    return endDateTime;
+  }
+
+  Future<void> _saveFinalEvent(DateTime startDateTime, DateTime endDateTime) async {
     String eventRetId = widget.actualevent?.eventResultId ?? '';
     if (eventRetId.isEmpty) {
       eventRetId = FirebaseFirestore.instance.collection('result_events').doc().id;
@@ -247,8 +299,11 @@ class _AddEventScreenState extends State<AddEventScreen> {
       categoryId: selectedCategoryId ?? '',
       userId: userId, // 사용자 ID 설정
       eventResultDate: _selectedDate,
-      eventResultSttTime: _startTime ?? DateTime.now(),
-      eventResultEndTime: _endTime ?? DateTime.now().add(Duration(hours: 1)),
+      eventResultSttTime: combineDateTime(_selectedDate!, _startTime!),
+      eventResultEndTime: combineDateTime(
+          _endTime!.isBefore(_startTime!) ? _selectedDate!.add(Duration(days: 1)) : _selectedDate!,
+          _endTime!
+      ),
       eventResultTitle: _titleController.text,
       eventResultContent: _contentController.text,
       isAllDay: _isAllDay ? true : false,
@@ -278,7 +333,7 @@ class _AddEventScreenState extends State<AddEventScreen> {
     }
   }
 
-  Future<void> _saveRegularEvent() async {
+  Future<void> _saveRegularEvent(DateTime startDateTime, DateTime endDateTime) async {
     String eventId = widget.event?.eventId ?? '';
     if (eventId.isEmpty) {
       eventId = FirebaseFirestore.instance.collection('events').doc().id;
@@ -294,8 +349,11 @@ class _AddEventScreenState extends State<AddEventScreen> {
       eventContent: _contentController.text,
       categoryId: selectedCategoryId ?? categories.first['categoryId'],
       userId: userId,
-      eventSttTime: _startTime,
-      eventEndTime: _endTime,
+      eventSttTime: combineDateTime(_selectedDate!, _startTime!),
+      eventEndTime: combineDateTime(
+          _endTime!.isBefore(_startTime!) ? _selectedDate!.add(Duration(days: 1)) : _selectedDate!,
+          _endTime!
+      ),
       isAllDay: _isAllDay,
       completedYn: 'N',
       isRecurring: _isRecurring,
@@ -332,6 +390,22 @@ class _AddEventScreenState extends State<AddEventScreen> {
           .set(recurringEvent.toMap());
     }
   }
+  void _adjustDateForMidnight(bool isStartTime) {
+    if (isStartTime) {
+      if (_startTime != null && _startTime!.hour == 0 && _startTime!.minute == 0) {
+        setState(() {
+          _selectedDate = _selectedDate!.add(Duration(days: 1));
+        });
+      }
+    } else {
+      if (_endTime != null && _endTime!.hour == 0 && _endTime!.minute == 0) {
+        setState(() {
+          _endTime = _endTime!.add(Duration(days: 1));
+        });
+      }
+    }
+  }
+
 
   Widget _buildDateTimeSelector() {
     return _buildCard(
@@ -538,7 +612,7 @@ class _CustomTimePickerState extends State<CustomTimePicker> {
                   context,
                   _hour,
                   0,
-                  23,
+                  24,
                       (value) => setState(() => _hour = value),
                 ),
                 Text(':', style: TextStyle(fontSize: 20)),
@@ -555,6 +629,12 @@ class _CustomTimePickerState extends State<CustomTimePicker> {
             ElevatedButton(
               child: Text('확인'),
               onPressed: () {
+                if (_hour == 24) {
+                  _hour = 0;
+                  ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(content: Text('24시는 다음 날 00시로 설정됩니다.')),
+                  // 날짜를 다음 날로 변경하는 로직 추가 필요
+                  );}
                 Navigator.of(context).pop(TimeOfDay(hour: _hour, minute: _minute));
               },
             ),
