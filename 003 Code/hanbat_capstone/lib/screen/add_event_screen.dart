@@ -188,10 +188,22 @@ class _AddEventScreenState extends State<AddEventScreen> {
 
         if (isStartTime) {
           _startTime = newDateTime;
+          // 종료 시간이 시작 시간보다 이전이면 종료 시간을 시작 시간 + 1시간으로 설정
+          if (_endTime != null && _endTime!.isBefore(_startTime!)) {
+            _endTime = _startTime!.add(Duration(hours: 1));
+          }
         } else {
+          // 종료 시간이 시작 시간보다 이전이면 경고 메시지 표시
+          if (_startTime != null && newDateTime.isBefore(_startTime!)) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(content: Text('종료 시간은 시작 시간 이후여야 합니다.')),
+            );
+            return;
+          }
           _endTime = newDateTime;
         }
       });
+
       _adjustDateForMidnight(isStartTime);
     }
   }
@@ -233,6 +245,12 @@ class _AddEventScreenState extends State<AddEventScreen> {
         final endDateTime = _calculateEndDateTime(eventDate, startTimeOfDay, endTimeOfDay);
 
 
+        if (startDateTime.isAtSameMomentAs(endDateTime)) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('시작 시간과 종료 시간이 같을 수 없습니다.')),
+          );
+          return; // 저장 프로세스 중단
+        }
 
 
         if (widget.isFinalEvent) {

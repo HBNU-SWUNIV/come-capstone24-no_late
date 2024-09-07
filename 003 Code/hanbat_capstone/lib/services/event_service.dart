@@ -321,62 +321,34 @@ class EventService {
   // 시간별 일정에 대한 체크박스 상태 로드
   Future<Map<int, bool>> loadTimeBasedCheckboxStatesForDate(String formattedDate) async {
     await ensureUserLoggedIn();
+    final prefs = await SharedPreferences.getInstance();
     Map<int, bool> states = {};
 
-    final eventDate = DateTime.parse(formattedDate);
-    final nextDate = eventDate.add(Duration(days: 1));
-
-    // 파이어베이스에서 해당 날짜의 시간 기반 이벤트 및 결과 이벤트 로드
-    final events = await getTimeBasedEventsForDate(eventDate);
-    final nextDayEvents = await getTimeBasedEventsForDate(nextDate);
-    final resultEvents = await getResultEventsForDate(eventDate);
-    final nextDayResultEvents = await getResultEventsForDate(nextDate);
-
     for (int i = 0; i <= 24; i++) {
-      states[i] = false; // 초기 상태를 모두 false로 설정
+      final key = '${userId}_${formattedDate}_checkbox_$i';
+      states[i] = prefs.getBool(key) ?? false;
     }
 
-    // 이벤트와 결과 이벤트를 기반으로 체크박스 상태 설정
-    void processEvents(List<EventModel> eventList, bool isNextDay) {
-      for (var event in eventList) {
-        if (event.eventSttTime != null && !event.isAllDay) {
-          int startHour = event.eventSttTime!.hour;
-          int endHour = event.eventEndTime!.hour == 0 ? 24 : event.eventEndTime!.hour;
 
-          if (isNextDay && startHour == 0) {
-            states[24] = event.completedYn == 'Y';
-          } else if (!isNextDay) {
-            for (int i = startHour; i < endHour && i <= 24; i++) {
-              states[i] = event.completedYn == 'Y';
-            }
-          }
-        }
-      }
-    }
-
-    void processResultEvents(List<EventResultModel> eventList, bool isNextDay) {
-      for (var event in eventList) {
-        if (event.eventResultSttTime != null && event.isAllDay != true) {
-          int startHour = event.eventResultSttTime!.hour;
-          int endHour = event.eventResultEndTime!.hour == 0 ? 24 : event.eventResultEndTime!.hour;
-
-          if (isNextDay && startHour == 0) {
-            states[24] = true;
-          } else if (!isNextDay) {
-            for (int i = startHour; i < endHour && i <= 24; i++) {
-              states[i] = true;
-            }
-          }
-        }
-      }
-    }
-
-    processEvents(events, false);
-    processEvents(nextDayEvents, true);
-    processResultEvents(resultEvents, false);
-    processResultEvents(nextDayResultEvents, true);
 
     return states;
+  }
+  Future<void> handleCheckboxChange(String formattedDate, int hour, bool newState) async {
+    await saveTimeBasedCheckboxState(formattedDate, hour, newState);
+
+    final eventDate = DateTime.parse(formattedDate);
+    if (newState) {
+      await createOrUpdateResultEvent(formattedDate, hour, hour);
+    } else {
+      await removeResultEvent(formattedDate, hour, ''); // eventId는 빈 문자열로 전달
+    }
+  }
+
+  Future<void> updateResultEventCompleteStatus(String eventResultId, bool isCompleted) async {
+    await _firestore
+        .collection('result_events')
+        .doc(eventResultId)
+        .update({'completeYn': isCompleted ? 'Y' : 'N'});
   }
 
   List<Map<String, String>> generateScheduleData(
@@ -440,14 +412,13 @@ class EventService {
     DateTime eventEndTime;
 
     if (hour == 23 && event.eventEndTime!.hour == 0) {
-      // 자정을 넘어가는 경우
       eventEndTime = eventDate.add(Duration(days: 1));
     } else {
       eventEndTime = DateTime(eventDate.year, eventDate.month, eventDate.day, hour + 1);
     }
 
     // result_events 컬렉션에서 해당 이벤트 찾기
-    final resultEventSnapshot = await FirebaseFirestore.instance
+    final resultEventSnapshot = await _firestore
         .collection('result_events')
         .where('eventId', isEqualTo: event.eventId)
         .where('eventResultDate', isEqualTo: eventDate.toIso8601String())
@@ -456,7 +427,7 @@ class EventService {
     if (resultEventSnapshot.docs.isEmpty) {
       // 새로운 result_event 생성
       final resultEventData = EventResultModel(
-        eventResultId: FirebaseFirestore.instance.collection('result_events').doc().id,
+        eventResultId: _firestore.collection('result_events').doc().id,
         eventId: event.eventId,
         categoryId: event.categoryId,
         userId: event.userId,
@@ -469,7 +440,7 @@ class EventService {
         completeYn: 'Y',
       );
 
-      await FirebaseFirestore.instance
+      await _firestore
           .collection('result_events')
           .doc(resultEventData.eventResultId)
           .set(resultEventData.toMap());
@@ -482,13 +453,16 @@ class EventService {
     }
 
     // 원본 이벤트 업데이트
-    await FirebaseFirestore.instance
+    await _firestore
         .collection('events')
         .doc(event.eventId)
         .update({
       'completedYn': 'Y',
-      'lastCompletedHour': hour+1,
+      'lastCompletedHour': hour + 1,
     });
+
+    // 체크박스 상태 저장
+    await saveTimeBasedCheckboxState(formattedDate, hour, true);
   }
 
   Future<void> removeResultEvent(String formattedDate, int hour, String eventId) async {
@@ -496,7 +470,7 @@ class EventService {
     final eventEndTime = DateTime(eventDate.year, eventDate.month, eventDate.day, hour);
 
     // result_events 컬렉션에서 해당 이벤트 찾기
-    final resultEventSnapshot = await FirebaseFirestore.instance
+    final resultEventSnapshot = await _firestore
         .collection('result_events')
         .where('eventId', isEqualTo: eventId)
         .where('eventResultDate', isEqualTo: eventDate.toIso8601String())
@@ -519,7 +493,7 @@ class EventService {
     }
 
     // 원본 이벤트 업데이트
-    final eventDoc = await FirebaseFirestore.instance
+    final eventDoc = await _firestore
         .collection('events')
         .doc(eventId)
         .get();
@@ -539,8 +513,10 @@ class EventService {
         });
       }
     }
-  }
 
+    // 체크박스 상태 저장
+    await saveTimeBasedCheckboxState(formattedDate, hour, false);
+  }
 
   Future<void> updateEventCompletedStatus(String eventId, String status) async {
     await ensureUserLoggedIn();
@@ -575,9 +551,6 @@ class EventService {
       final eventDoc = matchingEvents.first;
       final event = EventModel.fromMap(eventDoc.data());
 
-      // 원본 이벤트의 completedYn을 'Y'로 업데이트
-      await updateEventCompletedStatus(eventDoc.id, 'Y');
-
       // 결과 이벤트 생성 또는 업데이트
       final existingResultSnapshot = await _firestore
           .collection('result_events')
@@ -586,15 +559,7 @@ class EventService {
           .where('eventResultSttTime', isEqualTo: eventStartTime.toIso8601String())
           .get();
 
-      if (existingResultSnapshot.docs.isNotEmpty) {
-        // 기존 결과 이벤트 업데이트
-        final existingResultData = existingResultSnapshot.docs.first.data();
-        final existingResult = EventResultModel.fromMap(existingResultData);
-        await _firestore
-            .collection('result_events')
-            .doc(existingResult.eventResultId)
-            .update({'completeYn': 'Y'});
-      } else {
+      if (existingResultSnapshot.docs.isEmpty) {
         // 새 결과 이벤트 생성
         final eventResult = EventResultModel(
           eventResultId: _firestore.collection('result_events').doc().id,
@@ -607,7 +572,7 @@ class EventService {
           eventResultTitle: event.eventTitle,
           eventResultContent: event.eventContent,
           isAllDay: false,
-          completeYn: 'Y',
+          completeYn: 'N',  // 기본값을 'N'으로 설정
         );
 
         await _firestore
@@ -805,8 +770,9 @@ class EventService {
     }
   }
   Future<void> saveTimeBasedCheckboxState(String date, int hour, bool state) async {
+    await ensureUserLoggedIn();
     final prefs = await SharedPreferences.getInstance();
-    final key = '${date}_checkbox_$hour';
+    final key = '${userId}_${date}_checkbox_$hour';
     await prefs.setBool(key, state);
   }
 }

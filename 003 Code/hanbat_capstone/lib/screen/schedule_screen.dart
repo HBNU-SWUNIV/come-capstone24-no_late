@@ -61,6 +61,10 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
     super.dispose();
   }
 
+  void refreshSchedule() {
+    _loadEvents();
+  }
+
   Future<void> _loadEvents() async {
     setState(() => _isLoading = true);
     try {
@@ -423,9 +427,17 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
     });
   }
 
-  void _handleCheckboxChange(int hour) async {
+  void _handleCheckboxChange(int hour, bool newValue) async {
+
     print("Checkbox changed for hour: $hour");
     try {
+      final eventResultId = scheduleData[formattedDate]?[hour - startTime]?['eventResultId'];
+      if (eventResultId != null) {
+        await eventService.updateResultEventCompleteStatus(eventResultId, newValue);
+        setState(() {
+          scheduleData[formattedDate]![hour - startTime]['completeYn'] = newValue ? 'Y' : 'N';
+        });
+      }
       final eventForHour = regularEvents.firstWhereOrNull((event) {
         final eventEndHour = event.eventEndTime!.hour == 0 ? 24 : event.eventEndTime!.hour;
         return event.eventSttTime!.hour <= hour && eventEndHour > hour;
@@ -435,7 +447,7 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
         final newState = !(selectedStates[hour] ?? false);
         setState(() {
           selectedStates[hour] = newState;
-          if (hour == 23 && eventForHour.eventEndTime!.hour == 0) {
+          if (hour == 24 && eventForHour.eventEndTime!.hour == 0) {
             selectedStates[0] = newState;
           }
         });
@@ -467,6 +479,7 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
       );
     }
   }
+
 
   void _handlePlanCellTap(int index) async {
     print("Plan cell tapped at index: $index"); // 디버그
@@ -741,7 +754,7 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
                     isChecked: selectedStates[hour] ?? false,
                     onChanged: (bool? value) {
                       if (value != null) {
-                        _handleCheckboxChange(hour);
+                        _handleCheckboxChange(hour, value);
                       }
                     },
                     activeColor: Colors.lightBlue[900],

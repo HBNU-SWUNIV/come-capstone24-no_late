@@ -28,6 +28,8 @@ class _RootScreenState extends State<RootScreen> {
   int _selectedIndex = 0;
   final GlobalKey<CalendarScreenState> _calendarKey =
   GlobalKey<CalendarScreenState>();
+  late List<Widget> _screens;
+
 
   @override
   void initState() {
@@ -35,7 +37,18 @@ class _RootScreenState extends State<RootScreen> {
     if (widget.selectedDate != null) {
       _selectedIndex = 1; // 스케줄 화면으로 이동
     }
+    _initializeScreens();
   }
+  void _initializeScreens() {
+    _screens = [
+      CalendarScreen(key: _calendarKey),
+      ScheduleScreen(selectedDate: widget.selectedDate ?? DateTime.now()),
+      AddEventScreen(),
+      ReviewScreen(),
+      SettingScreen(),
+    ];
+  }
+
 
   void _onItemTapped(int index) {
     setState(() {
@@ -67,10 +80,17 @@ class _RootScreenState extends State<RootScreen> {
     if (result == true) {
       // 이벤트가 저장되었다면 캘린더 화면 갱신
       _calendarKey.currentState?.refreshCalendar();
+      _refreshScheduleScreen();
       setState(() {
         _selectedIndex = 0; // 캘린더 화면으로 이동
       });
     }
+  }
+
+  void _refreshScheduleScreen() {
+    setState(() {
+      _screens[1] = ScheduleScreen(selectedDate: widget.selectedDate ?? DateTime.now());
+    });
   }
 
   @override
@@ -78,14 +98,11 @@ class _RootScreenState extends State<RootScreen> {
     return Scaffold(
       //resizeToAvoidBottomInset: false,
       body: SafeArea(
-          child: Column(
-            children: [
-              Expanded(
-                child:
-                renderChildren(widget.selectedDate).elementAt(_selectedIndex),
-              )
-            ],
-          )),
+        child: IndexedStack(
+          index: _selectedIndex,
+          children: _screens,
+        ),
+      ),
       bottomNavigationBar: renderBottomNavigation(),
       floatingActionButton: FloatingActionButton(
         onPressed: () {
