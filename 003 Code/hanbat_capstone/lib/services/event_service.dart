@@ -410,20 +410,13 @@ class EventService {
     final eventDate = DateTime.parse(formattedDate);
     final eventStartTime = DateTime(eventDate.year, eventDate.month, eventDate.day, event.eventSttTime!.hour);
     DateTime eventEndTime;
-
-    if (hour == 23 && event.eventEndTime!.hour == 0) {
-      eventEndTime = eventDate.add(Duration(days: 1));
-    } else {
       eventEndTime = DateTime(eventDate.year, eventDate.month, eventDate.day, hour + 1);
-    }
-
     // result_events 컬렉션에서 해당 이벤트 찾기
     final resultEventSnapshot = await _firestore
         .collection('result_events')
         .where('eventId', isEqualTo: event.eventId)
         .where('eventResultDate', isEqualTo: eventDate.toIso8601String())
         .get();
-
     if (resultEventSnapshot.docs.isEmpty) {
       // 새로운 result_event 생성
       final resultEventData = EventResultModel(
@@ -437,9 +430,8 @@ class EventService {
         eventResultTitle: event.eventTitle,
         eventResultContent: event.eventContent,
         isAllDay: false,
-        completeYn: 'Y',
+        completeYn: '',
       );
-
       await _firestore
           .collection('result_events')
           .doc(resultEventData.eventResultId)
@@ -451,7 +443,6 @@ class EventService {
         'eventResultEndTime': eventEndTime.toIso8601String(),
       });
     }
-
     // 원본 이벤트 업데이트
     await _firestore
         .collection('events')
@@ -460,7 +451,6 @@ class EventService {
       'completedYn': 'Y',
       'lastCompletedHour': hour + 1,
     });
-
     // 체크박스 상태 저장
     await saveTimeBasedCheckboxState(formattedDate, hour, true);
   }

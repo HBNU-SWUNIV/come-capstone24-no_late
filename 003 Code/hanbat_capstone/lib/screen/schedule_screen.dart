@@ -751,7 +751,7 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
                 children: [
                   Text(hour == 24 ? '24:00' : '${hour.toString().padLeft(2, '0')}:00'),
                   CheckboxComponent(
-                    isChecked: selectedStates[hour] ?? false,
+                    isChecked: (timeData['actual'] ?? '').isNotEmpty && timeData['completedYn'] == 'Y',
                     onChanged: (bool? value) {
                       if (value != null) {
                         _handleCheckboxChange(hour, value);
