@@ -69,7 +69,8 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
     setState(() => _isLoading = true);
     try {
       final allEvents = await eventService.getEventsForDate(_focusedDate);
-      final regularResultEvents = await eventService.getResultEventsForDate(_focusedDate, excludeAllDay: true);
+      final regularResultEvents = await eventService.getResultEventsForDate(
+          _focusedDate, excludeAllDay: true);
 
       setState(() {
         allDayEvents = allEvents.where((event) => event.isAllDay).toList();
@@ -109,7 +110,8 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
 
       setState(() {
         allDayEventStates = Map.fromEntries(
-            snapshot.docs.map((doc) => MapEntry(doc['eventId'] as String, doc['isCompleted'] as bool))
+            snapshot.docs.map((doc) =>
+                MapEntry(doc['eventId'] as String, doc['isCompleted'] as bool))
         );
       });
     } catch (e) {
@@ -136,13 +138,14 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
     }
   }
 
-  Future<void> _handleAllDayEventCheckboxChange(String eventId, bool newValue) async {
+  Future<void> _handleAllDayEventCheckboxChange(String eventId,
+      bool newValue) async {
     try {
-      await eventService.updateAllDayEventState(formattedDate, eventId, newValue);
+      await eventService.updateAllDayEventState(
+          formattedDate, eventId, newValue);
       setState(() {
         allDayEventStates[eventId] = newValue;
       });
-
 
 
       // 상태 변경 알림
@@ -153,10 +156,6 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
               : '종일 일정 완료가 취소되었습니다.'),
         ),
       );
-
-
-
-
     } catch (e) {
       print('Error handling all-day event checkbox change: $e');
       ScaffoldMessenger.of(context).showSnackBar(
@@ -189,11 +188,13 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
               final isCompleted = allDayEventStates[event.eventId] ?? false;
               return GestureDetector(
                 onTap: () => _handleAllDayEventTap(event),
-                onDoubleTap: () => _openEventDetail(event.eventTitle, index, isplan: true),
+                onDoubleTap: () =>
+                    _openEventDetail(event.eventTitle, index, isplan: true),
                 child: Container(
                   padding: EdgeInsets.symmetric(vertical: 8, horizontal: 16),
                   decoration: BoxDecoration(
-                    border: Border(bottom: BorderSide(color: Colors.grey[300]!)),
+                    border: Border(
+                        bottom: BorderSide(color: Colors.grey[300]!)),
                   ),
                   child: Row(
                     children: [
@@ -202,7 +203,9 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
                           event.eventTitle,
                           style: TextStyle(
                             // 변경: 완료된 일정에 취소선 추가
-                            decoration: isCompleted ? TextDecoration.lineThrough : null,
+                            decoration: isCompleted
+                                ? TextDecoration.lineThrough
+                                : null,
                           ),
                         ),
                       ),
@@ -228,7 +231,6 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
     await _saveAllDayEventState(event.eventId, newState);
     await _handleAllDayEventCheckboxChange(event.eventId, newState);
   }
-
 
 
   Future<void> _ensureUserLoggedIn() async {
@@ -267,7 +269,6 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
       endTime - startTime + 1,
           (_) => {'plan': '', 'actual': ''},
     );
-
   }
 
 // 이 import 문을 파일 상단에 추가해주세요.
@@ -326,19 +327,25 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
   Future<void> _fetchEvents() async {
     setState(() => _isLoading = true);
     try {
-      final startOfDay = DateTime(_focusedDate.year, _focusedDate.month, _focusedDate.day);
+      final startOfDay = DateTime(
+          _focusedDate.year, _focusedDate.month, _focusedDate.day);
       final endOfDay = startOfDay.add(Duration(days: 1));
 
-      print("Fetching events for date: ${startOfDay.toIso8601String()} to ${endOfDay.toIso8601String()}");
+      print("Fetching events for date: ${startOfDay
+          .toIso8601String()} to ${endOfDay.toIso8601String()}");
 
       final events = await eventService.getEventsForDate(startOfDay);
-      final fetchedResultEvents = await eventService.getResultEventsForDate(startOfDay);
+      final fetchedResultEvents = await eventService.getResultEventsForDate(
+          startOfDay);
 
-      print("Fetched ${events.length} events and ${fetchedResultEvents.length} result events");
+      print("Fetched ${events.length} events and ${fetchedResultEvents
+          .length} result events");
 
       setState(() {
-        allDayEvents = events.where((event) => event.isAllDay ?? false).toList();
-        regularEvents = events.where((event) => !(event.isAllDay ?? false)).toList();
+        allDayEvents =
+            events.where((event) => event.isAllDay ?? false).toList();
+        regularEvents =
+            events.where((event) => !(event.isAllDay ?? false)).toList();
         resultEvents = fetchedResultEvents;
 
         allDayEventStates = {
@@ -347,28 +354,35 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
         };
 
         scheduleData[formattedDate] = List.generate(
-          25,  // 0시부터 24시까지 (25개의 시간대)
+          25, // 0시부터 24시까지 (25개의 시간대)
               (hour) {
             final planEvents = regularEvents.where((event) {
               if (event.isAllDay ?? false) return false;
               final eventStartHour = event.eventSttTime!.hour;
-              final eventEndHour = event.eventEndTime!.hour == 0 ? 24 : event.eventEndTime!.hour;
+              final eventEndHour = event.eventEndTime!.hour == 0 ? 24 : event
+                  .eventEndTime!.hour;
               return eventStartHour <= hour && hour < eventEndHour;
             }).toList();
 
             final actualEvents = resultEvents.where((event) {
               if (event.isAllDay ?? false) return false;
               final eventStartHour = event.eventResultSttTime!.hour;
-              final eventEndHour = event.eventResultEndTime!.hour == 0 ? 24 : event.eventResultEndTime!.hour;
+              final eventEndHour = event.eventResultEndTime!.hour == 0
+                  ? 24
+                  : event.eventResultEndTime!.hour;
               return eventStartHour <= hour && hour < eventEndHour;
             }).toList();
 
             return {
               'plan': planEvents.isNotEmpty ? planEvents.first.eventTitle : '',
-              'planCategoryId': planEvents.isNotEmpty ? planEvents.first.categoryId : '',
-              'actual': actualEvents.isNotEmpty ? actualEvents.first.eventResultTitle : '',
-              'actualCategoryId': actualEvents.isNotEmpty ? actualEvents.first.categoryId : '',
-              'completedYn': planEvents.isNotEmpty ? planEvents.first.completedYn ?? 'N' : 'N',
+              'planCategoryId': planEvents.isNotEmpty ? planEvents.first
+                  .categoryId : '',
+              'actual': actualEvents.isNotEmpty ? actualEvents.first
+                  .eventResultTitle : '',
+              'actualCategoryId': actualEvents.isNotEmpty ? actualEvents.first
+                  .categoryId : '',
+              'completedYn': planEvents.isNotEmpty ? planEvents.first
+                  .completedYn ?? 'N' : 'N',
               'eventId': planEvents.isNotEmpty ? planEvents.first.eventId : '',
             };
           },
@@ -378,7 +392,9 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
           selectedStates[hour] = resultEvents.any((event) {
             if (event.isAllDay ?? false) return false;
             final eventStartHour = event.eventResultSttTime!.hour;
-            final eventEndHour = event.eventResultEndTime!.hour == 0 ? 24 : event.eventResultEndTime!.hour;
+            final eventEndHour = event.eventResultEndTime!.hour == 0
+                ? 24
+                : event.eventResultEndTime!.hour;
             return eventStartHour <= hour && hour < eventEndHour;
           });
         }
@@ -428,18 +444,21 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
   }
 
   void _handleCheckboxChange(int hour, bool newValue) async {
-
     print("Checkbox changed for hour: $hour");
     try {
-      final eventResultId = scheduleData[formattedDate]?[hour - startTime]?['eventResultId'];
+      final eventResultId = scheduleData[formattedDate]?[hour -
+          startTime]?['eventResultId'];
       if (eventResultId != null) {
-        await eventService.updateResultEventCompleteStatus(eventResultId, newValue);
+        await eventService.updateResultEventCompleteStatus(
+            eventResultId, newValue);
         setState(() {
-          scheduleData[formattedDate]![hour - startTime]['completeYn'] = newValue ? 'Y' : 'N';
+          scheduleData[formattedDate]![hour - startTime]['completeYn'] =
+          newValue ? 'Y' : 'N';
         });
       }
       final eventForHour = regularEvents.firstWhereOrNull((event) {
-        final eventEndHour = event.eventEndTime!.hour == 0 ? 24 : event.eventEndTime!.hour;
+        final eventEndHour = event.eventEndTime!.hour == 0 ? 24 : event
+            .eventEndTime!.hour;
         return event.eventSttTime!.hour <= hour && eventEndHour > hour;
       });
 
@@ -454,10 +473,12 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
 
         if (newState) {
           print("Moving plan to actual for hour: $hour");
-          await eventService.movePlanToActual(formattedDate, hour, eventForHour);
+          await eventService.movePlanToActual(
+              formattedDate, hour, eventForHour);
         } else {
           print("Updating result event for hour: $hour");
-          await eventService.removeResultEvent(formattedDate, hour, eventForHour.eventId);
+          await eventService.removeResultEvent(
+              formattedDate, hour, eventForHour.eventId);
         }
 
         // 상태 업데이트 후 이벤트와 체크박스 상태 다시 로드
@@ -504,15 +525,16 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
     Navigator.push(
       context,
       MaterialPageRoute(
-        builder: (context) => AddEventScreen(
-          selectedDate: _focusedDate,
-          selectedTime: DateTime(
-            _focusedDate.year,
-            _focusedDate.month,
-            _focusedDate.day,
-            startTime + index,
-          ),
-        ),
+        builder: (context) =>
+            AddEventScreen(
+              selectedDate: _focusedDate,
+              selectedTime: DateTime(
+                _focusedDate.year,
+                _focusedDate.month,
+                _focusedDate.day,
+                startTime + index,
+              ),
+            ),
       ),
     ).then((_) => _fetchEvents());
   }
@@ -521,16 +543,17 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
     Navigator.push(
       context,
       MaterialPageRoute(
-        builder: (context) => AddEventScreen(
-          selectedDate: _focusedDate,
-          selectedTime: DateTime(
-            _focusedDate.year,
-            _focusedDate.month,
-            _focusedDate.day,
-            startTime + index,
-          ),
-          isFinalEvent: true,
-        ),
+        builder: (context) =>
+            AddEventScreen(
+              selectedDate: _focusedDate,
+              selectedTime: DateTime(
+                _focusedDate.year,
+                _focusedDate.month,
+                _focusedDate.day,
+                startTime + index,
+              ),
+              isFinalEvent: true,
+            ),
       ),
     ).then((_) => _fetchEvents());
   }
@@ -577,60 +600,62 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
           await Navigator.push(
             context,
             MaterialPageRoute(
-              builder: (context) => EventDetailScreen(
-                event: isplan ? event as EventModel : null,
-                eventResult: isplan ? null : event as EventResultModel,
-                selectedDate: _focusedDate,
-                updateCalendar: _fetchEvents,
-                onEventDeleted: (deleteAllRecurrence) async {
-                  if (isplan) {
-                    await eventService.deleteEvent(
-                        'events', (event as EventModel).eventId);
-                  } else {
-                    await eventService.deleteEvent('result_events',
-                        (event as EventResultModel).eventResultId);
-                  }
-                  _fetchEvents();
-                },
-                onEventEdited: (editedEvent) async {
-                  if (editedEvent != null) {
-                    await FirebaseFirestore.instance
-                        .collection(isplan ? 'events' : 'result_events')
-                        .doc(isplan
-                        ? (event as EventModel).eventId
-                        : (event as EventResultModel).eventResultId)
-                        .update(editedEvent.toMap());
-
-                    setState(() {
+              builder: (context) =>
+                  EventDetailScreen(
+                    event: isplan ? event as EventModel : null,
+                    eventResult: isplan ? null : event as EventResultModel,
+                    selectedDate: _focusedDate,
+                    updateCalendar: _fetchEvents,
+                    onEventDeleted: (deleteAllRecurrence) async {
                       if (isplan) {
-                        final updatedEvent = EventModel(
-                          eventId: editedEvent.eventId,
-                          eventTitle: editedEvent.eventTitle,
-                          eventDate: editedEvent.eventDate,
-                          eventSttTime: editedEvent.eventSttTime,
-                          eventEndTime: editedEvent.eventEndTime,
-                          eventContent: editedEvent.eventContent,
-                          categoryId: editedEvent.categoryId,
-                          userId: editedEvent.userId,
-                          isAllDay: editedEvent.isAllDay,
-                          completedYn: editedEvent.completedYn,
-                          isRecurring: editedEvent.isRecurring,
-                          showOnCalendar: editedEvent.showOnCalendar,
-                          originalEventId: editedEvent.originalEventId,
-                        );
-                        // 기존 이벤트를 새로운 이벤트로 교체
-                        final eventIndex = regularEvents.indexWhere((e) => e.eventId == updatedEvent.eventId);
-                        if (eventIndex != -1) {
-                          regularEvents[eventIndex] = updatedEvent;
-                        }
+                        await eventService.deleteEvent(
+                            'events', (event as EventModel).eventId);
                       } else {
-                        // EventResultModel에 대한 처리
+                        await eventService.deleteEvent('result_events',
+                            (event as EventResultModel).eventResultId);
                       }
-                    });
-                    _fetchEvents();  // 전체 이벤트 목록 새로고침
-                  }
-                },
-              ),
+                      _fetchEvents();
+                    },
+                    onEventEdited: (editedEvent) async {
+                      if (editedEvent != null) {
+                        await FirebaseFirestore.instance
+                            .collection(isplan ? 'events' : 'result_events')
+                            .doc(isplan
+                            ? (event as EventModel).eventId
+                            : (event as EventResultModel).eventResultId)
+                            .update(editedEvent.toMap());
+
+                        setState(() {
+                          if (isplan) {
+                            final updatedEvent = EventModel(
+                              eventId: editedEvent.eventId,
+                              eventTitle: editedEvent.eventTitle,
+                              eventDate: editedEvent.eventDate,
+                              eventSttTime: editedEvent.eventSttTime,
+                              eventEndTime: editedEvent.eventEndTime,
+                              eventContent: editedEvent.eventContent,
+                              categoryId: editedEvent.categoryId,
+                              userId: editedEvent.userId,
+                              isAllDay: editedEvent.isAllDay,
+                              completedYn: editedEvent.completedYn,
+                              isRecurring: editedEvent.isRecurring,
+                              showOnCalendar: editedEvent.showOnCalendar,
+                              originalEventId: editedEvent.originalEventId,
+                            );
+                            // 기존 이벤트를 새로운 이벤트로 교체
+                            final eventIndex = regularEvents.indexWhere((e) =>
+                            e.eventId == updatedEvent.eventId);
+                            if (eventIndex != -1) {
+                              regularEvents[eventIndex] = updatedEvent;
+                            }
+                          } else {
+                            // EventResultModel에 대한 처리
+                          }
+                        });
+                        _fetchEvents(); // 전체 이벤트 목록 새로고침
+                      }
+                    },
+                  ),
             ),
           );
 
@@ -675,14 +700,16 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
             _pageController.jumpToPage(1000); // Reset to the middle page
             _loadCheckboxStates();
           },
-          onPreviousDay: () => _pageController.previousPage(
-            duration: Duration(milliseconds: 300),
-            curve: Curves.easeInOut,
-          ),
-          onNextDay: () => _pageController.nextPage(
-            duration: Duration(milliseconds: 300),
-            curve: Curves.easeInOut,
-          ),
+          onPreviousDay: () =>
+              _pageController.previousPage(
+                duration: Duration(milliseconds: 300),
+                curve: Curves.easeInOut,
+              ),
+          onNextDay: () =>
+              _pageController.nextPage(
+                duration: Duration(milliseconds: 300),
+                curve: Curves.easeInOut,
+              ),
         ),
         elevation: 0,
       ),
@@ -694,7 +721,8 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
               controller: _pageController,
               onPageChanged: _onPageChanged,
               itemBuilder: (context, index) {
-                final pageDate = _focusedDate.add(Duration(days: index - _currentPage));
+                final pageDate = _focusedDate.add(
+                    Duration(days: index - _currentPage));
                 return _buildPageContent(pageDate);
               },
             ),
@@ -715,139 +743,138 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
     );
   }
 
-  Widget _buildTimeBlock(int index, DateTime pageDate) {
-    final hour = (index);  // 24시를 00시로 처리
-    final timeData = scheduleData[formattedDate]?[hour - startTime] ?? {'plan': '', 'actual': ''};;
+  Widget _buildTimeBlock(int hour, DateTime pageDate) {
+    final timeData = scheduleData[formattedDate]?[hour - startTime] ??
+        {'plan': '', 'actual': ''};
 
 
-    // final eventsForThisHour = regularEvents
-    //     .where((event) =>
-    // !event.isAllDay &&
-    //     ((event.eventSttTime?.hour == hour &&
-    //         DateFormat('yyyy-MM-dd').format(event.eventDate!) == currentDate) ||
-    //         (event.eventEndTime?.hour == hour &&
-    //             DateFormat('yyyy-MM-dd').format(event.eventEndTime!) ==
-    //                 (hour == 0 ? nextDate : currentDate)))
-    // )
-    //     .toList();
-    // final planEvent = eventsForThisHour.isNotEmpty ? eventsForThisHour.first : null;
-    // final actualEvent = resultEvents
-    //     .where((event) =>
-    // event.eventResultSttTime?.hour == hour &&
-    //     DateFormat('yyyy-MM-dd').format(event.eventResultDate!) == currentDate)
-    //     .firstOrNull;
-    //
 
-    return Card(
-      margin: EdgeInsets.symmetric(vertical: 4, horizontal: 8),
-      color: Colors.white,
-      child: Padding(
-        padding: EdgeInsets.all(8),
-        child: Row(
-          children: [
-            Expanded(
-              flex: 1,
-              child: Column(
-                children: [
-                  Text(hour == 24 ? '24:00' : '${hour.toString().padLeft(2, '0')}:00'),
-                  CheckboxComponent(
-                    isChecked: (timeData['actual'] ?? '').isNotEmpty && timeData['completedYn'] == 'Y',
-                    onChanged: (bool? value) {
-                      if (value != null) {
-                        _handleCheckboxChange(hour, value);
-                      }
-                    },
-                    activeColor: Colors.lightBlue[900],
-                  ),
-                ],
+    String planTitle = timeData['plan'] ?? '';
+    String actualTitle = timeData['actual'] ?? '';
+    if (hour == 23) {
+      final nextDayData = scheduleData[formattedDate]?[24 - startTime];
+      if (nextDayData != null) {
+        if (nextDayData['plan'] != null && (nextDayData['plan'] as String).isNotEmpty) {
+          planTitle += ' / ${nextDayData['plan']}';
+        }
+        if (nextDayData['actual'] != null && (nextDayData['actual'] as String).isNotEmpty) {
+          actualTitle += ' / ${nextDayData['actual']}';
+        }
+      }
+    }
+
+      return Card(
+        margin: EdgeInsets.symmetric(vertical: 4, horizontal: 8),
+        color: Colors.white,
+        child: Padding(
+          padding: EdgeInsets.all(8),
+          child: Row(
+            children: [
+              Expanded(
+                flex: 1,
+                child: Column(
+                  children: [
+                    Text(hour == 24 ? '24:00' : '${hour.toString().padLeft(
+                        2, '0')}:00'),
+                    CheckboxComponent(
+                      isChecked: (timeData['actual'] ?? '').isNotEmpty &&
+                          timeData['completedYn'] == 'Y',
+                      onChanged: (bool? value) {
+                        if (value != null) {
+                          _handleCheckboxChange(hour, value);
+                        }
+                      },
+                      activeColor: Colors.lightBlue[900],
+                    ),
+                  ],
+                ),
               ),
-            ),
-            Expanded(
-              flex: 2,
-              child: _buildEventCell(
-                timeData?['plan'] ?? '',
-                timeData?['planCategoryId'] ?? '',
-                    () => _handlePlanCellTap(hour - startTime),
-                Colors.blue.withOpacity(0.1),
+              Expanded(
+                flex: 2,
+                child: _buildEventCell(
+                  planTitle,
+                  timeData?['planCategoryId'] ?? '',
+                      () => _handlePlanCellTap(hour - startTime),
+                  Colors.blue.withOpacity(0.1),
+                ),
               ),
-            ),
-            Expanded(
-              flex: 2,
-              child: _buildEventCell(
-                timeData?['actual'] ?? '',
-                timeData?['actualCategoryId'] ?? '',
-                    () => _handleActualCellTap(hour - startTime),
-                Colors.green.withOpacity(0.1),
+              Expanded(
+                flex: 2,
+                child: _buildEventCell(
+                  actualTitle,
+                  timeData?['actualCategoryId'] ?? '',
+                      () => _handleActualCellTap(hour - startTime),
+                  Colors.green.withOpacity(0.1),
+                ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
-      ),
-    );
-  }
+      );
+    }
 
-  Widget _buildEventCell(String eventTitle, String categoryId,
-      VoidCallback onTap, Color backgroundColor) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        padding: EdgeInsets.all(8),
-        decoration: BoxDecoration(
-          color: backgroundColor,
-          borderRadius: BorderRadius.circular(8),
+    Widget _buildEventCell(String eventTitle, String categoryId,
+        VoidCallback onTap, Color backgroundColor) {
+      return GestureDetector(
+        onTap: onTap,
+        child: Container(
+          padding: EdgeInsets.all(8),
+          decoration: BoxDecoration(
+            color: backgroundColor,
+            borderRadius: BorderRadius.circular(8),
+          ),
+          child: EventCell(
+            eventTitle: eventTitle,
+            categoryId: categoryId,
+            onTap: onTap,
+          ),
         ),
-        child: EventCell(
-          eventTitle: eventTitle,
-          categoryId: categoryId,
-          onTap: onTap,
-        ),
-      ),
-    );
-  }
+      );
+    }
 
-  // Widget _buildAllDayEventsSection() {
-  //   if (allDayEvents.isEmpty) {
-  //     return SizedBox.shrink(); // 종일 일정이 없으면 이 섹션을 표시하지 않음
-  //   }
-  //   return Container(
-  //     color: Colors.grey[200],
-  //     child: Column(
-  //       crossAxisAlignment: CrossAxisAlignment.start,
-  //       children: [
-  //         Padding(
-  //           padding: const EdgeInsets.all(8.0),
-  //           child: Text(
-  //             '종일 일정',
-  //             style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
-  //           ),
-  //         ),
-  //         ListView.builder(
-  //           shrinkWrap: true,
-  //           physics: NeverScrollableScrollPhysics(),
-  //           itemCount: allDayEvents.length,
-  //           itemBuilder: (context, index) {
-  //             final event = allDayEvents[index];
-  //             return ListTile(
-  //               title: Text(event.eventTitle),
-  //               subtitle: Text('종일'),
-  //               onTap: () =>
-  //                   _openEventDetail(event.eventTitle, index, isplan: true),
-  //             );
-  //           },
-  //         ),
-  //       ],
-  //     ),
-  //   );
-  // }
+    // Widget _buildAllDayEventsSection() {
+    //   if (allDayEvents.isEmpty) {
+    //     return SizedBox.shrink(); // 종일 일정이 없으면 이 섹션을 표시하지 않음
+    //   }
+    //   return Container(
+    //     color: Colors.grey[200],
+    //     child: Column(
+    //       crossAxisAlignment: CrossAxisAlignment.start,
+    //       children: [
+    //         Padding(
+    //           padding: const EdgeInsets.all(8.0),
+    //           child: Text(
+    //             '종일 일정',
+    //             style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+    //           ),
+    //         ),
+    //         ListView.builder(
+    //           shrinkWrap: true,
+    //           physics: NeverScrollableScrollPhysics(),
+    //           itemCount: allDayEvents.length,
+    //           itemBuilder: (context, index) {
+    //             final event = allDayEvents[index];
+    //             return ListTile(
+    //               title: Text(event.eventTitle),
+    //               subtitle: Text('종일'),
+    //               onTap: () =>
+    //                   _openEventDetail(event.eventTitle, index, isplan: true),
+    //             );
+    //           },
+    //         ),
+    //       ],
+    //     ),
+    //   );
+    // }
 
-  Widget _buildRegularEventsSection(DateTime pageDate) {
-    return ListView.builder(
-      itemCount: endTime - startTime + 1,  // 24시까지 표시하기 위해 25로 변경
-      itemBuilder: (context, index) {
-        return _buildTimeBlock(index + startTime, pageDate);
-      },
-    );
+    Widget _buildRegularEventsSection(DateTime pageDate) {
+      return ListView.builder(
+        itemCount: endTime - startTime , // 24시까지 표시하기 위해 25로 변경
+        itemBuilder: (context, index) {
+          return _buildTimeBlock(index + startTime, pageDate);
+        },
+      );
+    }
   }
-}
 
 

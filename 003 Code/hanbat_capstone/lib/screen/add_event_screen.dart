@@ -171,6 +171,8 @@ class _AddEventScreenState extends State<AddEventScreen> {
       builder: (BuildContext context) {
         return CustomTimePicker(
           initialTime: TimeOfDay.fromDateTime(initialDateTime),
+          use24HourFormat: true,
+          isEndTime: !isStartTime,  // 종료 시간 선택인지 여부
         );
       },
     );
@@ -185,6 +187,8 @@ class _AddEventScreenState extends State<AddEventScreen> {
           selectedTime.hour,
           0,
         );
+
+
 
         if (isStartTime) {
           _startTime = newDateTime;
@@ -352,13 +356,7 @@ class _AddEventScreenState extends State<AddEventScreen> {
   }
 
   void _adjustDateForMidnight(bool isStartTime) {
-    if (isStartTime) {
-      if (_startTime != null && _startTime!.hour == 0 && _startTime!.minute == 0) {
-        setState(() {
-          _selectedDate = _selectedDate!.add(Duration(days: 1));
-        });
-      }
-    } else {
+    if (!isStartTime) {
       if (_endTime != null && _endTime!.hour == 0 && _endTime!.minute == 0) {
         setState(() {
           _endTime = _endTime!.add(Duration(days: 1));
@@ -655,8 +653,11 @@ class _AddEventScreenState extends State<AddEventScreen> {
 }
 class CustomTimePicker extends StatefulWidget {
   final TimeOfDay initialTime;
+  final bool use24HourFormat;
+  final bool isEndTime;
 
-  CustomTimePicker({required this.initialTime});
+
+  CustomTimePicker({required this.initialTime, this.use24HourFormat = true, this.isEndTime = false});
 
   @override
   _CustomTimePickerState createState() => _CustomTimePickerState();
@@ -693,8 +694,8 @@ class _CustomTimePickerState extends State<CustomTimePicker> {
                   context,
                   _hour,
                   0,
-                  24,
-                      (value) => setState(() => _hour = value),
+                  widget.use24HourFormat ? 24 : 23,
+                  (value) => setState(() => _hour = value),
                 ),
                 Text(':', style: TextStyle(fontSize: 20)),
                 _buildNumberPicker(

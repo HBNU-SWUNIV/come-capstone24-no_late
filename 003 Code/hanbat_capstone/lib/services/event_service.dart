@@ -357,12 +357,13 @@ class EventService {
       int endTime,
       List<EventModel> events,
       List<EventResultModel> resultEvents) {
-    return List.generate(endTime - startTime + 1, (index) {
+    return List.generate(endTime - startTime + 2, (index) {
+      final hour = startTime + index;
       final eventTimeStart = DateTime(
         selectedDate.year,
         selectedDate.month,
         selectedDate.day,
-        startTime + index,
+          hour
       );
       final eventTimeEnd = eventTimeStart.add(Duration(hours: 1));
 
