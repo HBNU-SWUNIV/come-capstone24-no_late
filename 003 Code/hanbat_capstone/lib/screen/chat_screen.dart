@@ -409,6 +409,7 @@
 import 'package:flutter/material.dart';
 import '../services/chat_service.dart';
 import '../model/message_model.dart';
+import '../services/chat_service_v2.dart';
 import '../widget/message_list.dart';
 import '../widget/message_input.dart';
 
@@ -419,25 +420,28 @@ class ChatScreen extends StatefulWidget {
 
 class _ChatScreenState extends State<ChatScreen> {
   final List<MessageModel> _messages = [];
-  final ChatService _chatService = ChatService();
+  final AdvancedChatService _chatService = AdvancedChatService();
   String _errorMessage = "";
+  bool _calendarNeedsUpdate = false;
 
   void _sendMessage(String text) async {
-    if (text.isEmpty) return;
     setState(() {
       _messages.add(MessageModel(text: text, isUserMessage: true));
     });
 
     try {
-      final response = await _chatService.createModel(text);
+      final response = await _chatService.processUserMessage(text);
       setState(() {
         _messages.add(MessageModel(text: response, isUserMessage: false));
-        _errorMessage = "";
       });
+
+      // 캘린더 업데이트가 필요한지 확인
+      if (response.contains("일정이 추가되었습니다") ||
+          response.contains("일정이 수정되었습니다") ||
+          response.contains("일정이 삭제되었습니다")) {
+        _calendarNeedsUpdate = true;
+      }
     } catch (e) {
-      setState(() {
-        _errorMessage = e.toString();
-      });
       print("Error: $e");
     }
   }

@@ -36,7 +36,7 @@ class _AuthScreenState extends State<AuthScreen> {
           // 회원가입 시 이메일 중복 확인
           bool isEmailInUse = await authProvider.isEmailAlreadyInUse(_email);
           if (isEmailInUse) {
-            if(mounted) {
+            if (mounted) {
               _showErrorDialog('이미 사용 중인 이메일 입니다.');
             }
             return;
@@ -46,18 +46,19 @@ class _AuthScreenState extends State<AuthScreen> {
         if (_isLogin) {
           success = await authProvider.signIn(_email, _password);
         } else {
-          success = await authProvider.signUp(_email, _password, _name, _phoneNumber);
+          success =
+              await authProvider.signUp(_email, _password, _name, _phoneNumber);
         }
 
         if (success) {
-          if(mounted){
+          if (mounted) {
             // 로그인/회원가입 성공 처리
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(content: Text(_isLogin ? '로그인 성공' : '회원가입 성공')),
             );
           }
         } else {
-          if(mounted){
+          if (mounted) {
             // 실패 처리
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(content: Text(authProvider.errorMessage)),
@@ -66,7 +67,7 @@ class _AuthScreenState extends State<AuthScreen> {
         }
       } catch (e) {
         print('Error in _submitForm: $e');
-        if(mounted){
+        if (mounted) {
           _showErrorDialog('오류가 발생했습니다: $e');
         }
       }
@@ -91,7 +92,8 @@ class _AuthScreenState extends State<AuthScreen> {
               TextFormField(
                 decoration: InputDecoration(labelText: '비밀번호'),
                 obscureText: true,
-                validator: (value) => value!.length < 6 ? '6자 이상의 비밀번호를 입력하세요' : null,
+                validator: (value) =>
+                    value!.length < 6 ? '6자 이상의 비밀번호를 입력하세요' : null,
                 onSaved: (value) => _password = value!,
               ),
               if (!_isLogin) ...[
@@ -109,10 +111,18 @@ class _AuthScreenState extends State<AuthScreen> {
               SizedBox(height: 20),
               ElevatedButton(
                 child: Text(_isLogin ? '로그인' : '회원가입'),
+                style: ElevatedButton.styleFrom(
+                  foregroundColor: Colors.white,
+                  backgroundColor: Colors.lightBlue[900],
+                  padding: EdgeInsets.symmetric(horizontal: 50, vertical: 15),
+                ),
                 onPressed: _submitForm,
               ),
               TextButton(
-                child: Text(_isLogin ? '회원가입으로 전환' : '로그인으로 전환'),
+                child: Text(_isLogin ? '회원가입' : '로그인'),
+                style: TextButton.styleFrom(
+                  foregroundColor: Colors.lightBlue[900],
+                ),
                 onPressed: () {
                   setState(() {
                     _isLogin = !_isLogin;
@@ -128,8 +138,8 @@ class _AuthScreenState extends State<AuthScreen> {
 
   //에러 다이얼로그
   void _showErrorDialog(String message) {
-    if(!mounted) return;  // mounted상태확인 (화면 활성화 여부 확인)
-    print('Showing dialog with message: $message');  // 디버그 출력 추가
+    if (!mounted) return; // mounted상태확인 (화면 활성화 여부 확인)
+    print('Showing dialog with message: $message'); // 디버그 출력 추가
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
@@ -144,8 +154,6 @@ class _AuthScreenState extends State<AuthScreen> {
           )
         ],
       ),
-    ).then((_) => print('Dialog closed'));  // 다이얼로그가 닫힐 때 디버그 출력
+    ).then((_) => print('Dialog closed')); // 다이얼로그가 닫힐 때 디버그 출력
   }
-
 }
-

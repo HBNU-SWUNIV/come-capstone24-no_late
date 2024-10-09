@@ -31,6 +31,8 @@ Future<void> main() async {
   final authProvider = AuthProvider();
   await authProvider.loadUser();  // 사용자 정보 로드
 
+
+
   runApp(
     MultiProvider(
       providers: [

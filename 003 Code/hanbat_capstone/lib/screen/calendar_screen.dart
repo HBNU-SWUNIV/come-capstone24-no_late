@@ -654,6 +654,7 @@ class CalendarScreenState extends State<CalendarScreen> {
                         sixWeekMonthsEnforced: true,
                         rowHeight: rowHeight,
                         onFormatChanged: _onFormatChanged,
+
                         daysOfWeekHeight: 40,
                         eventLoader: _getEventsForDay,
                         selectedDayPredicate: (day) =>
@@ -829,6 +830,8 @@ class CalendarScreenState extends State<CalendarScreen> {
                           decoration: BoxDecoration(
                             color: Colors.lightBlue[900],
                           ),
+                          leftChevronIcon: Icon(Icons.chevron_left, color: Colors.white),  // 추가
+                          rightChevronIcon: Icon(Icons.chevron_right, color: Colors.white),  // 추가
                         ),
                       )),
                   if (_calendarFormat != CalendarFormat.month)

@@ -17,10 +17,10 @@ class DateSelector extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Row(
-      mainAxisAlignment: MainAxisAlignment.center,
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
         IconButton(
-          icon: Icon(Icons.arrow_left),
+          icon: Icon(Icons.chevron_left),
           onPressed: onPreviousDay,
         ),
         InkWell(
@@ -28,7 +28,7 @@ class DateSelector extends StatelessWidget {
           child: Text(DateFormat('yyyy-MM-dd').format(selectedDate)),
         ),
         IconButton(
-          icon: Icon(Icons.arrow_right),
+          icon: Icon(Icons.chevron_right),
           onPressed: onNextDay,
         ),
       ],

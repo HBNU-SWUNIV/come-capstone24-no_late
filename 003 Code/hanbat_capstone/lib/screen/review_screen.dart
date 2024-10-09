@@ -183,8 +183,8 @@ class _ReviewScreenState extends State<ReviewScreen> {
                       children: [
                         TextButton.icon(
                           onPressed: onPressSettingBtn,
-                          label: Text('커스텀'),
-                          icon: Icon(Icons.settings),)
+                          label: Text('커스텀', style: TextStyle(color: Colors.lightBlue[900],),),
+                          icon: Icon(Icons.settings, color: Colors.lightBlue[900],), )
                       ],
                     ),
                     Container(
