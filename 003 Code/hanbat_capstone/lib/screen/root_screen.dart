@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:hanbat_capstone/screen/category_screen.dart';
+import 'package:hanbat_capstone/screen/chart_screen.dart';
 import 'chat_screen.dart';
 import 'schedule_screen.dart';
 import 'add_event_screen.dart';
@@ -45,6 +45,7 @@ class _RootScreenState extends State<RootScreen> {
       ScheduleScreen(selectedDate: widget.selectedDate ?? DateTime.now()),
       AddEventScreen(),
       ReviewScreen(),
+      ChartScreen(),
       SettingScreen(),
     ];
   }
@@ -67,6 +68,7 @@ class _RootScreenState extends State<RootScreen> {
     ScheduleScreen(selectedDate: selectedDate ?? DateTime.now()),
     AddEventScreen(),
     ReviewScreen(), // 회고관리 화면 연결
+    ChartScreen(),
     SettingScreen(), // 설정관리 화면 연결
   ];
 
@@ -154,6 +156,10 @@ class _RootScreenState extends State<RootScreen> {
         BottomNavigationBarItem(
             icon: Icon(Icons.fact_check),
             label: '회고관리',
+            backgroundColor: Colors.white),
+        BottomNavigationBarItem(
+            icon: Icon(Icons.bar_chart),
+            label: '통계',
             backgroundColor: Colors.white),
         BottomNavigationBarItem(
             icon: Icon(Icons.settings),
