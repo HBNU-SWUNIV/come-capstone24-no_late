@@ -114,21 +114,23 @@ class _RootScreenState extends State<RootScreen> {
         ),
       ),
       bottomNavigationBar: renderBottomNavigation(),
-      floatingActionButton: FloatingActionButton(
-        onPressed: () async {
-          final result = await Navigator.push(
-            context,
-            MaterialPageRoute(builder: (context) => ChatScreen()),
-          );
-          if (result == true) {
-            // 캘린더 업데이트가 필요한 경우
-            _updateScreens();  // 캘린더 이벤트를 다시 불러오는 메서드
-          }
-        },
-        backgroundColor:  Colors.lightBlue[900], // 배경색을 보라색으로 변경
-        foregroundColor: Colors.white, // 아이콘 색상을 흰색으로 변경
-        child: Icon(Icons.chat),
-      ),
+      floatingActionButton: _selectedIndex == 3 || _selectedIndex == 5
+          ? null
+          : FloatingActionButton(
+              onPressed: () async {
+                final result = await Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (context) => ChatScreen()),
+                );
+                if (result == true) {
+                  // 캘린더 업데이트가 필요한 경우
+                  _updateScreens();  // 캘린더 이벤트를 다시 불러오는 메서드
+                }
+              },
+              backgroundColor:  Colors.lightBlue[900], // 배경색을 보라색으로 변경
+              foregroundColor: Colors.white, // 아이콘 색상을 흰색으로 변경
+              child: Icon(Icons.chat),
+            )
     );
   }
 
