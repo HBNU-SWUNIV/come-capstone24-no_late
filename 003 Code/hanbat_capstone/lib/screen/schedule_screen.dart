@@ -3,7 +3,9 @@ import 'dart:math';
 
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:hanbat_capstone/screen/time_range_setting_screen.dart';
 import 'package:intl/intl.dart';
+import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../model/event_model.dart';
 import '../model/event_result_model.dart';
@@ -11,6 +13,7 @@ import '../component/date_selector.dart';
 import '../component/time_cell.dart';
 import '../component/event_cell.dart';
 import '../component/checkbox_component.dart';
+import '../providers/schedulesettings_provider.dart';
 import '../services/event_service.dart';
 import 'add_event_screen.dart';
 import 'event_detail_screen.dart';
@@ -42,6 +45,11 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
   List<EventResultModel> regularResultEvents = [];
   bool _isLoading = true;
   List<EventResultModel> resultEvents = [];
+
+  final Color dragSourceColor = Colors.blue.withOpacity(0.1); // 원본 위치 색상
+  final Color dragFeedbackColor = Colors.blue.withOpacity(0.1); // 드래그 중인 아이템 색상
+  final Color dragTargetColor = Colors.green.withOpacity(0.1); // 드롭 대상 영역 색상
+  final Color dragTargetActiveColor = Colors.green.withOpacity(0.2); // 드래그 오버 시 색상
 
   @override
   void initState() {
@@ -682,6 +690,10 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
 
   @override
   Widget build(BuildContext context) {
+
+    final settings = context.watch<ScheduleSettingsProvider>();
+    final startTime = settings.startTime;
+    final endTime = settings.endTime;
     if (_isLoading) {
       return Scaffold(
         body: Center(child: CircularProgressIndicator()),
@@ -711,6 +723,7 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
                 curve: Curves.easeInOut,
               ),
         ),
+
         elevation: 0,
       ),
       body: Column(
@@ -747,71 +760,135 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
     final timeData = scheduleData[formattedDate]?[hour - startTime] ??
         {'plan': '', 'actual': ''};
 
-
-
     String planTitle = timeData['plan'] ?? '';
     String actualTitle = timeData['actual'] ?? '';
-    if (hour == 23) {
-      final nextDayData = scheduleData[formattedDate]?[24 - startTime];
-      if (nextDayData != null) {
-        if (nextDayData['plan'] != null && (nextDayData['plan'] as String).isNotEmpty) {
-          planTitle += ' / ${nextDayData['plan']}';
-        }
-        if (nextDayData['actual'] != null && (nextDayData['actual'] as String).isNotEmpty) {
-          actualTitle += ' / ${nextDayData['actual']}';
-        }
-      }
-    }
 
-      return Card(
-        margin: EdgeInsets.symmetric(vertical: 4, horizontal: 8),
-        color: Colors.white,
-        child: Padding(
-          padding: EdgeInsets.all(8),
-          child: Row(
-            children: [
-              Expanded(
-                flex: 1,
-                child: Column(
-                  children: [
-                    Text(hour == 24 ? '24:00' : '${hour.toString().padLeft(
-                        2, '0')}:00'),
-                    CheckboxComponent(
-                      isChecked: (timeData['actual'] ?? '').isNotEmpty &&
-                          timeData['completedYn'] == 'Y',
-                      onChanged: (bool? value) {
-                        if (value != null) {
-                          _handleCheckboxChange(hour, value);
-                        }
-                      },
-                      activeColor: Colors.lightBlue[900],
+    return Card(
+      margin: EdgeInsets.symmetric(vertical: 4, horizontal: 8),
+      color: Colors.white,
+      child: Padding(
+        padding: EdgeInsets.all(8),
+        child: Row(
+          children: [
+            Expanded(
+              flex: 1,
+              child: Text(
+                  hour == 24 ? '24:00' : '${hour.toString().padLeft(2, '0')}:00'
+              ),
+            ),
+            Expanded(
+              flex: 2,
+              child: Draggable<Map<String, dynamic>>(
+                data: {
+                  'eventTitle': planTitle,
+                  'categoryId': timeData['planCategoryId'] ?? '',
+                  'hour': hour,
+                  'eventId': timeData['eventId'] ?? '',
+                },
+                feedback: Material(
+                  elevation: 4.0,
+                  child: Container(
+                    padding: EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: dragFeedbackColor,
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(
+                        color: Colors.blue.withOpacity(0.3),
+                        width: 1,
+                      ),
                     ),
-                  ],
+                    width: MediaQuery.of(context).size.width * 0.3,
+                    child: Text(
+                      planTitle,
+                      style: TextStyle(
+                        color: Colors.black87,
+                        fontSize: 14,
+                      ),
+                    ),
+                  ),
+                ),
+                childWhenDragging: Container(
+                  padding: EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: Colors.grey.withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: EventCell(
+                    eventTitle: planTitle,
+                    categoryId: timeData['planCategoryId'] ?? '',
+                    onTap: () => _handlePlanCellTap(hour - startTime),
+                  ),
+                ),
+                child: Container(
+                  padding: EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: dragSourceColor,
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: EventCell(
+                    eventTitle: planTitle,
+                    categoryId: timeData['planCategoryId'] ?? '',
+                    onTap: () => _handlePlanCellTap(hour - startTime),
+                  ),
                 ),
               ),
-              Expanded(
-                flex: 2,
-                child: _buildEventCell(
-                  planTitle,
-                  timeData?['planCategoryId'] ?? '',
-                      () => _handlePlanCellTap(hour - startTime),
-                  Colors.blue.withOpacity(0.1),
-                ),
+            ),
+            Expanded(
+              flex: 2,
+              child: DragTarget<Map<String, dynamic>>(
+                builder: (context, candidateData, rejectedData) {
+                  return Container(
+                    padding: EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: candidateData.isNotEmpty
+                          ? dragTargetActiveColor
+                          : dragTargetColor,
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: EventCell(
+                      eventTitle: actualTitle,
+                      categoryId: timeData['actualCategoryId'] ?? '',
+                      onTap: () => _handleActualCellTap(hour - startTime),
+                    ),
+                  );
+                },
+                onAccept: (data) async {
+                  final eventHour = data['hour'] as int;
+                  final eventId = data['eventId'] as String;
+                  if (eventId.isNotEmpty) {
+                    try {
+                      await eventService.movePlanToActual(
+                        formattedDate,
+                        hour,
+                        regularEvents.firstWhere((e) => e.eventId == eventId),
+                      );
+                      _loadEvents(); // 화면 새로고침
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: Text('일정이 이동되었습니다.'),
+                          backgroundColor: Colors.blue,
+                          behavior: SnackBarBehavior.floating,
+                        ),
+                      );
+                    } catch (e) {
+                      print('Error moving event: $e');
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: Text('일정 이동 중 오류가 발생했습니다.'),
+                          backgroundColor: Colors.red,
+                          behavior: SnackBarBehavior.floating,
+                        ),
+                      );
+                    }
+                  }
+                },
               ),
-              Expanded(
-                flex: 2,
-                child: _buildEventCell(
-                  actualTitle,
-                  timeData?['actualCategoryId'] ?? '',
-                      () => _handleActualCellTap(hour - startTime),
-                  Colors.green.withOpacity(0.1),
-                ),
-              ),
-            ],
-          ),
+            ),
+          ],
         ),
-      );
-    }
+      ),
+    );
+  }
 
     Widget _buildEventCell(String eventTitle, String categoryId,
         VoidCallback onTap, Color backgroundColor) {

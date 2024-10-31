@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:hanbat_capstone/providers/category_provider.dart';
+import 'package:hanbat_capstone/providers/schedulesettings_provider.dart';
 import 'package:intl/date_symbol_data_local.dart';
 import 'firebase_options.dart';
 import 'package:hanbat_capstone/services/notification_service.dart';
@@ -38,6 +39,7 @@ Future<void> main() async {
       providers: [
         ChangeNotifierProvider(create: (_) => AuthProvider()),
         ChangeNotifierProvider(create: (_) => CategoryProvider()),
+        ChangeNotifierProvider(create: (_) => ScheduleSettingsProvider()),
       ],
       child: MyApp(notificationService: notificationService,
         theme: ThemeData(

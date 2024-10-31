@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+
+import '../providers/schedulesettings_provider.dart';
 
 class TimeRangeSettingScreen extends StatefulWidget {
   @override
@@ -25,12 +28,14 @@ class _TimeRangeSettingScreenState extends State<TimeRangeSettingScreen> {
   }
 
   _saveSettings() async {
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setInt('startTime', _startTime);
-    await prefs.setInt('endTime', _endTime);
+    // Provider를 통해 설정 저장
+    await context.read<ScheduleSettingsProvider>().saveSettings(_startTime, _endTime);
+
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(content: Text('설정이 저장되었습니다.')),
     );
+
+    Navigator.pop(context);
   }
 
   @override
@@ -49,7 +54,6 @@ class _TimeRangeSettingScreenState extends State<TimeRangeSettingScreen> {
               value: _startTime,
               items: List.generate(25, (index) => DropdownMenuItem(
                 value: index,
-
                 child: Text(index == 24 ? '24:00' : '${index.toString().padLeft(2, '0')}:00'),
               )),
               onChanged: (value) {
@@ -81,10 +85,7 @@ class _TimeRangeSettingScreenState extends State<TimeRangeSettingScreen> {
             SizedBox(height: 40),
             Center(
               child: ElevatedButton(
-                onPressed: () {
-                  _saveSettings();
-                  Navigator.pop(context);
-                },
+                onPressed: _saveSettings,
                 child: Text('설정 저장'),
               ),
             ),
