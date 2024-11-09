@@ -701,6 +701,7 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
     }
     return Scaffold(
       appBar: AppBar(
+        centerTitle: true,
         title: DateSelector(
           selectedDate: _focusedDate,
           onDateChanged: (date) {

@@ -408,7 +408,7 @@ class EventService {
 
 
   Future<void> movePlanToActual(String formattedDate, int hour, EventModel event) async {
-    final eventDate = DateTime.parse(formattedDate);
+    final eventDate = event.eventDate ?? DateTime.parse(formattedDate);
     final eventStartTime = DateTime(eventDate.year, eventDate.month, eventDate.day, event.eventSttTime!.hour);
     DateTime eventEndTime;
       eventEndTime = DateTime(eventDate.year, eventDate.month, eventDate.day, hour + 1);
@@ -431,7 +431,7 @@ class EventService {
         eventResultTitle: event.eventTitle,
         eventResultContent: event.eventContent,
         isAllDay: false,
-        completeYn: '',
+        completeYn: 'Y',
       );
       await _firestore
           .collection('result_events')

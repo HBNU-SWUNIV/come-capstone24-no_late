@@ -306,9 +306,98 @@ class CalendarScreenState extends State<CalendarScreen> {
     }
   }
 
+  // void _showMonthPicker() {
+  //   final currentYear = DateTime.now().year;
+  //   final years = List.generate(100, (index) => currentYear - 50 + index);
+  //
+  //   int selectedYear = _focusedDay.year;
+  //   int selectedMonth = _focusedDay.month;
+  //
+  //   showDialog(
+  //     context: context,
+  //     builder: (BuildContext context) {
+  //       return StatefulBuilder(
+  //         builder: (BuildContext context, StateSetter setState) {
+  //           return AlertDialog(
+  //             title: Text('연도와 월을 선택하세요'),
+  //             content: Container(
+  //               width: 300,
+  //               height: 400,
+  //               child: Column(
+  //                 children: [
+  //                   DropdownButton<int>(
+  //                     value: selectedYear,
+  //                     onChanged: (int? newValue) {
+  //                       setState(() {
+  //                         selectedYear = newValue!;
+  //                       });
+  //                     },
+  //                     items: years.map<DropdownMenuItem<int>>((int value) {
+  //                       return DropdownMenuItem<int>(
+  //                         value: value,
+  //                         child: Text(value.toString()),
+  //                       );
+  //                     }).toList(),
+  //                   ),
+  //                   Expanded(
+  //                     child: GridView.count(
+  //                       crossAxisCount: 3,
+  //                       children: List<Widget>.generate(12, (int index) {
+  //                         final month = index + 1;
+  //                         final monthName = [
+  //                           '1월',
+  //                           '2월',
+  //                           '3월',
+  //                           '4월',
+  //                           '5월',
+  //                           '6월',
+  //                           '7월',
+  //                           '8월',
+  //                           '9월',
+  //                           '10월',
+  //                           '11월',
+  //                           '12월'
+  //                         ][index];
+  //                         return GestureDetector(
+  //                           onTap: () {
+  //                             setState(() {
+  //                               selectedMonth = month;
+  //                             });
+  //                             final selectedDate =
+  //                             DateTime(selectedYear, selectedMonth);
+  //                             this.setState(() {
+  //                               _focusedDay = selectedDate;
+  //                             });
+  //                             Navigator.pop(context);
+  //                           },
+  //                           child: Center(
+  //                             child: Text(
+  //                               monthName,
+  //                               style: TextStyle(
+  //                                 fontSize: 16,
+  //                                 fontWeight: FontWeight.bold,
+  //                               ),
+  //                             ),
+  //                           ),
+  //                         );
+  //                       }),
+  //                     ),
+  //                   ),
+  //                 ],
+  //               ),
+  //             ),
+  //           );
+  //         },
+  //       );
+  //     },
+  //   );
+  // }
+
   void _showMonthPicker() {
     final currentYear = DateTime.now().year;
     final years = List.generate(100, (index) => currentYear - 50 + index);
+    final mainColor = Colors.lightBlue[900]!;
+    final backgroundColor = Colors.grey[100]!;
 
     int selectedYear = _focusedDay.year;
     int selectedMonth = _focusedDay.month;
@@ -316,82 +405,189 @@ class CalendarScreenState extends State<CalendarScreen> {
     showDialog(
       context: context,
       builder: (BuildContext context) {
-        return StatefulBuilder(
-          builder: (BuildContext context, StateSetter setState) {
-            return AlertDialog(
-              title: Text('연도와 월을 선택하세요'),
-              content: Container(
-                width: 300,
-                height: 400,
-                child: Column(
-                  children: [
-                    DropdownButton<int>(
-                      value: selectedYear,
-                      onChanged: (int? newValue) {
-                        setState(() {
-                          selectedYear = newValue!;
-                        });
-                      },
-                      items: years.map<DropdownMenuItem<int>>((int value) {
-                        return DropdownMenuItem<int>(
-                          value: value,
-                          child: Text(value.toString()),
-                        );
-                      }).toList(),
+        return Dialog(
+          backgroundColor: Colors.transparent,
+          child: StatefulBuilder(
+            builder: (BuildContext context, StateSetter setState) {
+              return Container(
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(20),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.1),
+                      blurRadius: 20,
+                      offset: Offset(0, 10),
                     ),
-                    Expanded(
-                      child: GridView.count(
-                        crossAxisCount: 3,
-                        children: List<Widget>.generate(12, (int index) {
+                  ],
+                ),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    // 헤더
+                    Container(
+                      padding: EdgeInsets.all(20),
+                      decoration: BoxDecoration(
+                        color: mainColor,
+                        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+                      ),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Text(
+                            '날짜 선택',
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontSize: 20,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                          Icon(Icons.calendar_today, color: Colors.white),
+                        ],
+                      ),
+                    ),
+
+                    // 년도 선택
+                    Container(
+                      padding: EdgeInsets.symmetric(vertical: 16),
+                      child: Column(
+                        children: [
+                          Text('년도', style: TextStyle(color: Colors.grey[600])),
+                          Container(
+                            height: 150,
+                            padding: EdgeInsets.symmetric(horizontal: 16),
+                            child: CupertinoPicker(
+                              scrollController: FixedExtentScrollController(
+                                initialItem: years.indexOf(selectedYear),
+                              ),
+                              itemExtent: 40,
+                              onSelectedItemChanged: (index) {
+                                setState(() {
+                                  selectedYear = years[index];
+                                });
+                              },
+                              children: years.map((year) => Center(
+                                child: Text(
+                                  year.toString(),
+                                  style: TextStyle(
+                                    fontSize: 20,
+                                    color: mainColor,
+                                    fontWeight: FontWeight.w500,
+                                  ),
+                                ),
+                              )).toList(),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+
+                    // 월 선택 그리드
+                    Container(
+                      height: 280,
+                      padding: EdgeInsets.symmetric(horizontal: 16),
+                      child: GridView.builder(
+                        gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                          crossAxisCount: 3,
+                          childAspectRatio: 1.5,
+                          crossAxisSpacing: 12,
+                          mainAxisSpacing: 12,
+                        ),
+                        itemCount: 12,
+                        itemBuilder: (context, index) {
                           final month = index + 1;
-                          final monthName = [
-                            '1월',
-                            '2월',
-                            '3월',
-                            '4월',
-                            '5월',
-                            '6월',
-                            '7월',
-                            '8월',
-                            '9월',
-                            '10월',
-                            '11월',
-                            '12월'
-                          ][index];
+                          final isSelected = month == selectedMonth;
+                          final monthName = '${month}월';
+
                           return GestureDetector(
                             onTap: () {
-                              setState(() {
-                                selectedMonth = month;
-                              });
-                              final selectedDate =
-                              DateTime(selectedYear, selectedMonth);
+                              final selectedDate = DateTime(selectedYear, month);
+                              Navigator.pop(context);
                               this.setState(() {
                                 _focusedDay = selectedDate;
                               });
-                              Navigator.pop(context);
                             },
-                            child: Center(
-                              child: Text(
-                                monthName,
-                                style: TextStyle(
-                                  fontSize: 16,
-                                  fontWeight: FontWeight.bold,
+                            child: Container(
+                              decoration: BoxDecoration(
+                                color: isSelected ? mainColor : backgroundColor,
+                                borderRadius: BorderRadius.circular(12),
+                                border: Border.all(
+                                  color: isSelected ? mainColor : Colors.transparent,
+                                  width: 2,
+                                ),
+                              ),
+                              child: Center(
+                                child: Text(
+                                  monthName,
+                                  style: TextStyle(
+                                    fontSize: 18,
+                                    fontWeight: FontWeight.bold,
+                                    color: isSelected ? Colors.white : Colors.black87,
+                                  ),
                                 ),
                               ),
                             ),
                           );
-                        }),
+                        },
+                      ),
+                    ),
+
+                    // 버튼 영역
+                    Container(
+                      padding: EdgeInsets.all(16),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                        children: [
+                          TextButton(
+                            onPressed: () => Navigator.of(context).pop(),
+                            child: Text(
+                              '취소',
+                              style: TextStyle(
+                                color: Colors.grey[600],
+                                fontSize: 16,
+                              ),
+                            ),
+                          ),
+                          ElevatedButton(
+                            onPressed: () {
+                              final selectedDate =
+                              DateTime(selectedYear, selectedMonth);
+                              Navigator.pop(context);
+                              this.setState(() {
+                                _focusedDay = selectedDate;
+                              });
+                            },
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: mainColor,
+                              padding: EdgeInsets.symmetric(
+                                  horizontal: 32,
+                                  vertical: 12
+                              ),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(25),
+                              ),
+                            ),
+                            child: Text(
+                              '확인',
+                              style: TextStyle(
+                                fontSize: 16,
+                                color: Colors.white,
+                              ),
+                            ),
+                          ),
+                        ],
                       ),
                     ),
                   ],
                 ),
-              ),
-            );
-          },
+              );
+            },
+          ),
         );
       },
     );
   }
+
 
   @override
   // Widget build(BuildContext context) {

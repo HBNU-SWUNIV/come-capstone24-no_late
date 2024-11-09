@@ -693,29 +693,126 @@ class _EventDetailScreenState extends State<EventDetailScreen> {
   void _showDeleteRecurrenceDialog(BuildContext context) {
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
-        title: Text('반복 일정 삭제'),
-        content: Text('이 일정의 모든 반복 항목을 삭제하시겠습니까?'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: Text('취소'),
+      builder: (context) => Dialog(
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(20),
+        ),
+        child: Container(
+          padding: EdgeInsets.all(24),
+          width: 320,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              // 경고 아이콘
+              Container(
+                width: 70,
+                height: 70,
+                decoration: BoxDecoration(
+                  color: Colors.red[50],
+                  shape: BoxShape.circle,
+                ),
+                child: Icon(
+                  Icons.warning_rounded,
+                  color: Colors.red,
+                  size: 40,
+                ),
+              ),
+              SizedBox(height: 24),
+
+              // 제목
+              Text(
+                '반복 일정 삭제',
+                style: TextStyle(
+                  fontSize: 24,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              SizedBox(height: 16),
+
+              // 내용
+              Text(
+                '이 반복 일정을 어떻게 삭제하시겠습니까?',
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  fontSize: 16,
+                  color: Colors.grey[600],
+                  height: 1.5,
+                ),
+              ),
+              SizedBox(height: 32),
+
+              // 버튼들
+              Column(
+                children: [
+                  // 모두 삭제 버튼
+                  ElevatedButton(
+                    onPressed: () async {
+                      await _deleteEvent(true);
+                      Navigator.pop(context);
+                    },
+                    child: Text(
+                      '모든 반복 일정 삭제',
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.red,
+                      minimumSize: Size(double.infinity, 50),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                    ),
+                  ),
+                  SizedBox(height: 12),
+
+                  // 이 항목만 삭제 버튼
+                  ElevatedButton(
+                    onPressed: () async {
+                      await _deleteEvent(false);
+                      Navigator.pop(context);
+                    },
+                    child: Text(
+                      '이 일정만 삭제',
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.grey[800],
+                      minimumSize: Size(double.infinity, 50),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                    ),
+                  ),
+                  SizedBox(height: 12),
+
+                  // 취소 버튼
+                  TextButton(
+                    onPressed: () => Navigator.pop(context),
+                    child: Text(
+                      '취소',
+                      style: TextStyle(
+                        fontSize: 16,
+                        color: Colors.grey[600],
+                      ),
+                    ),
+                    style: TextButton.styleFrom(
+                      minimumSize: Size(double.infinity, 50),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        side: BorderSide(color: Colors.grey[300]!),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ],
           ),
-          TextButton(
-            onPressed: () async {
-              await _deleteEvent(true);
-              Navigator.pop(context);
-            },
-            child: Text('모두 삭제'),
-          ),
-          TextButton(
-            onPressed: () async {
-              await _deleteEvent(false);
-              Navigator.pop(context);
-            },
-            child: Text('이 항목만 삭제'),
-          ),
-        ],
+        ),
       ),
     );
   }
@@ -723,31 +820,116 @@ class _EventDetailScreenState extends State<EventDetailScreen> {
   void _showDeleteDialog(BuildContext context, bool isEventModel) {
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
-        title: Text('일정 삭제'),
-        content: Text('이 일정을 삭제하시겠습니까?'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: Text('취소'),
+      builder: (context) => Dialog(
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(20),
+        ),
+        child: Container(
+          padding: EdgeInsets.all(24),
+          width: 320,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              // 경고 아이콘
+              Container(
+                width: 70,
+                height: 70,
+                decoration: BoxDecoration(
+                  color: Colors.red[50],
+                  shape: BoxShape.circle,
+                ),
+                child: Icon(
+                  Icons.warning_rounded,
+                  color: Colors.red,
+                  size: 40,
+                ),
+              ),
+              SizedBox(height: 24),
+
+              // 제목
+              Text(
+                '일정 삭제',
+                style: TextStyle(
+                  fontSize: 24,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              SizedBox(height: 16),
+
+              // 내용
+              Text(
+                '이 일정을 삭제하시겠습니까?\n삭제된 일정은 복구할 수 없습니다.',
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  fontSize: 16,
+                  color: Colors.grey[600],
+                  height: 1.5,
+                ),
+              ),
+              SizedBox(height: 32),
+
+              // 버튼
+              Row(
+                children: [
+                  // 취소 버튼
+                  Expanded(
+                    child: TextButton(
+                      onPressed: () => Navigator.pop(context),
+                      child: Text(
+                        '취소',
+                        style: TextStyle(
+                          fontSize: 16,
+                          color: Colors.grey[600],
+                        ),
+                      ),
+                      style: TextButton.styleFrom(
+                        padding: EdgeInsets.symmetric(vertical: 16),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                          side: BorderSide(color: Colors.grey[300]!),
+                        ),
+                      ),
+                    ),
+                  ),
+                  SizedBox(width: 12),
+
+                  // 삭제 버튼
+                  Expanded(
+                    child: ElevatedButton(
+                      onPressed: () async {
+                        if (isEventModel) {
+                          await _deleteEvent(false);
+                        } else {
+                          await FirebaseFirestore.instance
+                              .collection('result_events')
+                              .doc(_currentEventResult.eventResultId)
+                              .delete();
+                          widget.onEventDeleted(false);
+                          Navigator.pop(context);
+                          Navigator.pop(context);
+                        }
+                      },
+                      child: Text(
+                        '삭제',
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.red,
+                        padding: EdgeInsets.symmetric(vertical: 16),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ],
           ),
-          TextButton(
-            onPressed: () async {
-              if (isEventModel) {
-                await _deleteEvent(false);
-              } else {
-                await FirebaseFirestore.instance
-                    .collection('result_events')
-                    .doc(_currentEventResult!.eventResultId)
-                    .delete();
-                widget.onEventDeleted(false);
-                Navigator.pop(context);
-                Navigator.pop(context);
-              }
-            },
-            child: Text('삭제'),
-          ),
-        ],
+        ),
       ),
     );
   }

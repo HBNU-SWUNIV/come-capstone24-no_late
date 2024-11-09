@@ -381,25 +381,108 @@ class _DayEventsScreenState extends State<DayEventsScreen> {
   void _showDeleteConfirmationDialog(EventModel event) {
     showDialog(
       context: context,
-      builder: (BuildContext context) {
-        return AlertDialog(
-          title: Text('일정 삭제'),
-          content: Text('이 일정을 삭제하시겠습니까?'),
-          actions: <Widget>[
-            TextButton(
-              child: Text('취소'),
-              onPressed: () => Navigator.of(context).pop(),
-            ),
-            TextButton(
-              child: Text('삭제'),
-              onPressed: () {
-                _deleteEvent(event);
-                Navigator.of(context).pop();
-              },
-            ),
-          ],
-        );
-      },
+      builder: (context) => Dialog(
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(20),
+        ),
+        child: Container(
+          padding: EdgeInsets.all(24),
+          width: 320,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              // 경고 아이콘
+              Container(
+                width: 70,
+                height: 70,
+                decoration: BoxDecoration(
+                  color: Colors.red[50],
+                  shape: BoxShape.circle,
+                ),
+                child: Icon(
+                  Icons.warning_rounded,
+                  color: Colors.red,
+                  size: 40,
+                ),
+              ),
+              SizedBox(height: 24),
+
+              // 제목
+              Text(
+                '일정 삭제',
+                style: TextStyle(
+                  fontSize: 24,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              SizedBox(height: 16),
+
+              // 내용
+              Text(
+                '이 일정을 삭제하시겠습니까?\n삭제된 일정은 복구할 수 없습니다.',
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  fontSize: 16,
+                  color: Colors.grey[600],
+                  height: 1.5,
+                ),
+              ),
+              SizedBox(height: 32),
+
+              // 버튼
+              Row(
+                children: [
+                  // 취소 버튼
+                  Expanded(
+                    child: TextButton(
+                      onPressed: () => Navigator.pop(context),
+                      child: Text(
+                        '취소',
+                        style: TextStyle(
+                          fontSize: 16,
+                          color: Colors.grey[600],
+                        ),
+                      ),
+                      style: TextButton.styleFrom(
+                        padding: EdgeInsets.symmetric(vertical: 16),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                          side: BorderSide(color: Colors.grey[300]!),
+                        ),
+                      ),
+                    ),
+                  ),
+                  SizedBox(width: 12),
+
+                  // 삭제 버튼
+                  Expanded(
+                    child: ElevatedButton(
+                      onPressed: () {
+                        _deleteEvent(event);
+                        Navigator.pop(context);
+                      },
+                      child: Text(
+                        '삭제',
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.red,
+                        padding: EdgeInsets.symmetric(vertical: 16),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ),
     );
   }
 

@@ -150,12 +150,17 @@ class _AddEventScreenState extends State<AddEventScreen> {
 
 
   Future<void> _selectDate(BuildContext context) async {
-    final selectedDate = await showDatePicker(
+    final DateTime? selectedDate = await showDialog<DateTime>(
       context: context,
-      initialDate: _selectedDate ?? DateTime.now(),
-      firstDate: DateTime(2000),
-      lastDate: DateTime(2100),
+      builder: (BuildContext context) {
+        return CustomScrollDatePicker(
+          initialDate: _selectedDate ?? DateTime.now(),
+          firstDate: DateTime(2000),
+          lastDate: DateTime(2100),
+        );
+      },
     );
+
     if (selectedDate != null) {
       setState(() {
         _selectedDate = selectedDate;
@@ -604,14 +609,32 @@ class _AddEventScreenState extends State<AddEventScreen> {
                     ),
                   ),
                   SizedBox(height: 16),
-                  _buildCard(
-                    child: Column(
-                      children: [
-                        _buildSwitch('반복 여부', _isRecurring, (value) => setState(() => _isRecurring = value)),
-                        _buildSwitch('캘린더에 표시', _showOnCalendar, (value) => setState(() => _showOnCalendar = value)),
-                        _buildSwitch('종일', _isAllDay, (value) => _toggleAllDay(value)),
-                      ],
-                    ),
+                  _buildCustomToggle(
+                    icon: Icons.repeat,
+                    title: '반복 여부',
+                    subtitle: _isRecurring ? '매주 반복' : '반복 안함',
+                    value: _isRecurring,
+                    onChanged: (value) => setState(() => _isRecurring = value),
+                  ),
+                  Divider(height: 1, color: Colors.grey[300]),
+
+                  // 캘린더 표시 토글
+                  _buildCustomToggle(
+                    icon: Icons.calendar_view_month,
+                    title: '캘린더에 표시',
+                    subtitle: _showOnCalendar ? '캘린더에 표시됨' : '캘린더에 표시 안됨',
+                    value: _showOnCalendar,
+                    onChanged: (value) => setState(() => _showOnCalendar = value),
+                  ),
+                  Divider(height: 1, color: Colors.grey[300]),
+
+                  // 종일 토글
+                  _buildCustomToggle(
+                    icon: Icons.access_time_filled,
+                    title: '종일',
+                    subtitle: _isAllDay ? '하루 종일' : '시간 지정',
+                    value: _isAllDay,
+                    onChanged: _toggleAllDay,
                   ),
                   SizedBox(height: 24),
                   ElevatedButton(
@@ -642,22 +665,212 @@ class _AddEventScreenState extends State<AddEventScreen> {
     );
   }
 
-  Widget _buildSwitch(String title, bool value, ValueChanged<bool> onChanged) {
-    return SwitchListTile(
-      title: Text(title),
-      value: value,
-      onChanged: onChanged,
-      activeColor: accentColor,
+  // Widget _buildSwitch(String title, bool value, ValueChanged<bool> onChanged) {
+  //   return SwitchListTile(
+  //     title: Text(title),
+  //     value: value,
+  //     onChanged: onChanged,
+  //     activeColor: accentColor,
+  //   );
+  // }
+  Widget _buildCustomToggle({
+    required IconData icon,
+    required String title,
+    required String subtitle,
+    required bool value,
+    required ValueChanged<bool> onChanged,
+  }) {
+    return Padding(
+      padding: EdgeInsets.symmetric(vertical: 8),
+      child: InkWell(
+        onTap: () => onChanged(!value),
+        borderRadius: BorderRadius.circular(12),
+        child: Padding(
+          padding: EdgeInsets.symmetric(vertical: 8, horizontal: 4),
+          child: Row(
+            children: [
+              Container(
+                padding: EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: accentColor.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Icon(icon, color: accentColor, size: 20),
+              ),
+              SizedBox(width: 16),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      title,
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                    SizedBox(height: 2),
+                    Text(
+                      subtitle,
+                      style: TextStyle(
+                        fontSize: 14,
+                        color: Colors.grey[600],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              GestureDetector(
+                onTap: () => onChanged(!value),
+                child: Container(
+                  width: 50,
+                  height: 28,
+                  padding: EdgeInsets.all(2),
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(14),
+                    color: value ? accentColor : Colors.grey[300],
+                  ),
+                  child: AnimatedAlign(
+                    duration: Duration(milliseconds: 200),
+                    alignment:
+                    value ? Alignment.centerRight : Alignment.centerLeft,
+                    child: Container(
+                      width: 24,
+                      height: 24,
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        color: Colors.white,
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withOpacity(0.1),
+                            blurRadius: 4,
+                            offset: Offset(0, 1),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
     );
   }
 }
+// class CustomTimePicker extends StatefulWidget {
+//   final TimeOfDay initialTime;
+//   final bool use24HourFormat;
+//   final bool isEndTime;
+//
+//
+//   CustomTimePicker({required this.initialTime, this.use24HourFormat = true, this.isEndTime = false});
+//
+//   @override
+//   _CustomTimePickerState createState() => _CustomTimePickerState();
+// }
+//
+// class _CustomTimePickerState extends State<CustomTimePicker> {
+//   late int _hour;
+//   late int _minute;
+//
+//   @override
+//   void initState() {
+//     super.initState();
+//     _hour = widget.initialTime.hour;
+//     _minute = widget.initialTime.minute;
+//   }
+//
+//   @override
+//   Widget build(BuildContext context) {
+//     return Dialog(
+//       child: Container(
+//         padding: EdgeInsets.all(16),
+//         child: Column(
+//           mainAxisSize: MainAxisSize.min,
+//           children: [
+//             Text(
+//               '시간 선택',
+//               style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+//             ),
+//             SizedBox(height: 20),
+//             Row(
+//               mainAxisAlignment: MainAxisAlignment.center,
+//               children: [
+//                 _buildNumberPicker(
+//                   context,
+//                   _hour,
+//                   0,
+//                   widget.use24HourFormat ? 24 : 23,
+//                   (value) => setState(() => _hour = value),
+//                 ),
+//                 Text(':', style: TextStyle(fontSize: 20)),
+//                 _buildNumberPicker(
+//                   context,
+//                   _minute,
+//                   0,
+//                   59,
+//                       (value) => setState(() => _minute = value),
+//                 ),
+//               ],
+//             ),
+//             SizedBox(height: 20),
+//             ElevatedButton(
+//               child: Text('확인'),
+//               onPressed: () {
+//                 if (_hour == 24) {
+//                   _hour = 0;
+//                   ScaffoldMessenger.of(context).showSnackBar(
+//                       SnackBar(content: Text('24시는 다음 날 00시로 설정됩니다.')),
+//                   // 날짜를 다음 날로 변경하는 로직 추가 필요
+//                   );}
+//                 Navigator.of(context).pop(TimeOfDay(hour: _hour, minute: _minute));
+//               },
+//             ),
+//           ],
+//         ),
+//       ),
+//     );
+//   }
+//
+//   Widget _buildNumberPicker(
+//       BuildContext context,
+//       int value,
+//       int minValue,
+//       int maxValue,
+//       ValueChanged<int> onChanged,
+//       ) {
+//     return Container(
+//       height: 100,
+//       width: 70,
+//       child: CupertinoPicker(
+//         scrollController: FixedExtentScrollController(initialItem: value),
+//         itemExtent: 30,
+//         onSelectedItemChanged: onChanged,
+//         children: List<Widget>.generate(
+//           maxValue - minValue + 1,
+//               (index) => Center(
+//             child: Text(
+//               (minValue + index).toString().padLeft(2, '0'),
+//               style: TextStyle(fontSize: 20),
+//             ),
+//           ),
+//         ),
+//       ),
+//     );
+//   }
+// }
 class CustomTimePicker extends StatefulWidget {
   final TimeOfDay initialTime;
   final bool use24HourFormat;
   final bool isEndTime;
 
-
-  CustomTimePicker({required this.initialTime, this.use24HourFormat = true, this.isEndTime = false});
+  CustomTimePicker({
+    required this.initialTime,
+    this.use24HourFormat = true,
+    this.isEndTime = false
+  });
 
   @override
   _CustomTimePickerState createState() => _CustomTimePickerState();
@@ -666,6 +879,8 @@ class CustomTimePicker extends StatefulWidget {
 class _CustomTimePickerState extends State<CustomTimePicker> {
   late int _hour;
   late int _minute;
+  final Color mainColor = Colors.lightBlue[900]!;
+  final Color backgroundColor = Colors.grey[100]!;
 
   @override
   void initState() {
@@ -677,48 +892,160 @@ class _CustomTimePickerState extends State<CustomTimePicker> {
   @override
   Widget build(BuildContext context) {
     return Dialog(
+      backgroundColor: Colors.transparent,
       child: Container(
-        padding: EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(20),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.1),
+              blurRadius: 20,
+              offset: Offset(0, 10),
+            ),
+          ],
+        ),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Text(
-              '시간 선택',
-              style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+            // 헤더
+            Container(
+              padding: EdgeInsets.all(20),
+              decoration: BoxDecoration(
+                color: mainColor,
+                borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+              ),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text(
+                    widget.isEndTime ? '종료 시간' : '시작 시간',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 20,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  Icon(Icons.access_time, color: Colors.white),
+                ],
+              ),
             ),
-            SizedBox(height: 20),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                _buildNumberPicker(
-                  context,
-                  _hour,
-                  0,
-                  widget.use24HourFormat ? 24 : 23,
-                  (value) => setState(() => _hour = value),
-                ),
-                Text(':', style: TextStyle(fontSize: 20)),
-                _buildNumberPicker(
-                  context,
-                  _minute,
-                  0,
-                  59,
-                      (value) => setState(() => _minute = value),
-                ),
-              ],
+            // 시간 선택 영역
+            Container(
+              padding: EdgeInsets.symmetric(vertical: 24, horizontal: 16),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  // 시간 선택기
+                  Expanded(
+                    child: Column(
+                      children: [
+                        Text('시', style: TextStyle(color: Colors.grey[600])),
+                        Container(
+                          height: 150,
+                          decoration: BoxDecoration(
+                            color: backgroundColor,
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          margin: EdgeInsets.symmetric(vertical: 8),
+                          child: _buildNumberPicker(
+                            context,
+                            _hour,
+                            0,
+                            widget.use24HourFormat ? 24 : 23,
+                                (value) => setState(() => _hour = value),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  // 구분선
+                  Padding(
+                    padding: EdgeInsets.symmetric(horizontal: 16),
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        SizedBox(height: 20),
+                        Text(
+                          ':',
+                          style: TextStyle(
+                            fontSize: 30,
+                            fontWeight: FontWeight.bold,
+                            color: mainColor,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  // 분 선택기
+                  Expanded(
+                    child: Column(
+                      children: [
+                        Text('분', style: TextStyle(color: Colors.grey[600])),
+                        Container(
+                          height: 150,
+                          decoration: BoxDecoration(
+                            color: backgroundColor,
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          margin: EdgeInsets.symmetric(vertical: 8),
+                          child: _buildNumberPicker(
+                            context,
+                            _minute,
+                            0,
+                            59,
+                                (value) => setState(() => _minute = value),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
             ),
-            SizedBox(height: 20),
-            ElevatedButton(
-              child: Text('확인'),
-              onPressed: () {
-                if (_hour == 24) {
-                  _hour = 0;
-                  ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(content: Text('24시는 다음 날 00시로 설정됩니다.')),
-                  // 날짜를 다음 날로 변경하는 로직 추가 필요
-                  );}
-                Navigator.of(context).pop(TimeOfDay(hour: _hour, minute: _minute));
-              },
+            // 버튼 영역
+            Container(
+              padding: EdgeInsets.all(16),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                children: [
+                  TextButton(
+                    onPressed: () => Navigator.of(context).pop(),
+                    child: Text(
+                      '취소',
+                      style: TextStyle(
+                        color: Colors.grey[600],
+                        fontSize: 16,
+                      ),
+                    ),
+                  ),
+                  ElevatedButton(
+                    onPressed: () {
+                      if (_hour == 24) {
+                        _hour = 0;
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(content: Text('24시는 다음 날 00시로 설정됩니다.')),
+                        );
+                      }
+                      Navigator.of(context).pop(TimeOfDay(hour: _hour, minute: _minute));
+                    },
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: mainColor,
+                      padding: EdgeInsets.symmetric(horizontal: 32, vertical: 12),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(25),
+                      ),
+                    ),
+                    child: Text(
+                      '확인',
+                      style: TextStyle(
+                        fontSize: 16,
+                        color: Colors.white,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
             ),
           ],
         ),
@@ -733,22 +1060,341 @@ class _CustomTimePickerState extends State<CustomTimePicker> {
       int maxValue,
       ValueChanged<int> onChanged,
       ) {
-    return Container(
-      height: 100,
-      width: 70,
-      child: CupertinoPicker(
-        scrollController: FixedExtentScrollController(initialItem: value),
-        itemExtent: 30,
-        onSelectedItemChanged: onChanged,
-        children: List<Widget>.generate(
-          maxValue - minValue + 1,
-              (index) => Center(
-            child: Text(
-              (minValue + index).toString().padLeft(2, '0'),
-              style: TextStyle(fontSize: 20),
+    return CupertinoPicker(
+      scrollController: FixedExtentScrollController(
+        initialItem: value - minValue,
+      ),
+      itemExtent: 40,
+      diameterRatio: 1.5,
+      onSelectedItemChanged: onChanged,
+      children: List<Widget>.generate(
+        maxValue - minValue + 1,
+            (index) => Center(
+          child: Text(
+            (minValue + index).toString().padLeft(2, '0'),
+            style: TextStyle(
+              fontSize: 24,
+              fontWeight: FontWeight.w500,
+              color: mainColor,
             ),
           ),
         ),
+      ),
+    );
+  }
+}
+
+class CustomScrollDatePicker extends StatefulWidget {
+  final DateTime initialDate;
+  final DateTime firstDate;
+  final DateTime lastDate;
+
+  CustomScrollDatePicker({
+    required this.initialDate,
+    required this.firstDate,
+    required this.lastDate,
+  });
+
+  @override
+  _CustomScrollDatePickerState createState() => _CustomScrollDatePickerState();
+}
+
+class _CustomScrollDatePickerState extends State<CustomScrollDatePicker> {
+  late int _selectedYear;
+  late int _selectedMonth;
+  late int _selectedDay;
+  final Color mainColor = Colors.lightBlue[900]!;
+  final Color backgroundColor = Colors.grey[100]!;
+
+  @override
+  void initState() {
+    super.initState();
+    _selectedYear = widget.initialDate.year;
+    _selectedMonth = widget.initialDate.month;
+    _selectedDay = widget.initialDate.day;
+  }
+
+  int _getDaysInMonth(int year, int month) {
+    return DateTime(year, month + 1, 0).day;
+  }
+
+  void _updateDayIfNeeded() {
+    int daysInMonth = _getDaysInMonth(_selectedYear, _selectedMonth);
+    if (_selectedDay > daysInMonth) {
+      setState(() {
+        _selectedDay = daysInMonth;
+      });
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Dialog(
+      backgroundColor: Colors.transparent,
+      child: Container(
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(20),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.1),
+              blurRadius: 20,
+              offset: Offset(0, 10),
+            ),
+          ],
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            // 헤더
+            Container(
+              padding: EdgeInsets.all(20),
+              decoration: BoxDecoration(
+                color: mainColor,
+                borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+              ),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text(
+                    '날짜 선택',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 20,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  Icon(Icons.calendar_today, color: Colors.white),
+                ],
+              ),
+            ),
+            // 날짜 선택 영역
+            Container(
+              padding: EdgeInsets.symmetric(vertical: 24, horizontal: 16),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  // 년도 선택
+                  Expanded(
+                    child: Column(
+                      children: [
+                        Text('년', style: TextStyle(color: Colors.grey[600])),
+                        Container(
+                          height: 150,
+                          decoration: BoxDecoration(
+                            color: backgroundColor,
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          margin: EdgeInsets.symmetric(vertical: 8),
+                          child: CupertinoPicker(
+                            scrollController: FixedExtentScrollController(
+                              initialItem: _selectedYear - widget.firstDate.year,
+                            ),
+                            itemExtent: 40,
+                            onSelectedItemChanged: (index) {
+                              setState(() {
+                                _selectedYear = widget.firstDate.year + index;
+                                _updateDayIfNeeded();
+                              });
+                            },
+                            children: List<Widget>.generate(
+                              widget.lastDate.year - widget.firstDate.year + 1,
+                                  (index) => Center(
+                                child: Text(
+                                  '${widget.firstDate.year + index}',
+                                  style: TextStyle(
+                                    fontSize: 20,
+                                    color: mainColor,
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  SizedBox(width: 10),
+                  // 월 선택
+                  Expanded(
+                    child: Column(
+                      children: [
+                        Text('월', style: TextStyle(color: Colors.grey[600])),
+                        Container(
+                          height: 150,
+                          decoration: BoxDecoration(
+                            color: backgroundColor,
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          margin: EdgeInsets.symmetric(vertical: 8),
+                          child: CupertinoPicker(
+                            scrollController: FixedExtentScrollController(
+                              initialItem: _selectedMonth - 1,
+                            ),
+                            itemExtent: 40,
+                            onSelectedItemChanged: (index) {
+                              setState(() {
+                                _selectedMonth = index + 1;
+                                _updateDayIfNeeded();
+                              });
+                            },
+                            children: List<Widget>.generate(
+                              12,
+                                  (index) => Center(
+                                child: Text(
+                                  '${index + 1}',
+                                  style: TextStyle(
+                                    fontSize: 20,
+                                    color: mainColor,
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  SizedBox(width: 10),
+                  // 일 선택
+                  Expanded(
+                    child: Column(
+                      children: [
+                        Text('일', style: TextStyle(color: Colors.grey[600])),
+                        Container(
+                          height: 150,
+                          decoration: BoxDecoration(
+                            color: backgroundColor,
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          margin: EdgeInsets.symmetric(vertical: 8),
+                          child: CupertinoPicker(
+                            scrollController: FixedExtentScrollController(
+                              initialItem: _selectedDay - 1,
+                            ),
+                            itemExtent: 40,
+                            onSelectedItemChanged: (index) {
+                              setState(() {
+                                _selectedDay = index + 1;
+                              });
+                            },
+                            children: List<Widget>.generate(
+                              _getDaysInMonth(_selectedYear, _selectedMonth),
+                                  (index) => Center(
+                                child: Text(
+                                  '${index + 1}',
+                                  style: TextStyle(
+                                    fontSize: 20,
+                                    color: mainColor,
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            // 버튼 영역
+            Container(
+              padding: EdgeInsets.all(16),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                children: [
+                  TextButton(
+                    onPressed: () => Navigator.of(context).pop(),
+                    child: Text(
+                      '취소',
+                      style: TextStyle(
+                        color: Colors.grey[600],
+                        fontSize: 16,
+                      ),
+                    ),
+                  ),
+                  ElevatedButton(
+                    onPressed: () {
+                      Navigator.of(context).pop(
+                        DateTime(_selectedYear, _selectedMonth, _selectedDay),
+                      );
+                    },
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: mainColor,
+                      padding: EdgeInsets.symmetric(horizontal: 32, vertical: 12),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(25),
+                      ),
+                    ),
+                    child: Text(
+                      '확인',
+                      style: TextStyle(
+                        fontSize: 16,
+                        color: Colors.white,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+class TouchableScale extends StatefulWidget {
+  final Widget child;
+  final VoidCallback onTap;
+
+  TouchableScale({
+    required this.child,
+    required this.onTap,
+  });
+
+  @override
+  _TouchableScaleState createState() => _TouchableScaleState();
+}
+
+class _TouchableScaleState extends State<TouchableScale>
+    with SingleTickerProviderStateMixin {
+  late AnimationController _controller;
+  late Animation<double> _scaleAnimation;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(
+      duration: Duration(milliseconds: 150),
+      vsync: this,
+    );
+    _scaleAnimation = Tween<double>(begin: 1.0, end: 0.95).animate(
+      CurvedAnimation(
+        parent: _controller,
+        curve: Curves.easeInOut,
+      ),
+    );
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTapDown: (_) => _controller.forward(),
+      onTapUp: (_) {
+        _controller.reverse();
+        widget.onTap();
+      },
+      onTapCancel: () => _controller.reverse(),
+      child: ScaleTransition(
+        scale: _scaleAnimation,
+        child: widget.child,
       ),
     );
   }
