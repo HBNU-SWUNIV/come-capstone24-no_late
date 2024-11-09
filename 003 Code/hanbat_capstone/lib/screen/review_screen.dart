@@ -49,12 +49,30 @@ class _ReviewScreenState extends State<ReviewScreen> {
   String? aiReviewText;
   String? aiErrorMessage;
 
+  bool isDate = true;
+  bool isWeek = false;
+  bool isMonth = false;
+  late List<bool> isSelected; // 토글버튼 선택
+
   @override
   void initState() {
+    isSelected = [isDate, isWeek, isMonth];
     super.initState();
     userId = FirebaseAuth.instance.currentUser?.uid;
     fetchAiReviewText();
     reviewData = reviewList();
+  }
+
+  void toggleSelect(value) {
+    isDate = value == 0 ? true : false;
+    isWeek = value == 1 ? true : false;
+    isMonth = value == 2 ? true : false;
+
+    setState(() {
+      isSelected = [isDate, isWeek, isMonth];
+      aiReviewText = null;
+      fetchAiReviewText();
+    });
   }
 
   /**
@@ -62,7 +80,16 @@ class _ReviewScreenState extends State<ReviewScreen> {
    */
   Future<void> fetchAiReviewText() async {
     try {
-      final result = await await _reviewService.summarizeRetrospective(currentDay, userId!);
+      var result = null;
+
+      if(isDate){
+        result = await _reviewService.summarizeRetrospective(currentDay, userId!);
+      }else if(isWeek){
+        result = await _reviewService.summarizeRetrospectiveWeek(currentDay, userId!);
+      }else{
+        result = await _reviewService.summarizeRetrospectiveMonth(currentDay, userId!);
+      }
+
       if(mounted) {
         setState(() {
           aiReviewText = result;
@@ -181,14 +208,43 @@ class _ReviewScreenState extends State<ReviewScreen> {
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        TextButton.icon(
-                          onPressed: onPressSettingBtn,
-                          label: Text('커스텀', style: TextStyle(color: Colors.lightBlue[900],),),
-                          icon: Icon(Icons.settings, color: Colors.lightBlue[900],), )
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceAround,
+                          children: [
+                            SizedBox(width: 5,),
+                            ToggleButtons(
+                              disabledColor: Colors.white,
+                              renderBorder: false,
+                              borderRadius: BorderRadius.circular(10),
+                              borderWidth: 0,
+                              borderColor: Colors.white,
+                              selectedBorderColor: Colors.white,
+                              fillColor: Colors.white,
+                              color: Colors.grey,
+                              selectedColor: Colors.lightBlue[900],
+                              children: [
+                              Padding(
+                                  padding: EdgeInsets.symmetric(horizontal: 15),
+                                  child: Text('일별 요약')
+                              ),
+                              Padding(
+                                  padding: EdgeInsets.symmetric(horizontal: 15),
+                                  child: Text('주별 요약')
+                              ),
+                              Padding(
+                                  padding: EdgeInsets.symmetric(horizontal: 15),
+                                  child: Text('월별 요약')
+                              ),
+                            ],
+                              isSelected: isSelected,
+                            onPressed: toggleSelect,)
+                          ],
+                        ),
+                        IconButton(onPressed: onPressSettingBtn, icon: Icon(Icons.settings, color:Colors.lightBlue[900]))
                       ],
                     ),
                     Container(
-                      margin: EdgeInsets.all(10),
+                      margin: EdgeInsets.all(5),
                       // constraints: BoxConstraints(
                       //   maxHeight: 150
                       // ),
@@ -280,8 +336,9 @@ class _ReviewScreenState extends State<ReviewScreen> {
   void onPressBackBtn() {
     setState(() {
       currentDay = currentDay.subtract(Duration(days: 1));
-      aiReviewText = null;
-      fetchAiReviewText();
+      //aiReviewText = null;
+      toggleSelect(0);
+      //fetchAiReviewText();
       reviewData = reviewList();  // 날짜 변경 시 데이터 다시 로드
     });
   }
@@ -304,8 +361,9 @@ class _ReviewScreenState extends State<ReviewScreen> {
     if (selectedDate != null) {
       setState(() {
         currentDay = selectedDate;
-        aiReviewText = null;
-        fetchAiReviewText();
+        //aiReviewText = null;
+        //fetchAiReviewText();
+        toggleSelect(0);
         reviewData = reviewList();  // 날짜 변경 시 데이터 다시 로드
       });
     }
@@ -318,8 +376,9 @@ class _ReviewScreenState extends State<ReviewScreen> {
   void onPressForwardBtn() {
     setState(() {
       currentDay = currentDay.add(Duration(days: 1));
-      aiReviewText = null;
-      fetchAiReviewText();
+      //aiReviewText = null;
+      //fetchAiReviewText();
+      toggleSelect(0);
       reviewData = reviewList();  // 날짜 변경 시 데이터 다시 로드
     });
   }
