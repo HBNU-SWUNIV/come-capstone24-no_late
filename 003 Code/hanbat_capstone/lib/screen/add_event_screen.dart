@@ -3,9 +3,11 @@ import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:intl/intl.dart';
+import 'package:provider/provider.dart';
 import '../model/category_model.dart';
 import '../model/event_model.dart';
 import '../model/event_result_model.dart';
+import '../providers/category_provider.dart';
 import 'root_screen.dart';
 
 class AddEventScreen extends StatefulWidget {
@@ -266,6 +268,14 @@ class _AddEventScreenState extends State<AddEventScreen> {
           await _saveFinalEvent(startDateTime, endDateTime);
         } else {
           await _saveRegularEvent(startDateTime, endDateTime);
+        }
+
+        final categoryProvider = Provider.of<CategoryProvider>(context, listen: false);
+        await categoryProvider.loadCategories();
+
+
+        if (widget.onEventAdded != null) {
+          widget.onEventAdded!();
         }
 
         String message = widget.isEditing ? '일정이 수정되었습니다.' : '일정이 추가되었습니다.';
@@ -604,6 +614,9 @@ class _AddEventScreenState extends State<AddEventScreen> {
                           setState(() {
                             selectedCategoryId = newValue;
                           });
+                          if (widget.onEventAdded != null) {
+                            widget.onEventAdded!();
+                          }
                         }
                       },
                     ),

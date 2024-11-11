@@ -16,20 +16,27 @@ import '../component/checkbox_component.dart';
 import '../providers/schedulesettings_provider.dart';
 import '../services/event_service.dart';
 import 'add_event_screen.dart';
+import 'calendar_screen.dart';
 import 'event_detail_screen.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:collection/collection.dart';
+export 'schedule_screen.dart' show ScheduleScreenState;
 
 class ScheduleScreen extends StatefulWidget {
   final DateTime? selectedDate;
+  final Function? onEventUpdated;  // 콜백 추가
 
-  ScheduleScreen({this.selectedDate});
+  ScheduleScreen({
+    Key? key,
+    required this.selectedDate,
+    this.onEventUpdated,
+  }) : super(key: key);
 
   @override
-  _ScheduleScreenState createState() => _ScheduleScreenState();
+  State<ScheduleScreen> createState() => ScheduleScreenState();
 }
 
-class _ScheduleScreenState extends State<ScheduleScreen> {
+class ScheduleScreenState extends State<ScheduleScreen> {
   late String formattedDate;
   Map<String, List<Map<String, String>>> scheduleData = {};
   int startTime = 0;
@@ -45,33 +52,73 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
   List<EventResultModel> regularResultEvents = [];
   bool _isLoading = true;
   List<EventResultModel> resultEvents = [];
+  Map<String, String> categoryColors = {};  // 카테고리 색상 정보를 저장할 맵 추가
 
   final Color dragSourceColor = Colors.blue.withOpacity(0.1); // 원본 위치 색상
   final Color dragFeedbackColor = Colors.blue.withOpacity(0.1); // 드래그 중인 아이템 색상
   final Color dragTargetColor = Colors.green.withOpacity(0.1); // 드롭 대상 영역 색상
   final Color dragTargetActiveColor = Colors.green.withOpacity(0.2); // 드래그 오버 시 색상
 
+  Future<void> refreshSchedule() async {
+    await _loadInitialData();
+    widget.onEventUpdated?.call();  // 상위 위젯에 알림
+  }
+
   @override
   void initState() {
     super.initState();
     _focusedDate = widget.selectedDate ?? DateTime.now();
     formattedDate = DateFormat('yyyy-MM-dd').format(_focusedDate);
-    _loadSettings();
+
     _pageController = PageController(initialPage: 1000);
+
     _ensureUserLoggedIn();
-    _loadAllDayEventStates();
-    _loadEvents();
+    _loadInitialData();
   }
+
+  Future<void> _loadInitialData() async {
+    setState(() => _isLoading = true);
+    try {
+      await _loadCategories();  // 카테고리 먼저 로드
+      await _loadSettings();    // 설정 로드
+      await _loadAllDayEventStates(); // 종일 일정 상태 로드
+      await _loadEvents();      // 이벤트 로드
+    } catch (e) {
+      print('Error in _loadInitialData: $e');
+    } finally {
+      setState(() => _isLoading = false);
+    }
+  }
+
 
   @override
   void dispose() {
     _pageController.dispose();
     super.dispose();
   }
+  Future<void> _loadCategories() async {
+    try {
+      final user = FirebaseAuth.instance.currentUser;
+      if (user == null) return;
 
-  void refreshSchedule() {
-    _loadEvents();
+      final snapshot = await FirebaseFirestore.instance
+          .collection('category')
+          .where('userId', isEqualTo: user.uid)  // 사용자별 카테고리만 로드
+          .get();
+
+      if (!mounted) return;
+
+      setState(() {
+        categoryColors = Map.fromEntries(
+            snapshot.docs.map((doc) => MapEntry(doc.id, doc.data()['colorCode'] as String))
+        );
+      });
+      print('Loaded categories for user ${user.uid}: $categoryColors'); // 디버깅용
+    } catch (e) {
+      print('Error loading categories: $e');
+    }
   }
+
 
   Future<void> _loadEvents() async {
     setState(() => _isLoading = true);
@@ -613,7 +660,10 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
                     event: isplan ? event as EventModel : null,
                     eventResult: isplan ? null : event as EventResultModel,
                     selectedDate: _focusedDate,
-                    updateCalendar: _fetchEvents,
+                    updateCalendar: () async {
+                      await _loadInitialData();  // 전체 데이터 새로고침
+                      widget.onEventUpdated?.call();  // 일정 업데이트 시 콜백 호출
+                    },
                     onEventDeleted: (deleteAllRecurrence) async {
                       if (isplan) {
                         await eventService.deleteEvent(
@@ -660,14 +710,17 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
                             // EventResultModel에 대한 처리
                           }
                         });
-                        _fetchEvents(); // 전체 이벤트 목록 새로고침
+                        await _loadInitialData();  // 전체 데이터 새로고침
+
+                        widget.onEventUpdated?.call();  // 화면으로 돌아왔을 때도 콜백 호출
                       }
                     },
                   ),
             ),
           );
 
-          _fetchEvents();
+          await _loadInitialData();  // 화면으로 돌아왔을 때도 새로고침
+          widget.onEventUpdated?.call();  // 상위 위젯에 알림
         } else {
           print("No matching event found for title: $eventTitle");
           ScaffoldMessenger.of(context).showSnackBar(
@@ -866,18 +919,55 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
                       _loadEvents(); // 화면 새로고침
                       ScaffoldMessenger.of(context).showSnackBar(
                         SnackBar(
-                          content: Text('일정이 이동되었습니다.'),
-                          backgroundColor: Colors.blue,
+                          content: Text(
+                            '계획된 일정이 실제 수행 목록으로 이동되었습니다.',
+                            style: TextStyle(
+                              fontSize: 14,
+                              color: Colors.white,
+                            ),
+                          ),
+                          backgroundColor: Colors.black87,
+                          duration: Duration(seconds: 2),
                           behavior: SnackBarBehavior.floating,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          margin: EdgeInsets.symmetric(
+                            horizontal: 16,
+                            vertical: 16,
+                          ),
+                          elevation: 4,
+                          action: SnackBarAction(
+                            label: '확인',
+                            textColor: Colors.white70,
+                            onPressed: () {
+                              ScaffoldMessenger.of(context).hideCurrentSnackBar();
+                            },
+                          ),
                         ),
                       );
                     } catch (e) {
                       print('Error moving event: $e');
                       ScaffoldMessenger.of(context).showSnackBar(
                         SnackBar(
-                          content: Text('일정 이동 중 오류가 발생했습니다.'),
-                          backgroundColor: Colors.red,
+                          content: Text(
+                            '일정 이동 중 문제가 발생했습니다. 다시 시도해 주세요.',
+                            style: TextStyle(
+                              fontSize: 14,
+                              color: Colors.white,
+                            ),
+                          ),
+                          backgroundColor: Colors.black87,
+                          duration: Duration(seconds: 3),
                           behavior: SnackBarBehavior.floating,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          margin: EdgeInsets.symmetric(
+                            horizontal: 16,
+                            vertical: 16,
+                          ),
+                          elevation: 4,
                         ),
                       );
                     }

@@ -12,9 +12,13 @@ import 'package:intl/intl.dart';
 import 'day_events_screen.dart';
 
 class CalendarScreen extends StatefulWidget {
-  final Key? key;
+  final Function? onEventUpdated;
 
-  CalendarScreen({this.key}) : super(key: key);
+  CalendarScreen({
+    Key? key,
+    this.onEventUpdated,
+  }) : super(key: key);
+
 
   @override
   CalendarScreenState createState() => CalendarScreenState();
@@ -31,11 +35,7 @@ class CalendarScreenState extends State<CalendarScreen> {
 
   //선택한 날짜의 이벤트 목록
 
-  void refreshCalendar() {
-    setState(() {
-      _fetchEvents();
-    });
-  }
+
 
   Map<String, String> categoryColors = {};
 
@@ -63,6 +63,18 @@ class CalendarScreenState extends State<CalendarScreen> {
     _loadCategories().then((_) {
       updateExistingEvents().then((_) => _fetchEvents());
     });
+  }
+
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    refreshCalendar();
+  }
+
+  Future<void> refreshCalendar() async {
+    await _loadCategories();
+    await _fetchEvents();
   }
 
   void _onFormatChanged(CalendarFormat format) {

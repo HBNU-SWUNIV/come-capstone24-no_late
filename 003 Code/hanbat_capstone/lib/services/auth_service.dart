@@ -1,9 +1,12 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:hanbat_capstone/services/category_service.dart';
+import 'package:provider/provider.dart';
 import 'package:uuid/uuid.dart';
 import '../model/category_model.dart';
 import '../model/user_model.dart';
+import '../providers/category_provider.dart';
+import '../main.dart';  // globalNavigatorKey를 사용하기 위한 import
 
 class AuthService {
   final FirebaseAuth _auth = FirebaseAuth.instance;
@@ -32,10 +35,19 @@ class AuthService {
         // 카테고리 신규 생성
         try {
           await categoryService.addNewCategory(user.uid);
-        } catch (e) {
-          print('카테리고 신규 생성 시 오류가 발생 : $e');
-        }
 
+          // globalNavigatorKey를 사용하여 context 가져오기
+          if (globalNavigatorKey.currentContext != null) {
+            final categoryProvider = Provider.of<CategoryProvider>(
+                globalNavigatorKey.currentContext!,
+                listen: false
+            );
+            await categoryProvider.loadCategories();
+          }
+
+        } catch (e) {
+          print('카테고리 신규 생성 시 오류가 발생 : $e');
+        }
         return newUser;
       }
     } catch (e) {

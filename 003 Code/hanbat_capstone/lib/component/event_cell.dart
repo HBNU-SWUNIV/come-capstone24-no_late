@@ -80,11 +80,15 @@ class EventCell extends StatelessWidget {
   Widget build(BuildContext context) {
     return Consumer<CategoryProvider>(
       builder: (context, categoryProvider, child) {
-        Color cellColor = Colors.black;
+        Color backgroundColor = Colors.transparent;
+        Color textColor = Colors.black;
+
         try {
           String? colorString = categoryProvider.categoryColors[categoryId];
           if (colorString != null) {
-            cellColor = Color(int.parse(colorString));
+            Color baseColor = Color(int.parse(colorString));
+            backgroundColor = baseColor.withOpacity(0.1);
+            textColor = baseColor;
           }
         } catch (e) {
           print('Error parsing color for category $categoryId: $e');
@@ -93,11 +97,15 @@ class EventCell extends StatelessWidget {
         return GestureDetector(
           onTap: onTap,
           child: Container(
-            padding: EdgeInsets.symmetric(vertical: 2, horizontal: 4),
+            padding: EdgeInsets.symmetric(vertical: 4, horizontal: 8),
+            decoration: BoxDecoration(
+              color: backgroundColor,
+              borderRadius: BorderRadius.circular(4),
+            ),
             child: Text(
               eventTitle,
               style: TextStyle(
-                color: cellColor,
+                color: textColor,
                 fontSize: 14,
                 fontWeight: FontWeight.w500,
               ),

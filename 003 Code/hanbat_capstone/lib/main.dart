@@ -12,6 +12,8 @@ import 'package:provider/provider.dart';
 import 'package:hanbat_capstone/providers/auth_provider.dart';
 import 'package:dart_openai/dart_openai.dart';
 
+final GlobalKey<NavigatorState> globalNavigatorKey = GlobalKey<NavigatorState>();
+
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -78,6 +80,7 @@ class MyApp extends StatelessWidget {
       title: 'Hanbat Capstone',
       theme: theme,
       debugShowCheckedModeBanner: false,
+      navigatorKey: globalNavigatorKey,
       home: AuthWrapper(notificationService: notificationService),
     );
   }

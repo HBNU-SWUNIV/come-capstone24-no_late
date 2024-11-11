@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:hanbat_capstone/screen/chart_screen.dart';
+import '../providers/category_provider.dart';
 import 'chat_screen.dart';
 import 'schedule_screen.dart';
 import 'add_event_screen.dart';
@@ -28,7 +29,9 @@ class _RootScreenState extends State<RootScreen> {
   int _selectedIndex = 0;
   final GlobalKey<CalendarScreenState> _calendarKey =
   GlobalKey<CalendarScreenState>();
+  final GlobalKey<ScheduleScreenState> _scheduleKey = GlobalKey<ScheduleScreenState>();
   late List<Widget> _screens;
+  late CategoryProvider _categoryProvider;
 
 
   @override
@@ -37,18 +40,40 @@ class _RootScreenState extends State<RootScreen> {
     if (widget.selectedDate != null) {
       _selectedIndex = 1; // 스케줄 화면으로 이동
     }
+    _categoryProvider = CategoryProvider();
+    _categoryProvider.loadCategories();  // 카테고리 초기 로드
     _initializeScreens();
   }
   void _initializeScreens() {
     _screens = [
-      CalendarScreen(key: _calendarKey),
-      ScheduleScreen(selectedDate: widget.selectedDate ?? DateTime.now()),
-      AddEventScreen(),
+      CalendarScreen( key: _calendarKey,
+        onEventUpdated: _refreshAllScreens,  // 캘린더에서 일정 업데이트 시 호출할 콜백
+      ),
+      ScheduleScreen( key: _scheduleKey,
+        selectedDate: widget.selectedDate ?? DateTime.now(),
+        // onEventUpdated: _refreshAllScreens,  // 스케줄러에서 일정 업데이트 시 호출할 콜백
+        onEventUpdated: () {
+          // 스케줄러에서 이벤트가 업데이트되면 캘린더도 새로고침
+          _calendarKey.currentState?.refreshCalendar();
+          _categoryProvider.loadCategories();  // 카테고리 새로고침
+        },
+      ),
+      AddEventScreen(
+        onEventAdded: () {
+          _refreshAllScreens();
+          _categoryProvider.loadCategories();  // 카테고리 새로고침
+        },
+      ),
       ReviewScreen(),
       ChartScreen(),
       SettingScreen(),
     ];
   }
+  void _refreshAllScreens() {
+    _calendarKey.currentState?.refreshCalendar();
+    _scheduleKey.currentState?.refreshSchedule();
+  }
+
 
 
   void _onItemTapped(int index) {
@@ -56,9 +81,12 @@ class _RootScreenState extends State<RootScreen> {
       if(index ==2) {
         _onAddEvent();
       } else {
-        _selectedIndex = index;
-      }
-    });
+        // 탭 전환 시 화면 갱신
+        if (_selectedIndex != index) {
+          _selectedIndex = index;
+          _refreshAllScreens();
+        }
+    }});
 
 
   }
@@ -76,13 +104,20 @@ class _RootScreenState extends State<RootScreen> {
     final result = await Navigator.push(
       context,
       MaterialPageRoute(
-        builder: (context) => AddEventScreen(selectedDate: widget.selectedDate),
+        builder: (context) =>AddEventScreen(
+          selectedDate: widget.selectedDate,
+          onEventAdded: () {
+            _refreshAllScreens();
+            _categoryProvider.loadCategories();  // 카테고리 새로고침
+          },
+        ),
       ),
     );
     if (result == true) {
       // 이벤트가 저장되었다면 캘린더 화면 갱신
       _calendarKey.currentState?.refreshCalendar();
       _refreshScheduleScreen();
+      _categoryProvider.loadCategories();  // 카테고리 새로고침
       setState(() {
         _selectedIndex = 0; // 캘린더 화면으로 이동
       });
