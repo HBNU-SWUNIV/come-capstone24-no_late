@@ -13,6 +13,7 @@ import '../component/date_selector.dart';
 import '../component/time_cell.dart';
 import '../component/event_cell.dart';
 import '../component/checkbox_component.dart';
+import '../providers/category_provider.dart';
 import '../providers/schedulesettings_provider.dart';
 import '../services/event_service.dart';
 import 'add_event_screen.dart';
@@ -69,56 +70,124 @@ class ScheduleScreenState extends State<ScheduleScreen> {
     super.initState();
     _focusedDate = widget.selectedDate ?? DateTime.now();
     formattedDate = DateFormat('yyyy-MM-dd').format(_focusedDate);
-
     _pageController = PageController(initialPage: 1000);
 
     _ensureUserLoggedIn();
-    _loadInitialData();
+    _initializeScreen();
   }
 
-  Future<void> _loadInitialData() async {
-    setState(() => _isLoading = true);
-    try {
-      await _loadCategories();  // 카테고리 먼저 로드
-      await _loadSettings();    // 설정 로드
-      await _loadAllDayEventStates(); // 종일 일정 상태 로드
-      await _loadEvents();      // 이벤트 로드
-    } catch (e) {
-      print('Error in _loadInitialData: $e');
-    } finally {
-      setState(() => _isLoading = false);
+
+  Future<void> _initializeScreen() async {
+    if (!mounted) return;
+
+    await _ensureUserLoggedIn();
+    await _loadInitialData();
+
+    // CategoryProvider 초기화
+    if (mounted) {
+      final categoryProvider = Provider.of<CategoryProvider>(context, listen: false);
+      await categoryProvider.loadCategories();
     }
   }
 
+  Future<void> _loadInitialData() async {
+    if (!mounted) return;
+    setState(() => _isLoading = true);
 
-  @override
-  void dispose() {
-    _pageController.dispose();
-    super.dispose();
+    try {
+      // 카테고리 데이터 먼저 로드
+      await _loadCategories();
+
+      // 다른 데이터 로드
+      await Future.wait([
+        _loadSettings(),
+        _loadAllDayEventStates(),
+      ]);
+
+      // 이벤트 로드 전에 카테고리 색상이 있는지 확인
+      if (categoryColors.isEmpty) {
+        print('Warning: Categories not loaded properly');
+        // 카테고리 다시 로드 시도
+        await _reloadCategories();
+      }
+
+      await _loadEvents();
+    } catch (e) {
+      print('Error in _loadInitialData: $e');
+    } finally {
+      if (mounted) {
+        setState(() => _isLoading = false);
+      }
+    }
   }
-  Future<void> _loadCategories() async {
+
+  Future<void> _reloadCategories() async {
+    if (!mounted) return;
+
     try {
       final user = FirebaseAuth.instance.currentUser;
       if (user == null) return;
 
       final snapshot = await FirebaseFirestore.instance
           .collection('category')
-          .where('userId', isEqualTo: user.uid)  // 사용자별 카테고리만 로드
+          .where('userId', isEqualTo: user.uid)
           .get();
 
       if (!mounted) return;
 
       setState(() {
         categoryColors = Map.fromEntries(
-            snapshot.docs.map((doc) => MapEntry(doc.id, doc.data()['colorCode'] as String))
+            snapshot.docs.map((doc) => MapEntry(
+                doc.id,
+                doc.data()['colorCode'] as String? ?? '0xFF000000'
+            ))
         );
       });
-      print('Loaded categories for user ${user.uid}: $categoryColors'); // 디버깅용
+
+      // CategoryProvider에도 동기화
+      if (mounted) {
+        final categoryProvider = Provider.of<CategoryProvider>(context, listen: false);
+        await categoryProvider.loadCategories();
+      }
+    } catch (e) {
+      print('Error reloading categories: $e');
+    }
+  }
+// 카테고리 로드 함수 수정
+  Future<void> _loadCategories() async {
+    if (!mounted) return;  // 추가: mounted 체크
+
+    try {
+      final user = FirebaseAuth.instance.currentUser;
+      if (user == null) return;
+
+      final snapshot = await FirebaseFirestore.instance
+          .collection('category')
+          .where('userId', isEqualTo: user.uid)
+          .get();
+
+      if (!mounted) return;
+
+      final newCategories = <String, String>{};
+      for (var doc in snapshot.docs) {
+        final colorCode = doc.data()['colorCode'] as String;
+        newCategories[doc.id] = colorCode;
+        print('Loaded category: ${doc.id} with color: $colorCode');
+      }
+
+      if (mounted) {  // 추가: mounted 체크
+        setState(() {
+          categoryColors = newCategories;
+        });
+      }
+
+      print('Categories loaded successfully. Total: ${categoryColors.length}');
+      return;
+
     } catch (e) {
       print('Error loading categories: $e');
     }
   }
-
 
   Future<void> _loadEvents() async {
     setState(() => _isLoading = true);
