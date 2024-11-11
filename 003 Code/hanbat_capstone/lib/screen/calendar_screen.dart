@@ -253,22 +253,42 @@ class CalendarScreenState extends State<CalendarScreen> {
   }
 
 // 선택한 색의 명도를 높이는 함수
+//   Color _getLighterColor(Color color) {
+//     final hslColor = HSLColor.fromColor(color);
+//     return hslColor
+//         .withLightness((hslColor.lightness + 0.4).clamp(0.0, 1.0))
+//         .toColor();
+//   }
   Color _getLighterColor(Color color) {
+    // 먼저 색상이 검정색인지 확인
+    if (color.value == 0xFF000000) {
+      // 검정색인 경우 순수한 회색으로 변환
+      return Color.fromRGBO(240, 240, 240, 1.0); // 밝은 회색
+    }
+
+    // 다른 색상들에 대해서는 기존 로직 적용
     final hslColor = HSLColor.fromColor(color);
     return hslColor
+        .withSaturation(0.3)
         .withLightness((hslColor.lightness + 0.4).clamp(0.0, 1.0))
         .toColor();
   }
 
+
   Color _getCategoryColor(String? colorCode) {
     if (colorCode != null && colorCode.isNotEmpty) {
       try {
-        return Color(int.parse(colorCode));
+        // colorCode가 '0xFF'로 시작하는 경우 처리
+        if (colorCode.startsWith('0x')) {
+          return Color(int.parse(colorCode));
+        }
+        // '#'으로 시작하는 경우 처리
+        return Color(int.parse(colorCode.replaceFirst('#', '0xFF')));
       } catch (e) {
         print('Error parsing color code: $colorCode');
       }
     }
-    return Colors.grey; // 기본 색상
+    return Colors.black; // 기본 색상을 검정색으로 변경
   }
 
   void _onDaySelected(DateTime selectedDay, DateTime focusedDay) async {
