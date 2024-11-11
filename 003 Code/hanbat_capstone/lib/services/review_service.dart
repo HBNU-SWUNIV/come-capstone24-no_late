@@ -30,7 +30,7 @@ class ReviewService {
     for (var event in events) {
       var correspondingResult = eventResults.firstWhere(
             (result) => result.eventId == event.eventId && result.eventResultTitle == event.eventTitle,
-        orElse: () => EventResultModel(eventResultId: '', eventId: '', categoryId: '', userId: '', eventResultTitle: '', completeYn: 'N', showOnCalendar: false),
+        orElse: () => EventResultModel(eventResultId: '', eventId: '', categoryId: '', userId: '', eventResultTitle: '', completedYn: 'N', showOnCalendar: false),
       );
       if (correspondingResult.eventId != null && correspondingResult.eventId != '') {
         matchedCount++;
@@ -108,10 +108,10 @@ class ReviewService {
     for (var event in events) {
       var correspondingResult = eventResults.firstWhere(
             (result) => result.eventId == event.eventId && result.eventResultTitle == event.eventTitle,
-        orElse: () => EventResultModel(eventResultId: '', eventId: '', categoryId: '', userId: '', eventResultTitle: '', completeYn: 'N', showOnCalendar: false),
+        orElse: () => EventResultModel(eventResultId: '', eventId: '', categoryId: '', userId: '', eventResultTitle: '', completedYn: 'N', showOnCalendar: false),
       );
 
-      if (correspondingResult != null && correspondingResult.completeYn == 'Y') {
+      if (correspondingResult != null && correspondingResult.completedYn == 'Y') {
         completedEvents.add(event.eventTitle);
       } else {
         pendingEvents.add(event.eventTitle);
@@ -182,10 +182,10 @@ class ReviewService {
     for (var event in events) {
       var correspondingResult = eventResults.firstWhere(
             (result) => result.eventId == event.eventId && result.eventResultTitle == event.eventTitle,
-        orElse: () => EventResultModel(eventResultId: '', eventId: '', categoryId: '', userId: '', eventResultTitle: '', completeYn: 'N', showOnCalendar: false),
+        orElse: () => EventResultModel(eventResultId: '', eventId: '', categoryId: '', userId: '', eventResultTitle: '', completedYn: 'N', showOnCalendar: false),
       );
 
-      if (correspondingResult != null && correspondingResult.completeYn == 'Y') {
+      if (correspondingResult != null && correspondingResult.completedYn == 'Y') {
         completedEvents.add(event.eventTitle);
       } else {
         pendingEvents.add(event.eventTitle);
@@ -353,7 +353,7 @@ class ReviewService {
         eventResultTitle: data['eventResultTitle'] ?? '',
         eventResultContent: data['eventResultContent'] ?? '',
         isAllDay: data['isAllDay'] is bool ? data['isAllDay'] : false, // Ensure it's a bool
-        completeYn: data['completeYn'] ?? '',
+        completedYn: data['completedYn'] ?? '',
         showOnCalendar: data['showOnCalendar'] ?? true,
       );
     }).toList();

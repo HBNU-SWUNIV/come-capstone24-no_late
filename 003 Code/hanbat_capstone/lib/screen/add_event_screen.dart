@@ -344,7 +344,7 @@ class _AddEventScreenState extends State<AddEventScreen> {
       eventResultTitle: _titleController.text,
       eventResultContent: _contentController.text,
       isAllDay: _isAllDay ? true : false,
-      completeYn: '',
+      completedYn: '',
     );
 
     try {

@@ -22,10 +22,10 @@ class CategoryModel {
   CategoryModel.fromJson({
     required Map<String, dynamic> json,
   }) : categoryId = json['categoryId'],
-       userId = json['userId'],
-       categoryName = json['categoryName'],
-       colorCode = json['colorCode'],
-       defaultYn = json['defaultYn'] ?? 'N';
+        userId = json['userId'],
+        categoryName = json['categoryName'],
+        colorCode = json['colorCode'],
+        defaultYn = json['defaultYn'] ?? 'N';
 
   /**
    * 모델을 JSON으로 변환

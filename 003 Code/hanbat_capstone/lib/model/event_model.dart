@@ -58,7 +58,7 @@ class EventModel {
       categoryId: map['categoryId'] ?? '',
       userId: map['userId'] ?? '',
       eventDate:
-          map['eventDate'] != null ? DateTime.parse(map['eventDate']) : null,
+      map['eventDate'] != null ? DateTime.parse(map['eventDate']) : null,
       eventSttTime: map['eventSttTime'] != null
           ? DateTime.parse(map['eventSttTime'])
           : null,

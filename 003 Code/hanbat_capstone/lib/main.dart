@@ -11,6 +11,8 @@ import 'package:hanbat_capstone/screen/root_screen.dart';
 import 'package:provider/provider.dart';
 import 'package:hanbat_capstone/providers/auth_provider.dart';
 import 'package:dart_openai/dart_openai.dart';
+import 'package:hanbat_capstone/providers/statistics_provider.dart';
+
 
 final GlobalKey<NavigatorState> globalNavigatorKey = GlobalKey<NavigatorState>();
 
@@ -42,6 +44,7 @@ Future<void> main() async {
         ChangeNotifierProvider(create: (_) => AuthProvider()),
         ChangeNotifierProvider(create: (_) => CategoryProvider()),
         ChangeNotifierProvider(create: (_) => ScheduleSettingsProvider()),
+        ChangeNotifierProvider(create: (_) => StatisticsProvider()),
       ],
       child: MyApp(notificationService: notificationService,
         theme: ThemeData(
