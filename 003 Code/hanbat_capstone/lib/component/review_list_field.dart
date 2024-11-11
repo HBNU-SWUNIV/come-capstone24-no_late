@@ -30,62 +30,49 @@ class ReviewListField extends StatelessWidget {
       decoration: BoxDecoration(
           border: Border.all(width: 1, color: Colors.black12),
           borderRadius: BorderRadius.circular(8)),
+          margin: EdgeInsets.all(5),
       child: Padding(
         padding: const EdgeInsets.all(15),
         child: IntrinsicHeight(
           //높이를 내부 위젯들의 최대 높이로 설정
           child: Column(
             children: [
-              Container(
-                child: Padding(
-                  padding: EdgeInsets.symmetric(horizontal: 15, vertical: 8),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Text(title, style: TextStyle(
-                        fontSize: 15,
-                        fontWeight: FontWeight.w600,
-                        color: Colors.black87,
-                      )),
-                    ],
-                  ),
-                ),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text(title, style: TextStyle(
+                    fontSize: 15,
+                    fontWeight: FontWeight.w500,
+                    color: Colors.black
+                  ),),
+                  IconButton(onPressed: (){
+                    showModalBottomSheet(
+                        context: context,
+                        builder: (_) => ReviewAddScreen(reviewTitle: title, userId: userId, reviewDate: reviewDate, reviewId: reviewId.isNotEmpty ? reviewId : null, reviewContent: reviewContent,),
+                        isScrollControlled: true
+                    ).then((value){
+                      callback();
+                    });
+                  }, icon: Icon(Icons.edit))
+                ],
               ),
-              SizedBox(height: 10,),
+              SizedBox(height: 5,),
               Expanded(
                   child: Container(
-                    color: Colors.grey[200],
+                    color: Colors.grey[100],
                     constraints: BoxConstraints(
-                      minHeight: 100,
+                      minHeight: 100
                     ),
                     alignment: Alignment.topLeft,
-                    padding: EdgeInsets.all(15),
-                    child: Text(content,
+                    padding: EdgeInsets.all(10),
+                    child: Text(
+                      content,
                       style: TextStyle(
-                        fontSize: 15,
+                        fontSize: 14
                       ),
                     ),
-                  )),
-              SizedBox(height: 10,),
-              Container(
-                alignment: Alignment.bottomLeft,
-                child: IconButton(
-                    onPressed: (){
-                      showModalBottomSheet(context: context
-                          , isDismissible: true
-                          , builder: (_) => ReviewAddScreen(
-                            reviewTitle: title,
-                            reviewId: reviewId.isNotEmpty ? reviewId : null,
-                            userId: userId,
-                            reviewDate: reviewDate,
-                            reviewContent: reviewContent,
-                          )
-                          , isScrollControlled: true
-                      ).then((value) {
-                        callback();
-                      });
-                    }, icon: Icon(Icons.edit)),
-              ),
+                  )
+              )
             ],
           ),
         ),
