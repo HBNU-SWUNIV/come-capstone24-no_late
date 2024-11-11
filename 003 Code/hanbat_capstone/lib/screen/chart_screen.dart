@@ -12,10 +12,11 @@ class ChartScreen extends StatefulWidget {
 }
 
 class _ChartScreenState extends State<ChartScreen> {
+  int _selectedSection = 0; // 0: 전체/종일, 1: 주차별, 2: 카테고리별
+
   @override
   void initState() {
     super.initState();
-    // 화면 진입 시 통계 데이터 로드
     WidgetsBinding.instance.addPostFrameCallback((_) {
       context.read<StatisticsProvider>().initialize();
     });
@@ -52,29 +53,129 @@ class _ChartScreenState extends State<ChartScreen> {
               return const Center(child: Text('데이터가 없습니다.'));
             }
 
-            return SingleChildScrollView(
-              physics: const AlwaysScrollableScrollPhysics(),
-              child: Padding(
-                padding: const EdgeInsets.all(16.0),
-                child: Column(
-                  children: [
-                    _buildMonthSelector(provider),
-                    const SizedBox(height: 20),
-                    _buildTotalStats(chartData),
-                    const SizedBox(height: 20),
-                    _buildWeeklyStats(chartData),
-                    const SizedBox(height: 20),
-                    _buildAllDayStats(chartData),
-                    const SizedBox(height: 20),
-                    _buildCategoryStats(chartData),
-                  ],
+            return Column(
+              children: [
+                _buildMonthSelector(provider),
+                const SizedBox(height: 16),
+                _buildToggleButtons(),
+                const SizedBox(height: 16),
+                Expanded(
+                  child: SingleChildScrollView(
+                    physics: const AlwaysScrollableScrollPhysics(),
+                    child: Padding(
+                      padding: const EdgeInsets.all(16.0),
+                      child: _buildSelectedSection(chartData),
+                    ),
+                  ),
                 ),
-              ),
+              ],
             );
           },
         ),
       ),
     );
+  }
+
+  Widget _buildToggleButtons() {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 16),
+      child: Row(
+        children: [
+          Expanded(
+            child: TextButton(
+              style: TextButton.styleFrom(
+                backgroundColor: _selectedSection == 0
+                    ? Colors.blue[900]
+                    : Colors.grey[200],
+                foregroundColor: _selectedSection == 0
+                    ? Colors.white
+                    : Colors.black,
+                padding: const EdgeInsets.symmetric(vertical: 12),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(8),
+                ),
+              ),
+              onPressed: () => setState(() => _selectedSection = 0),
+              child: const Text('전체/종일'),
+            ),
+          ),
+          const SizedBox(width: 8),
+          Expanded(
+            child: TextButton(
+              style: TextButton.styleFrom(
+                backgroundColor: _selectedSection == 1
+                    ? Colors.blue[900]
+                    : Colors.grey[200],
+                foregroundColor: _selectedSection == 1
+                    ? Colors.white
+                    : Colors.black,
+                padding: const EdgeInsets.symmetric(vertical: 12),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(8),
+                ),
+              ),
+              onPressed: () => setState(() => _selectedSection = 1),
+              child: const Text('주차별'),
+            ),
+          ),
+          const SizedBox(width: 8),
+          Expanded(
+            child: TextButton(
+              style: TextButton.styleFrom(
+                backgroundColor: _selectedSection == 2
+                    ? Colors.blue[900]
+                    : Colors.grey[200],
+                foregroundColor: _selectedSection == 2
+                    ? Colors.white
+                    : Colors.black,
+                padding: const EdgeInsets.symmetric(vertical: 12),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(8),
+                ),
+              ),
+              onPressed: () => setState(() => _selectedSection = 2),
+              child: const Text('카테고리'),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildSelectedSection(MonthlyChartData chartData) {
+    switch (_selectedSection) {
+      case 0:
+        return Column(
+          children: [
+            _buildTotalStats(chartData),
+            const SizedBox(height: 20),
+            _buildAllDayStats(chartData),
+          ],
+        );
+      case 1:
+        if (chartData.weeklyStats.isEmpty) {
+          return Column(
+            children: [
+              const Text(
+                '주차별 통계',
+                style: TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              const SizedBox(height: 20),
+              const Center(
+                child: Text('해당 월에 등록된 일정이 없습니다.'),
+              ),
+            ],
+          );
+        }
+        return _buildWeeklyStats(chartData);
+      case 2:
+        return _buildCategoryStats(chartData);
+      default:
+        return const SizedBox.shrink();
+    }
   }
 
   Widget _buildMonthSelector(StatisticsProvider provider) {
@@ -150,7 +251,7 @@ class _ChartScreenState extends State<ChartScreen> {
                     sections: [
                       PieChartSectionData(
                         value: completionRate,
-                        color: Colors.blue,
+                        color: Colors.blue[900] ?? Colors.blue,
                         radius: 40,
                         title: '',
                       ),
@@ -216,10 +317,11 @@ class _ChartScreenState extends State<ChartScreen> {
       ),
     );
   }
+
   Widget _buildStatItem(String label, String value, IconData icon) {
     return Column(
       children: [
-        Icon(icon, color: Colors.blue),
+        Icon(icon, color: Colors.blue[900]),
         const SizedBox(height: 4),
         Text(
           value,
@@ -265,71 +367,90 @@ class _ChartScreenState extends State<ChartScreen> {
             ),
           ),
           const SizedBox(height: 20),
-          SizedBox(
-            height: 300,
-            child: BarChart(
-              BarChartData(
-                alignment: BarChartAlignment.spaceAround,
-                maxY: weeklyStats.fold(0.0, (max, stat) =>
-                stat.plannedCount > max ? stat.plannedCount.toDouble() : max) * 1.2,
-                titlesData: FlTitlesData(
-                  show: true,
-                  topTitles: const AxisTitles(
-                    sideTitles: SideTitles(showTitles: false),
+          // weeklyStats가 비어있거나 모든 계획 수가 0인 경우 메시지 표시
+          if (weeklyStats.isEmpty || weeklyStats.every((stat) => stat.plannedCount == 0))
+            const Padding(
+              padding: EdgeInsets.symmetric(vertical: 40),
+              child: Center(
+                child: Text(
+                  '해당 월에 등록된 일정이 없습니다.',
+                  style: TextStyle(
+                    color: Colors.grey,
+                    fontSize: 16,
                   ),
-                  rightTitles: const AxisTitles(
-                    sideTitles: SideTitles(showTitles: false),
-                  ),
-                  bottomTitles: AxisTitles(
-                    sideTitles: SideTitles(
-                      showTitles: true,
-                      getTitlesWidget: (value, meta) {
-                        return Text(
-                          '${value.toInt() + 1}주차',
-                          style: const TextStyle(fontSize: 12),
+                ),
+              ),
+            )
+          else
+            Column(
+              children: [
+                SizedBox(
+                  height: 300,
+                  child: BarChart(
+                    BarChartData(
+                      alignment: BarChartAlignment.spaceAround,
+                      maxY: weeklyStats.fold(0.0, (max, stat) =>
+                      stat.plannedCount > max ? stat.plannedCount.toDouble() : max) * 1.2,
+                      titlesData: FlTitlesData(
+                        show: true,
+                        topTitles: const AxisTitles(
+                          sideTitles: SideTitles(showTitles: false),
+                        ),
+                        rightTitles: const AxisTitles(
+                          sideTitles: SideTitles(showTitles: false),
+                        ),
+                        bottomTitles: AxisTitles(
+                          sideTitles: SideTitles(
+                            showTitles: true,
+                            getTitlesWidget: (value, meta) {
+                              return Text(
+                                '${value.toInt() + 1}주차',
+                                style: const TextStyle(fontSize: 12),
+                              );
+                            },
+                          ),
+                        ),
+                      ),
+                      gridData: const FlGridData(
+                        show: false,
+                        drawVerticalLine: false,
+                      ),
+                      borderData: FlBorderData(show: false),
+                      barGroups: weeklyStats.asMap().entries.map((entry) {
+                        final index = entry.key;
+                        final stat = entry.value;
+                        return BarChartGroupData(
+                          x: index,
+                          barRods: [
+                            BarChartRodData(
+                              toY: stat.plannedCount.toDouble(),
+                              width: 15,
+                              color: Colors.blue[900]?.withOpacity(0.5),
+                            ),
+                            BarChartRodData(
+                              toY: stat.completedCount.toDouble(),
+                              width: 15,
+                              color: Colors.blue[900],
+                            ),
+                          ],
                         );
-                      },
+                      }).toList(),
                     ),
                   ),
                 ),
-                gridData: const FlGridData(
-                  show: false,
-                  drawVerticalLine: false,
+                const SizedBox(height: 16),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    _buildLegendItem('계획', Colors.blue[900]?.withOpacity(0.5) ?? Colors.blue.withOpacity(0.5)),
+                    const SizedBox(width: 20),
+                    _buildLegendItem('완료', Colors.blue[900] ?? Colors.blue),
+                  ],
                 ),
-                borderData: FlBorderData(show: false),
-                barGroups: weeklyStats.asMap().entries.map((entry) {
-                  final index = entry.key;
-                  final stat = entry.value;
-                  return BarChartGroupData(
-                    x: index,
-                    barRods: [
-                      BarChartRodData(
-                        toY: stat.plannedCount.toDouble(),
-                        width: 15,
-                        color: Colors.blue.withOpacity(0.5),
-                      ),
-                      BarChartRodData(
-                        toY: stat.completedCount.toDouble(),
-                        width: 15,
-                        color: Colors.blue,
-                      ),
-                    ],
-                  );
-                }).toList(),
-              ),
+                const SizedBox(height: 16),
+                _buildWeeklyStatsTable(weeklyStats),
+              ],
             ),
-          ),
-          const SizedBox(height: 16),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              _buildLegendItem('계획', Colors.blue.withOpacity(0.5)),
-              const SizedBox(width: 20),
-              _buildLegendItem('완료', Colors.blue),
-            ],
-          ),
-          const SizedBox(height: 16),
-          _buildWeeklyStatsTable(weeklyStats),
         ],
       ),
     );
@@ -417,7 +538,7 @@ class _ChartScreenState extends State<ChartScreen> {
                   child: Text(
                     '${stat.completionRate.toStringAsFixed(1)}%',
                     style: TextStyle(
-                      color: stat.completionRate >= 80 ? Colors.blue :
+                      color: stat.completionRate >= 80 ? Colors.blue[900] :
                       stat.completionRate >= 50 ? Colors.orange :
                       Colors.red,
                     ),
@@ -461,13 +582,13 @@ class _ChartScreenState extends State<ChartScreen> {
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                 decoration: BoxDecoration(
-                  color: Colors.blue.withOpacity(0.1),
+                  color: Colors.blue[900]?.withOpacity(0.1),
                   borderRadius: BorderRadius.circular(20),
                 ),
                 child: Text(
                   '달성률 ${chartData.allDayStats.completionRate.toStringAsFixed(1)}%',
-                  style: const TextStyle(
-                    color: Colors.blue,
+                  style: TextStyle(
+                    color: Colors.blue[900],
                     fontWeight: FontWeight.bold,
                   ),
                 ),
@@ -547,6 +668,38 @@ class _ChartScreenState extends State<ChartScreen> {
   Widget _buildCategoryStats(MonthlyChartData chartData) {
     final categoryStats = chartData.categoryStats;
     categoryStats.sort((a, b) => b.completionRate.compareTo(a.completionRate));
+
+    if (categoryStats.isEmpty) {
+      return Container(
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(12),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.grey.withOpacity(0.2),
+              blurRadius: 4,
+              offset: const Offset(0, 2),
+            ),
+          ],
+        ),
+        child: const Column(
+          children: [
+            Text(
+              '카테고리별 통계',
+              style: TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            SizedBox(height: 20),
+            Center(
+              child: Text('등록된 카테고리가 없습니다.'),
+            ),
+          ],
+        ),
+      );
+    }
 
     return Container(
       padding: const EdgeInsets.all(16),
