@@ -34,49 +34,36 @@ class DateSelector extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.center,
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Expanded(                                  // 왼쪽 여백을 위한 Expanded
-          child: IconButton(
-            icon: Icon(Icons.chevron_left),
-            onPressed: onPreviousDay,
-          ),
-        ),
-        GestureDetector(
-          onTap: () => _selectDate(context),
-          child: Container(
-            padding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-            decoration: BoxDecoration(
-              color: Colors.transparent,
-              borderRadius: BorderRadius.circular(20),
+    return Container(
+      width: MediaQuery.of(context).size.width,
+      color: Colors.lightBlue[900], // AppBar와 같은 색상
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 8.0),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            IconButton(
+              icon: Icon(Icons.chevron_left, color: Colors.white),
+              onPressed: onPreviousDay,
             ),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Text(
-                  DateFormat('yyyy-MM-dd').format(selectedDate),
-                  style: TextStyle(
-                    fontSize: 24,
-                    fontWeight: FontWeight.bold,
-                  ),
+            GestureDetector(
+              onTap: () => _selectDate(context),
+              child: Text(
+                DateFormat('yyyy-MM-dd').format(selectedDate),
+                style: TextStyle(
+                  fontSize: 24,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.white,
                 ),
-
-
-              ],
+              ),
             ),
-          ),
+            IconButton(
+              icon: Icon(Icons.chevron_right, color: Colors.white),
+              onPressed: onNextDay,
+            ),
+          ],
         ),
-        Expanded(                                  // 오른쪽 여백을 위한 Expanded
-
-          child: IconButton(
-            icon: Icon(Icons.chevron_right),
-            onPressed: onNextDay,
-          ),
-        ),
-
-      ],
+      ),
     );
   }
 }

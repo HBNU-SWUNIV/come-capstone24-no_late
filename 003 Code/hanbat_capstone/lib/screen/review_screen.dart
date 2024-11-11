@@ -16,6 +16,8 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:hanbat_capstone/services/review_service.dart';
 import 'package:intl/intl.dart';
 
+import '../component/date_selector.dart';
+
 /**
  * 회고관리 화면
  */
@@ -348,14 +350,15 @@ class _ReviewScreenState extends State<ReviewScreen> {
    * - 날짜 선택 다이얼로그 띄운다.
    */
   void onPressDate() async {
-    final selectedDate = await showDatePicker(
+    final selectedDate = await showDialog<DateTime>(
       context: context,
-      initialDate: currentDay,
-      firstDate: DateTime(2020),
-      lastDate: DateTime(2030),
-      initialEntryMode: DatePickerEntryMode.calendarOnly,
-      // 캘린더만 띄움.
-      barrierDismissible: true, // 외부에서 탭할 경우 다이얼로그 닫기
+      builder: (BuildContext context) {
+        return CustomScrollDatePicker(
+          initialDate: currentDay,
+          firstDate: DateTime(2020),
+          lastDate: DateTime(2030),
+        );
+      },
     );
 
     if (selectedDate != null) {
