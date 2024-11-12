@@ -782,35 +782,53 @@ class EventService {
 
   // lib/services/event_service.dart 파일에 추가
 
-  Future<void> deleteEvent(String collectionName, String eventId) async {
+  Future<void> deleteEvent(String eventId) async {
     await ensureUserLoggedIn();
     try {
-      await FirebaseFirestore.instance
-          .collection(collectionName)
-          .doc(eventId)
-          .delete();
+      print('Starting deletion process for eventId: $eventId');
 
-      final deletedEvent = await FirebaseFirestore.instance
-          .collection(collectionName)
+      WriteBatch batch = _firestore.batch();
+
+      // 1. events 컬렉션에서 해당 일정 정보 먼저 가져오기
+      DocumentSnapshot eventSnapshot = await _firestore
+          .collection('events')
           .doc(eventId)
           .get();
 
-      if (deletedEvent.exists) {
-        final eventDate = deletedEvent.data()?['eventDate'] as String?;
-        if (eventDate != null) {
-          await loadTimeBasedCheckboxStatesForDate(eventDate.split('T')[0]);
-        }
+      if (!eventSnapshot.exists) {
+        print('Event not found with ID: $eventId');
+        return;
       }
 
-      print('Event deleted successfully');
+      // 2. events 컬렉션에서 해당 일정 삭제
+      batch.delete(eventSnapshot.reference);
+      print('Added events deletion to batch for ID: $eventId');
 
+      // 3. result_events 컬렉션에서 해당 eventId를 참조하는 모든 문서 찾기
+      QuerySnapshot resultEvents = await _firestore
+          .collection('result_events')
+          .where('eventId', isEqualTo: eventId)
+          .get();
+
+      print('Found ${resultEvents.docs.length} result events for eventId: $eventId');
+
+      // 각 result event의 데이터 출력
+      resultEvents.docs.forEach((doc) {
+        print('Result event data: ${doc.data()}');
+        batch.delete(doc.reference);
+        print('Added result event deletion to batch for doc ID: ${doc.id}');
+      });
+
+      // 4. 배치 작업 실행
+      await batch.commit();
+      print('Successfully deleted event and ${resultEvents.docs.length} related result events');
 
     } catch (e) {
-      print('Error deleting event: $e');
-      throw e; // 에러를 상위로 전파하여 UI에서 처리할 수 있게 함
+      print('Error in deleteEvent: $e');
+      print('Stack trace: ${StackTrace.current}');
+      throw e;
     }
-  }
-  Future<void> saveTimeBasedCheckboxState(String date, int hour, bool state) async {
+  }  Future<void> saveTimeBasedCheckboxState(String date, int hour, bool state) async {
     await ensureUserLoggedIn();
     final prefs = await SharedPreferences.getInstance();
     final key = '${userId}_${date}_checkbox_$hour';

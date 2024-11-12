@@ -735,11 +735,12 @@ class ScheduleScreenState extends State<ScheduleScreen> {
                     },
                     onEventDeleted: (deleteAllRecurrence) async {
                       if (isplan) {
-                        await eventService.deleteEvent(
-                            'events', (event as EventModel).eventId);
+                        await eventService.deleteEvent((event as EventModel).eventId);
                       } else {
-                        await eventService.deleteEvent('result_events',
-                            (event as EventResultModel).eventResultId);
+                        await FirebaseFirestore.instance
+                            .collection('result_events')
+                            .doc((event as EventResultModel).eventResultId)
+                            .delete();
                       }
                       _fetchEvents();
                     },
