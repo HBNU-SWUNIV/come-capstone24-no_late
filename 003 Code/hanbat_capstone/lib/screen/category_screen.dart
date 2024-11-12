@@ -240,35 +240,155 @@ class _CategoryScreenState extends State<CategoryScreen> {
    * 카테고리 색상 선택 팝업
    */
   void pickColor(BuildContext context, CategoryModel categoryModel) {
+    final mainColor = Colors.lightBlue[900]!;
     showDialog(
-        context: context,
-        builder: (BuildContext context) {
-          return AlertDialog(
-            title: Text('색상 선택'),
-            content: SingleChildScrollView(
-              child: BlockPicker(
-                pickerColor: Color(int.parse(categoryModel.colorCode)),
-                onColorChanged: (color) {
-                  setState(() {
-                    _pickerColor = color;
-                  });
-                },
-              ),
+      context: context,
+      builder: (BuildContext context) {
+        return Dialog(
+          backgroundColor: Colors.white,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(20),
+          ),
+          child: Container(
+            padding: EdgeInsets.all(20),
+            color: Colors.white,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                // 헤더
+                Container(
+                  padding: EdgeInsets.only(bottom: 16),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    border: Border(
+                      bottom: BorderSide(color: Colors.grey[300]!),
+                    ),
+                  ),
+                  child: Row(
+                    children: [
+                      Icon(Icons.palette, color: mainColor),
+                      SizedBox(width: 8),
+                      Text(
+                        '색상 선택',
+                        style: TextStyle(
+                          fontSize: 20,
+                          fontWeight: FontWeight.bold,
+                          color: mainColor,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+
+                // 컬러 피커
+                Container(
+                  height: 300,
+                  margin: EdgeInsets.symmetric(vertical: 20),
+                  color: Colors.white,
+                  child: SingleChildScrollView(
+                    child: BlockPicker(
+                      pickerColor: Color(int.parse(categoryModel.colorCode)),
+                      onColorChanged: (color) {
+                        setState(() {
+                          _pickerColor = color;
+                        });
+                      },
+                      layoutBuilder: (context, colors, child) {
+                        return Container(
+                          width: double.infinity,
+                          color: Colors.white,
+                          child: Wrap(
+                            spacing: 8,
+                            runSpacing: 8,
+                            alignment: WrapAlignment.center,
+                            children: colors.map((color) {
+                              return Container(
+                                padding: EdgeInsets.all(2),
+                                decoration: BoxDecoration(
+                                  shape: BoxShape.circle,
+                                  border: Border.all(
+                                    color: _pickerColor == color ? mainColor : Colors.transparent,
+                                    width: 2,
+                                  ),
+                                ),
+                                child: child(color),
+                              );
+                            }).toList(),
+                          ),
+                        );
+                      },
+                      itemBuilder: (color, isSelected, onSelect) {
+                        return InkWell(
+                          onTap: onSelect,
+                          child: Container(
+                            width: 45,
+                            height: 45,
+                            decoration: BoxDecoration(
+                              color: color,
+                              shape: BoxShape.circle,
+                            ),
+                            child: isSelected
+                                ? Icon(
+                              Icons.check,
+                              color: Colors.white,
+                              size: 24,
+                            )
+                                : null,
+                          ),
+                        );
+                      },
+                    ),
+                  ),
+                ),
+
+                // 버튼 영역
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.end,
+                  children: [
+                    TextButton(
+                      onPressed: () => Navigator.of(context).pop(),
+                      style: TextButton.styleFrom(
+                        padding: EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                      ),
+                      child: Text(
+                        '취소',
+                        style: TextStyle(
+                          color: Colors.grey[600],
+                          fontSize: 16,
+                        ),
+                      ),
+                    ),
+                    SizedBox(width: 8),
+                    ElevatedButton(
+                      onPressed: () async {
+                        await updateCategoryColor(categoryModel, _pickerColor);
+                        Navigator.of(context).pop();
+                      },
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: mainColor,
+                        padding: EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(25),
+                        ),
+                        elevation: 0, // 그림자 제거
+                      ),
+                      child: Text(
+                        '저장',
+                        style: TextStyle(
+                          color: Colors.white, // 텍스트 색상을 흰색으로 변경
+                          fontSize: 16,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
             ),
-            actions: [
-              TextButton(
-                  onPressed: () {
-                    Navigator.of(context).pop();
-                  },
-                  child: Text('취소')),
-              ElevatedButton(
-                  onPressed: () async {
-                    await updateCategoryColor(categoryModel, _pickerColor);
-                    Navigator.of(context).pop();
-                  },
-                  child: Text('저장'))
-            ],
-          );
-        });
+          ),
+        );
+      },
+    );
   }
 }

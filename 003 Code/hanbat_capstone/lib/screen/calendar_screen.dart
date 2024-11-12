@@ -733,7 +733,7 @@ class CalendarScreenState extends State<CalendarScreen> {
                           ),
                           headerPadding: EdgeInsets.symmetric(vertical: 4),
                           // 수직 패딩 줄이기
-                          headerMargin: EdgeInsets.only(bottom: 8),
+                          headerMargin: EdgeInsets.zero,
                           // 하단 마진 줄이기
                           titleCentered: true,
                           formatButtonVisible: false,

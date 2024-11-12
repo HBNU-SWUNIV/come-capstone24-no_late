@@ -295,13 +295,41 @@ class ScheduleScreenState extends State<ScheduleScreen> {
     if (allDayEvents.isEmpty) {
       return SizedBox.shrink();
     }
-    return Container(
-      color: Colors.grey[200],
+
+    return Card(
+      margin: EdgeInsets.symmetric(vertical: 4, horizontal: 8),
+      elevation: 0,
+      color: Colors.white,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(8),
+        side: BorderSide(color: Colors.grey[300]!, width: 1),
+      ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Padding(
-            padding: const EdgeInsets.all(8.0),
+          Container(
+            padding: EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.vertical(top: Radius.circular(8)),
+              border: Border(
+                bottom: BorderSide(color: Colors.grey[300]!, width: 1),
+              ),
+            ),
+            child: Row(
+              children: [
+                Icon(Icons.event, color: Colors.lightBlue[900], size: 20),
+                SizedBox(width: 8),
+                Text(
+                  '종일 일정',
+                  style: TextStyle(
+                    color: Colors.lightBlue[900],
+                    fontWeight: FontWeight.bold,
+                    fontSize: 16,
+                  ),
+                ),
+              ],
+            ),
           ),
           ListView.builder(
             shrinkWrap: true,
@@ -310,33 +338,65 @@ class ScheduleScreenState extends State<ScheduleScreen> {
             itemBuilder: (context, index) {
               final event = allDayEvents[index];
               final isCompleted = allDayEventStates[event.eventId] ?? false;
-              return GestureDetector(
-                onTap: () => _handleAllDayEventTap(event),
-                onDoubleTap: () =>
-                    _openEventDetail(event.eventTitle, index, isplan: true),
-                child: Container(
-                  padding: EdgeInsets.symmetric(vertical: 8, horizontal: 16),
-                  decoration: BoxDecoration(
-                    border: Border(
-                        bottom: BorderSide(color: Colors.grey[300]!)),
+              final categoryColor = event.categoryId != null && categoryColors.containsKey(event.categoryId)
+                  ? _getCategoryColor(categoryColors[event.categoryId])
+                  : Colors.lightBlue[900]!;
+
+              return Container(
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  border: Border(
+                    bottom: index != allDayEvents.length - 1
+                        ? BorderSide(color: Colors.grey[300]!)
+                        : BorderSide.none,
                   ),
-                  child: Row(
-                    children: [
-                      Expanded(
-                        child: Text(
-                          event.eventTitle,
-                          style: TextStyle(
-                            // 변경: 완료된 일정에 취소선 추가
-                            decoration: isCompleted
-                                ? TextDecoration.lineThrough
+                ),
+                child: Material(
+                  color: Colors.transparent,
+                  child: InkWell(
+                    onTap: () => _handleAllDayEventTap(event),
+                    onDoubleTap: () => _openEventDetail(event.eventTitle, index, isplan: true),
+                    child: Padding(
+                      padding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                      child: Row(
+                        children: [
+                          Container(
+                            width: 4,
+                            height: 24,
+                            decoration: BoxDecoration(
+                              color: categoryColor,
+                              borderRadius: BorderRadius.circular(2),
+                            ),
+                          ),
+                          SizedBox(width: 12),
+                          Expanded(
+                            child: Text(
+                              event.eventTitle,
+                              style: TextStyle(
+                                fontSize: 15,
+                                decoration: isCompleted ? TextDecoration.lineThrough : null,
+                                color: isCompleted ? Colors.grey : Colors.black87,
+                              ),
+                            ),
+                          ),
+                          Container(
+                            width: 24,
+                            height: 24,
+                            decoration: BoxDecoration(
+                              shape: BoxShape.circle,
+                              border: Border.all(
+                                color: isCompleted ? Colors.transparent : Colors.grey[400]!,
+                                width: 2,
+                              ),
+                              color: isCompleted ? categoryColor : Colors.transparent,
+                            ),
+                            child: isCompleted
+                                ? Icon(Icons.check, color: Colors.white, size: 16)
                                 : null,
                           ),
-                        ),
+                        ],
                       ),
-                      // 추가: 완료된 일정에 체크 아이콘 표시
-                      if (isCompleted)
-                        Icon(Icons.check, color: Colors.green),
-                    ],
+                    ),
                   ),
                 ),
               );
@@ -347,13 +407,55 @@ class ScheduleScreenState extends State<ScheduleScreen> {
     );
   }
 
+  Color _getCategoryColor(String? colorCode) {
+    if (colorCode != null && colorCode.isNotEmpty) {
+      try {
+        // colorCode가 '0xFF'로 시작하는 경우 처리
+        if (colorCode.startsWith('0x')) {
+          return Color(int.parse(colorCode));
+        }
+        // '#'으로 시작하는 경우 처리
+        else if (colorCode.startsWith('#')) {
+          return Color(int.parse(colorCode.replaceFirst('#', '0xFF')));
+        }
+        // 다른 형식의 colorCode 처리
+        return Color(int.parse('0xFF${colorCode.replaceAll("#", "")}'));
+      } catch (e) {
+        print('Error parsing color code: $colorCode');
+        return Colors.lightBlue[900]!;
+      }
+    }
+    return Colors.lightBlue[900]!; // 기본 색상
+  }
+
+
+// 힌트 메시지를 보여주는 함수 추가
+  void _showEventDetailHint() {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text('더블 탭하여 일정 상세 정보를 확인하세요'),
+        duration: Duration(seconds: 1),
+        behavior: SnackBarBehavior.floating,
+        margin: EdgeInsets.all(8),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(8),
+        ),
+      ),
+    );
+  }
+
+// 기존 _handleAllDayEventTap 함수 수정
   void _handleAllDayEventTap(EventModel event) async {
+    // 이전의 완료 상태 토글 로직은 유지하면서 힌트 메시지 추가
     final newState = !(allDayEventStates[event.eventId] ?? false);
     setState(() {
       allDayEventStates[event.eventId] = newState;
     });
     await _saveAllDayEventState(event.eventId, newState);
     await _handleAllDayEventCheckboxChange(event.eventId, newState);
+
+    // 힌트 메시지 표시
+    _showEventDetailHint();
   }
 
 
