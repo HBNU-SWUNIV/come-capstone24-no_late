@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:hanbat_capstone/screen/chart_screen.dart';
+import 'package:provider/provider.dart';
 import '../providers/category_provider.dart';
+import '../providers/statistics_provider.dart';
 import 'chat_screen.dart';
 import 'schedule_screen.dart';
 import 'add_event_screen.dart';
@@ -44,6 +46,8 @@ class _RootScreenState extends State<RootScreen> {
     _categoryProvider.loadCategories();  // 카테고리 초기 로드
     _initializeScreens();
   }
+
+
   void _initializeScreens() {
     _screens = [
       CalendarScreen( key: _calendarKey,
@@ -78,17 +82,22 @@ class _RootScreenState extends State<RootScreen> {
 
   void _onItemTapped(int index) {
     setState(() {
-      if(index ==2) {
+      if(index == 2) {
         _onAddEvent();
       } else {
         // 탭 전환 시 화면 갱신
         if (_selectedIndex != index) {
           _selectedIndex = index;
           _refreshAllScreens();
+
+          // 통계 화면으로 이동할 때 새로고침
+          if (index == 4) { // 통계 탭 인덱스
+            final chartScreen = _screens[4] as ChartScreen;
+            Provider.of<StatisticsProvider>(context, listen: false).forceRefresh();
+          }
         }
-    }});
-
-
+      }
+    });
   }
 
   List<Widget> renderChildren(DateTime? selectedDate) => <Widget>[

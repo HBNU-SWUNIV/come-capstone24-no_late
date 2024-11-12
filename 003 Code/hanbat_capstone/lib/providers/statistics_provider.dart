@@ -8,12 +8,11 @@ import '../services/statistics_service.dart';
 
 class StatisticsProvider extends ChangeNotifier {
   final StatisticsService _statisticsService = StatisticsService();
-
   DateTime _selectedMonth = DateTime.now();
   MonthlyChartData? _chartData;
   bool _isLoading = false;
   String? _error;
-  DateTime _lastUpdateTime = DateTime(0); // 마지막 업데이트 시간 추적
+  // DateTime _lastUpdateTime = DateTime(0); // 마지막 업데이트 시간 추적
 
   // Getters
   DateTime get selectedMonth => _selectedMonth;
@@ -21,27 +20,18 @@ class StatisticsProvider extends ChangeNotifier {
   bool get isLoading => _isLoading;
   String? get error => _error;
 
-  // 데이터 새로고침이 필요한지 확인
-  bool _needsRefresh() {
-    final now = DateTime.now();
-    return now.difference(_lastUpdateTime).inMinutes >= 1; // 1분 이상 경과시 새로고침
-  }
 
-  // 통계 데이터 로드 (캐시 활용)
   Future<void> loadStatistics([DateTime? month]) async {
     try {
-      if (_chartData == null || _needsRefresh() || month != null) {
-        _isLoading = true;
-        _error = null;
-        notifyListeners();
+      _isLoading = true;
+      _error = null;
+      notifyListeners();
 
-        final targetMonth = month ?? _selectedMonth;
-        _chartData = await _statisticsService.getMonthlyStatistics(targetMonth);
-        _lastUpdateTime = DateTime.now();
+      final targetMonth = month ?? _selectedMonth;
+      _chartData = await _statisticsService.getMonthlyStatistics(targetMonth);
 
-        if (month != null) {
-          _selectedMonth = month;
-        }
+      if (month != null) {
+        _selectedMonth = month;
       }
     } catch (e) {
       _error = e.toString();
@@ -51,6 +41,13 @@ class StatisticsProvider extends ChangeNotifier {
       notifyListeners();
     }
   }
+
+  // 강제 새로고침
+  Future<void> forceRefresh() async {
+    _chartData = null;  // 기존 데이터 초기화
+    await loadStatistics(_selectedMonth);
+  }
+
 
   // 이전 월로 이동
   void previousMonth() {
@@ -97,18 +94,6 @@ class StatisticsProvider extends ChangeNotifier {
           : week.completedCount;
       return weekMax > max ? weekMax : max;
     });
-  }
-
-  // 초기화
-  void initialize() {
-    _selectedMonth = DateTime.now();
-    loadStatistics();
-  }
-
-  // 강제 새로고침
-  Future<void> forceRefresh() async {
-    _lastUpdateTime = DateTime(0);  // 마지막 업데이트 시간 초기화
-    await loadStatistics(_selectedMonth);
   }
 
   // 데이터 새로고침

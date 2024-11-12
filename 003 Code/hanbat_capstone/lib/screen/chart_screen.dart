@@ -11,19 +11,35 @@ class ChartScreen extends StatefulWidget {
   State<ChartScreen> createState() => _ChartScreenState();
 }
 
-class _ChartScreenState extends State<ChartScreen> {
+class _ChartScreenState extends State<ChartScreen> with AutomaticKeepAliveClientMixin {
+  @override
+  bool get wantKeepAlive => false;  // false로 설정하여 매번 새로고침되도록
+
   int _selectedSection = 0; // 0: 전체/종일, 1: 주차별, 2: 카테고리별
 
   @override
   void initState() {
     super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      context.read<StatisticsProvider>().initialize();
-    });
+    _initializeScreen();
   }
 
   @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    _initializeScreen();  // 의존성이 변경될 때마다 새로고침
+  }
+
+  Future<void> _initializeScreen() async {
+    if (!mounted) return;
+    final provider = context.read<StatisticsProvider>();
+    await provider.forceRefresh(); // initialize() 대신 forceRefresh() 사용
+  }
+
+
+
+  @override
   Widget build(BuildContext context) {
+    super.build(context);  // AutomaticKeepAliveClientMixin 사용시 필요
     return Scaffold(
       body: RefreshIndicator(
         onRefresh: () => context.read<StatisticsProvider>().forceRefresh(),
