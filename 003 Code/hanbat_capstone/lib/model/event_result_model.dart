@@ -11,7 +11,7 @@ class EventResultModel {
   final String eventResultTitle;
   final String? eventResultContent;
   final bool? isAllDay;
-  final String completeYn;
+  final String completedYn;
   final bool showOnCalendar;
 
   EventResultModel({
@@ -25,7 +25,7 @@ class EventResultModel {
     required this.eventResultTitle,
     this.eventResultContent,
     this.isAllDay = false,
-    required this.completeYn,
+    required this.completedYn,
     this.showOnCalendar = true,
   });
 
@@ -41,7 +41,7 @@ class EventResultModel {
       'eventResultTitle': eventResultTitle,
       'eventResultContent': eventResultContent,
       'isAllDay': isAllDay,
-      'completeYn': completeYn,
+      'completeYn': completedYn,
       'showOnCalendar': showOnCalendar,
     };
   }
@@ -64,7 +64,7 @@ class EventResultModel {
       eventResultTitle: map['eventResultTitle'] ?? '',
       eventResultContent: map['eventResultContent'] ?? '',
       isAllDay: map['isAllDay'] ?? '',
-      completeYn: map['completeYn'] ?? '',
+      completedYn: map['completeYn'] ?? '',
       showOnCalendar: map['showOnCalendar'] ?? true,
     );
   }
@@ -94,7 +94,7 @@ class EventResultModel {
       eventResultTitle: eventResultTitle ?? this.eventResultTitle,
       eventResultContent: eventResultContent ?? this.eventResultContent,
       isAllDay: isAllDay ?? this.isAllDay,
-      completeYn: completedYn ?? this.completeYn,
+      completedYn: completedYn ?? this.completedYn,
       showOnCalendar: showOnCalendar ?? this.showOnCalendar,
     );
   }

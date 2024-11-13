@@ -70,19 +70,13 @@ class EventService {
   Future<void> updateAllDayEventState(String formattedDate, String eventId, bool isCompleted) async {
     await ensureUserLoggedIn();
     try {
-
-      final eventDoc = await _firestore.collection('events').doc(eventId).get();
-      if (!eventDoc.exists) return;
-
-      final event = EventModel.fromMap(eventDoc.data()!);
       // 원본 이벤트 업데이트
       await _firestore
           .collection('events')
           .doc(eventId)
-          .update({'completeYn': isCompleted ? 'Y' : 'N'});
+          .update({'completedYn': isCompleted ? 'Y' : 'N'});
 
-      final eventDate = event.eventDate!;
-
+      final eventDate = _normalizeDate(DateTime.parse(formattedDate));
 
       if (isCompleted) {
         // 완료된 경우 result_events에 추가
@@ -100,7 +94,7 @@ class EventService {
           eventResultTitle: event.eventTitle,
           eventResultContent: event.eventContent,
           isAllDay: true,
-          completeYn: 'Y',
+          completedYn: 'Y',
         );
 
         await _firestore
@@ -453,7 +447,7 @@ class EventService {
 
 
   Future<void> movePlanToActual(String formattedDate, int hour, EventModel event) async {
-    final eventDate = event.eventDate!;  // 계획된 일정의 원래 날짜 사용
+    final eventDate = DateTime.parse(formattedDate);
     final eventStartTime = DateTime(eventDate.year, eventDate.month, eventDate.day, event.eventSttTime!.hour);
     DateTime eventEndTime = DateTime(eventDate.year, eventDate.month, eventDate.day, hour + 1);
 
@@ -477,7 +471,7 @@ class EventService {
         eventResultTitle: event.eventTitle,
         eventResultContent: event.eventContent,
         isAllDay: false,
-        completeYn: 'N',  // 초기 상태는 'N'으로 설정
+        completedYn: 'N',  // 초기 상태는 'N'으로 설정
       );
 
       final docRef = _firestore
@@ -619,7 +613,7 @@ class EventService {
           eventResultTitle: event.eventTitle,
           eventResultContent: event.eventContent,
           isAllDay: false,
-          completeYn: 'N',  // 기본값을 'N'으로 설정
+          completedYn: 'N',  // 기본값을 'N'으로 설정
         );
 
         await _firestore
@@ -754,7 +748,7 @@ class EventService {
             eventResultTitle: event.eventTitle,
             eventResultContent: event.eventContent,
             isAllDay: event.isAllDay,
-            completeYn: 'Y',
+            completedYn: 'Y',
           );
 
           await FirebaseFirestore.instance

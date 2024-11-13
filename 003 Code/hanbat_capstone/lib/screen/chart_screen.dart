@@ -16,29 +16,25 @@ class _ChartScreenState extends State<ChartScreen> with AutomaticKeepAliveClient
   bool get wantKeepAlive => false;  // false로 설정하여 매번 새로고침되도록
 
   int _selectedSection = 0; // 0: 전체/종일, 1: 주차별, 2: 카테고리별
-  bool _isInitialized = false;
+
   @override
   void initState() {
     super.initState();
-
+    _initializeScreen();
   }
 
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
-    if (!_isInitialized) {
-      _initializeScreen();
-      _isInitialized = true;
-    }
+    _initializeScreen();  // 의존성이 변경될 때마다 새로고침
   }
+
   Future<void> _initializeScreen() async {
     if (!mounted) return;
-
-    // Future.microtask를 사용하여 build 사이클과 분리
     final provider = context.read<StatisticsProvider>();
-    await provider.loadStatistics(); // forceRefresh 대신 일반 로드 사용
-
+    await provider.forceRefresh(); // initialize() 대신 forceRefresh() 사용
   }
+
 
 
   @override

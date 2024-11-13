@@ -248,27 +248,12 @@ class _AddEventScreenState extends State<AddEventScreen> {
         }
 
         // 날짜와 시간 처리
-        final eventDate = _selectedDate ?? DateTime.now();
+        final eventDate = widget.selectedDate ?? DateTime.now();
         final startTimeOfDay = _timeOfDayFromDateTime(_startTime!) ?? TimeOfDay.now();
         final endTimeOfDay = _endTime != null ? _timeOfDayFromDateTime(_endTime!) : null;
 
-        final startDateTime = DateTime(
-          eventDate.year,
-          eventDate.month,
-          eventDate.day,
-          startTimeOfDay.hour,
-          0,
-        );
-
-        final endDateTime = endTimeOfDay != null
-            ? DateTime(
-          eventDate.year,
-          eventDate.month,
-          eventDate.day,
-          endTimeOfDay.hour,
-          0,
-        )
-            : startDateTime.add(Duration(hours: 1));
+        final startDateTime = _combineDateAndTime(eventDate, startTimeOfDay);
+        final endDateTime = _calculateEndDateTime(eventDate, startTimeOfDay, endTimeOfDay);
 
 
         if (startDateTime.isAtSameMomentAs(endDateTime)) {
@@ -359,7 +344,7 @@ class _AddEventScreenState extends State<AddEventScreen> {
       eventResultTitle: _titleController.text,
       eventResultContent: _contentController.text,
       isAllDay: _isAllDay ? true : false,
-      completeYn: '',
+      completedYn: '',
     );
 
     try {

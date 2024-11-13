@@ -54,7 +54,6 @@ class ScheduleScreenState extends State<ScheduleScreen> {
   bool _isLoading = true;
   List<EventResultModel> resultEvents = [];
   Map<String, String> categoryColors = {};  // 카테고리 색상 정보를 저장할 맵 추가
-  bool _mounted = true;
 
   final Color dragSourceColor = Colors.blue.withOpacity(0.1); // 원본 위치 색상
   final Color dragFeedbackColor = Colors.blue.withOpacity(0.1); // 드래그 중인 아이템 색상
@@ -64,27 +63,6 @@ class ScheduleScreenState extends State<ScheduleScreen> {
   Future<void> refreshSchedule() async {
     await _loadInitialData();
     widget.onEventUpdated?.call();  // 상위 위젯에 알림
-  }
-
-  @override
-  void dispose() {
-    _mounted = false;
-    super.dispose();
-  }
-
-  void setState(VoidCallback fn) {
-    if (_mounted && mounted) {
-      super.setState(fn);
-    }
-  }
-
-  // 비동기 작업에서 setState 호출 시
-  Future<void> someAsyncFunction() async {
-    if (!_mounted || !mounted) return;
-    // ... 작업 수행
-    setState(() {
-      // 상태 업데이트
-    });
   }
 
   @override
@@ -589,9 +567,6 @@ class ScheduleScreenState extends State<ScheduleScreen> {
       print("Fetched ${events.length} events and ${fetchedResultEvents
           .length} result events");
 
-      if (!mounted) return;  // 위젯이 dispose된 경우 중단
-
-
       setState(() {
         allDayEvents =
             events.where((event) => event.isAllDay ?? false).toList();
@@ -632,6 +607,8 @@ class ScheduleScreenState extends State<ScheduleScreen> {
                   .eventResultTitle : '',
               'actualCategoryId': actualEvents.isNotEmpty ? actualEvents.first
                   .categoryId : '',
+              'completedYn': planEvents.isNotEmpty ? planEvents.first
+                  .completedYn ?? 'N' : 'N',
               'eventId': planEvents.isNotEmpty ? planEvents.first.eventId : '',
             };
           },
