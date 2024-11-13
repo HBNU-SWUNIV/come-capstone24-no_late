@@ -390,7 +390,7 @@ class _EventDetailScreenState extends State<EventDetailScreen> {
           eventResultTitle: '',
           eventResultContent: '',
           isAllDay: false,
-          completedYn: 'N',
+          completeYn: 'N',
         );
   }
   Future<void> _reloadEvent() async {
