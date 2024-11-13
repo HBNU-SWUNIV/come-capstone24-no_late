@@ -20,19 +20,20 @@ class _ChartScreenState extends State<ChartScreen> with AutomaticKeepAliveClient
   @override
   void initState() {
     super.initState();
-    _initializeScreen();
+
   }
 
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
-    _initializeScreen();  // 의존성이 변경될 때마다 새로고침
+
+    Future.microtask(() => _initializeScreen());
   }
 
   Future<void> _initializeScreen() async {
     if (!mounted) return;
     final provider = context.read<StatisticsProvider>();
-    await provider.forceRefresh(); // initialize() 대신 forceRefresh() 사용
+    await provider.loadStatistics(); // forceRefresh 대신 일반 로드 사용
   }
 
 

@@ -70,13 +70,19 @@ class EventService {
   Future<void> updateAllDayEventState(String formattedDate, String eventId, bool isCompleted) async {
     await ensureUserLoggedIn();
     try {
+
+      final eventDoc = await _firestore.collection('events').doc(eventId).get();
+      if (!eventDoc.exists) return;
+      final event = EventModel.fromMap(eventDoc.data()!);
       // 원본 이벤트 업데이트
       await _firestore
           .collection('events')
           .doc(eventId)
           .update({'completedYn': isCompleted ? 'Y' : 'N'});
 
-      final eventDate = _normalizeDate(DateTime.parse(formattedDate));
+      final eventDate = event.eventDate!;
+
+
 
       if (isCompleted) {
         // 완료된 경우 result_events에 추가
@@ -447,7 +453,7 @@ class EventService {
 
 
   Future<void> movePlanToActual(String formattedDate, int hour, EventModel event) async {
-    final eventDate = DateTime.parse(formattedDate);
+    final eventDate = event.eventDate!;  // 계획된 일정의 원래 날짜 사용
     final eventStartTime = DateTime(eventDate.year, eventDate.month, eventDate.day, event.eventSttTime!.hour);
     DateTime eventEndTime = DateTime(eventDate.year, eventDate.month, eventDate.day, hour + 1);
 

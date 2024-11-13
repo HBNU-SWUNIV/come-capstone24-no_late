@@ -12,20 +12,38 @@ class StatisticsProvider extends ChangeNotifier {
   MonthlyChartData? _chartData;
   bool _isLoading = false;
   String? _error;
+  bool _disposed = false;
+  DateTime? _lastLoadTime;
+  static const refreshThreshold = Duration(seconds: 5);
   // DateTime _lastUpdateTime = DateTime(0); // 마지막 업데이트 시간 추적
-
+  // 중복 로드 방지를 위한 플래그
+  bool _isLoadingData = false;
   // Getters
   DateTime get selectedMonth => _selectedMonth;
   MonthlyChartData? get chartData => _chartData;
   bool get isLoading => _isLoading;
   String? get error => _error;
 
+  @override
+  void dispose() {
+    _disposed = true;
+    super.dispose();
+  }
 
   Future<void> loadStatistics([DateTime? month]) async {
+    if (_disposed) return; // disposed 체크
+
+    if (_isLoadingData) return;
+
+    if (_lastLoadTime != null &&
+        DateTime.now().difference(_lastLoadTime!) < refreshThreshold) {
+      return;
+    }
+
     try {
+      _isLoadingData = true;
       _isLoading = true;
-      _error = null;
-      notifyListeners();
+      if (!_disposed) notifyListeners();
 
       final targetMonth = month ?? _selectedMonth;
       _chartData = await _statisticsService.getMonthlyStatistics(targetMonth);
@@ -33,18 +51,33 @@ class StatisticsProvider extends ChangeNotifier {
       if (month != null) {
         _selectedMonth = month;
       }
+      _lastLoadTime = DateTime.now();
+      _error = null;
     } catch (e) {
       _error = e.toString();
       print('Statistics loading error: $e');
     } finally {
       _isLoading = false;
-      notifyListeners();
+      _isLoadingData = false;
+      if (!_disposed) { // disposed 체크
+        notifyListeners(); // 마지막 알림
+      }
+    }
+  }
+  @override
+  void notifyListeners() {
+    if (!_disposed) {
+      super.notifyListeners();
     }
   }
 
-  // 강제 새로고침
+
+
+
+    // 강제 새로고침
   Future<void> forceRefresh() async {
     _chartData = null;  // 기존 데이터 초기화
+    _lastLoadTime = null;  // 마지막 로드 시간 초기화
     await loadStatistics(_selectedMonth);
   }
 
@@ -56,6 +89,7 @@ class StatisticsProvider extends ChangeNotifier {
       _selectedMonth.month - 1,
       1,
     );
+    _lastLoadTime = null;  // 월 변경 시 강제 로드
     loadStatistics(previousMonth);
   }
 
@@ -66,6 +100,7 @@ class StatisticsProvider extends ChangeNotifier {
       _selectedMonth.month + 1,
       1,
     );
+    _lastLoadTime = null;  // 월 변경 시 강제 로드
     loadStatistics(nextMonth);
   }
 
@@ -127,4 +162,6 @@ class StatisticsProvider extends ChangeNotifier {
     final colorValue = int.tryParse(colorCode) ?? 0xFF000000;
     return Color(colorValue);
   }
+
+
 }
