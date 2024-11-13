@@ -387,7 +387,7 @@ class EventService {
     await _firestore
         .collection('result_events')
         .doc(eventResultId)
-        .update({'completeYn': isCompleted ? 'Y' : 'N'});
+        .update({'completedYn': isCompleted ? 'Y' : 'N'});
   }
 
   List<Map<String, String>> generateScheduleData(
@@ -482,7 +482,7 @@ class EventService {
 
       // 드래그 앤 드롭으로 이동했을 때 완료 처리
       await docRef.update({
-        'completeYn': 'Y'
+        'completedYn': 'Y'
       });
 
     } else {
@@ -490,7 +490,7 @@ class EventService {
       final resultEventDoc = resultEventSnapshot.docs.first;
       await resultEventDoc.reference.update({
         'eventResultEndTime': eventEndTime.toIso8601String(),
-        'completeYn': 'Y',  // 드래그 앤 드롭으로 이동했으므로 'Y'로 업데이트
+        'completedYn': 'Y',  // 드래그 앤 드롭으로 이동했으므로 'Y'로 업데이트
       });
     }
 

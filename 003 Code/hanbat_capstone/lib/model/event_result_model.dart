@@ -41,7 +41,7 @@ class EventResultModel {
       'eventResultTitle': eventResultTitle,
       'eventResultContent': eventResultContent,
       'isAllDay': isAllDay,
-      'completeYn': completedYn,
+      'completedYn': completedYn,
       'showOnCalendar': showOnCalendar,
     };
   }
@@ -64,7 +64,7 @@ class EventResultModel {
       eventResultTitle: map['eventResultTitle'] ?? '',
       eventResultContent: map['eventResultContent'] ?? '',
       isAllDay: map['isAllDay'] ?? '',
-      completedYn: map['completeYn'] ?? '',
+      completedYn: map['completedYn'] ?? '',
       showOnCalendar: map['showOnCalendar'] ?? true,
     );
   }
