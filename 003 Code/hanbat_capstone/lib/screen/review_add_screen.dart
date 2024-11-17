@@ -91,8 +91,12 @@ class _ReviewAddScreenState extends State<ReviewAddScreen> {
                 child: ElevatedButton(
                   onPressed: () => onSavePressed(context),
                   style: ElevatedButton.styleFrom(
-
-                  ), child: Text('저장'),
+                    backgroundColor: Colors.lightBlue[900]!,
+                    padding: EdgeInsets.symmetric(horizontal: 50, vertical: 15),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(30)
+                    )
+                  ), child: Text('저장',style: TextStyle(fontSize: 18,color: Colors.white)),
                 ),
               ),
               const SizedBox(height: 15,),

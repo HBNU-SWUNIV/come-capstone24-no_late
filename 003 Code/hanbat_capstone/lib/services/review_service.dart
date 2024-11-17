@@ -101,17 +101,31 @@ class ReviewService {
     final events = await getEvents(formattedCurDay, userId, 1); // 파이어베이스에서 yyyyMMdd로 events 조회
     final eventResults = await getEventResults(formattedCurDay, userId, 1); // 파이어베이스에서 yyyyMMdd로 eventResults 조회
 
+    // 3-0. 완료 및 미완료 상태 설정
+    Map<String, String> eventStatus = {};
+
+    for (var event in events) {
+      eventStatus[event.eventId] = event.completedYn ?? 'N';
+    }
+
+    for (var result in eventResults) {
+      eventStatus[result.eventId] = result.completedYn ?? 'N';
+    }
+
     // 3. 이벤트와 이벤트 결과 비교하기
     List<String> completedEvents = [];
     List<String> pendingEvents = [];
 
     for (var event in events) {
+      /*
       var correspondingResult = eventResults.firstWhere(
             (result) => result.eventId == event.eventId && result.eventResultTitle == event.eventTitle,
         orElse: () => EventResultModel(eventResultId: '', eventId: '', categoryId: '', userId: '', eventResultTitle: '', completedYn: 'N', showOnCalendar: false),
       );
 
       if (correspondingResult != null && correspondingResult.completedYn == 'Y') {
+      */
+      if (eventStatus[event.eventId] == 'Y'){
         completedEvents.add(event.eventTitle);
       } else {
         pendingEvents.add(event.eventTitle);
@@ -124,16 +138,17 @@ class ReviewService {
       comparisonSummary = "이번 주에는 계획된 이벤트가 없습니다.";
     } else {
       comparisonSummary = "이번 주 계획된 이벤트 목록입니다:\n"
-          "- 완료된 이벤트: ${completedEvents.join(', ')}\n"
-          "- 미완료 이벤트: ${pendingEvents.join(', ')}";
+          "- 완료된 이벤트: ${completedEvents.isNotEmpty ? completedEvents.join(', ') : '없음'}\n"
+          "- 미완료 이벤트: ${pendingEvents.isNotEmpty ? pendingEvents.join(', ') : '없음'}";
     }
 
     // 5. 요약 요청 메시지 준비
     final systemMessage = OpenAIChatCompletionChoiceMessageModel(
       content: [
         OpenAIChatCompletionChoiceMessageContentItemModel.text(
-            "이번 주에 계획된 이벤트에 대한 요약 정보를 드릴게요. "
-                "성공적으로 완료된 이벤트와 완료하지 못한 이벤트 목록을 각각 나눠서 보여주세요. "
+            "이번 주에 계획된 이벤트 중 완료된 이벤트와 미완료된 이벤트에 대한 요약 정보를 드릴게요. "
+                "계획된 이벤트가 없다면 계획을 세우고 실천할수있도록 격려해주세요."
+                "계획된 이벤트를 모두 완료했다면 칭찬해주고, 미완료된 이벤트가 남아있는경우 어떤 이벤트가 남아있는지 알려주세요."
                 "요약 정보는 구어체로 작성되어야 하며, 최대 4문장을 넘기지 않도록 해주세요. "
                 "요약 정보는 최대 100자 이내로 작성해주세요."
         ),
@@ -175,17 +190,31 @@ class ReviewService {
     final events = await getEvents(formattedCurDay, userId, 2); // 파이어베이스에서 yyyyMMdd로 events 조회
     final eventResults = await getEventResults(formattedCurDay, userId, 3); // 파이어베이스에서 yyyyMMdd로 eventResults 조회
 
+    // 3-0. 완료 및 미완료 상태 설정
+    Map<String, String> eventStatus = {};
+
+    for (var event in events) {
+      eventStatus[event.eventId] = event.completedYn ?? 'N';
+    }
+
+    for (var result in eventResults) {
+      eventStatus[result.eventId] = result.completedYn ?? 'N';
+    }
+
     // 3. 이벤트와 이벤트 결과 비교하기
     List<String> completedEvents = [];
     List<String> pendingEvents = [];
 
     for (var event in events) {
+      /*
       var correspondingResult = eventResults.firstWhere(
             (result) => result.eventId == event.eventId && result.eventResultTitle == event.eventTitle,
         orElse: () => EventResultModel(eventResultId: '', eventId: '', categoryId: '', userId: '', eventResultTitle: '', completedYn: 'N', showOnCalendar: false),
       );
 
       if (correspondingResult != null && correspondingResult.completedYn == 'Y') {
+       */
+      if (eventStatus[event.eventId] == 'Y'){
         completedEvents.add(event.eventTitle);
       } else {
         pendingEvents.add(event.eventTitle);
@@ -197,17 +226,20 @@ class ReviewService {
     if (events.isEmpty) {
       comparisonSummary = "이번 달에는 계획된 이벤트가 없습니다.";
     } else {
-      comparisonSummary = "이번 들 계획된 이벤트 목록입니다:\n"
-          "- 완료된 이벤트: ${completedEvents.join(', ')}\n"
-          "- 미완료 이벤트: ${pendingEvents.join(', ')}";
+      comparisonSummary = "이번 달에 계획하여 완료된 이벤트와 미완료된 이벤트 목록입니다:\n"
+          "- 완료된 이벤트: ${completedEvents.isNotEmpty ? completedEvents.join(', ') : '없음'}\n"
+          "- 미완료 이벤트: ${pendingEvents.isNotEmpty ? pendingEvents.join(', ') : '없음'}";
     }
+
+    print(comparisonSummary);
 
     // 5. 요약 요청 메시지 준비
     final systemMessage = OpenAIChatCompletionChoiceMessageModel(
       content: [
         OpenAIChatCompletionChoiceMessageContentItemModel.text(
-            "이번 달에 계획된 이벤트에 대한 요약 정보를 드릴게요. "
-                "성공적으로 완료된 이벤트와 완료하지 못한 이벤트 목록을 각각 나눠서 보여주세요. "
+            "이번 달에 계획된 이벤트 중 완료된 이벤트와 미완료된 이벤트에 대한 요약 정보를 드릴게요. "
+                "계획된 이벤트가 없다면 계획을 세우고 실천할수있도록 격려해주세요."
+                "계획된 이벤트를 모두 완료했다면 칭찬해주고, 미완료된 이벤트가 남아있는경우 어떤 이벤트가 남아있는지 알려주세요."
                 "요약 정보는 구어체로 작성되어야 하며, 최대 4문장을 넘기지 않도록 해주세요. "
                 "요약 정보는 최대 100자 이내로 작성해주세요."
         ),
